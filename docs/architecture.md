@@ -111,6 +111,9 @@ output. It should contain:
 
 The parser must retain non-usable entries so the UI can explain why an action is
 not available. A lightweight periodic refresh is sufficient for Phase 0.
+Polling must be visually silent when the discovered device state is unchanged,
+so open menu hierarchies and the main-window refresh control remain stable.
+Only an explicit user refresh should present transient refresh activity.
 
 ## Screenshots
 

@@ -10,6 +10,8 @@ final class DeviceStore {
     private let screenshotClipboard: any ScreenshotClipboardCopying
     private let mediaNotifier: any SavedMediaNotifying
     private var pollingTask: Task<Void, Never>?
+    @ObservationIgnored
+    private var isLoadingDevices = false
     private var capturingDeviceSerials = Set<String>()
     private var activeScreenRecording: ScreenRecordingSession?
 
@@ -42,7 +44,7 @@ final class DeviceStore {
         }
 
         AppLogger.devices.info("Starting device refresh polling")
-        refresh()
+        refreshFromPolling()
 
         pollingTask = Task { [weak self] in
             while !Task.isCancelled {
@@ -50,7 +52,7 @@ final class DeviceStore {
                 guard !Task.isCancelled else {
                     return
                 }
-                self?.refresh()
+                self?.refreshFromPolling()
             }
         }
     }
@@ -66,6 +68,19 @@ final class DeviceStore {
         }
 
         isRefreshing = true
+        refreshDevices()
+    }
+
+    func refreshFromPolling() {
+        refreshDevices()
+    }
+
+    private func refreshDevices() {
+        guard !isLoadingDevices else {
+            return
+        }
+
+        isLoadingDevices = true
         AppLogger.devices.info("Refreshing Android devices")
 
         Task { [weak self] in
@@ -79,6 +94,11 @@ final class DeviceStore {
             }
 
             apply(outcome)
+            isLoadingDevices = false
+
+            if isRefreshing {
+                isRefreshing = false
+            }
         }
     }
 
@@ -315,24 +335,44 @@ final class DeviceStore {
     }
 
     private func apply(_ outcome: DeviceLoadOutcome) {
-        isRefreshing = false
-
         switch outcome {
         case .sdkUnavailable(let failure):
-            resolvedSDK = nil
-            devices = []
-            status = .sdkUnavailable(failure)
+            applyDeviceState(
+                sdk: nil,
+                devices: [],
+                status: .sdkUnavailable(failure)
+            )
         case .adbResult(let sdk, .success(let devices)):
-            resolvedSDK = sdk
-            self.devices = devices
-            status = devices.isEmpty ? .noDevices : .devicesAvailable
+            applyDeviceState(
+                sdk: sdk,
+                devices: devices,
+                status: devices.isEmpty ? .noDevices : .devicesAvailable
+            )
         case .adbResult(let sdk, .failure(let error)):
-            resolvedSDK = sdk
-            devices = []
             switch error {
             case .commandFailed(let message):
-                status = .adbFailure(message)
+                applyDeviceState(
+                    sdk: sdk,
+                    devices: [],
+                    status: .adbFailure(message)
+                )
             }
+        }
+    }
+
+    private func applyDeviceState(
+        sdk: AndroidSDK?,
+        devices: [AndroidDevice],
+        status: DeviceDiscoveryStatus
+    ) {
+        if resolvedSDK != sdk {
+            resolvedSDK = sdk
+        }
+        if self.devices != devices {
+            self.devices = devices
+        }
+        if self.status != status {
+            self.status = status
         }
     }
 
