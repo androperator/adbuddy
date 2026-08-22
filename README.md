@@ -93,3 +93,5 @@ source layout.
   validation conventions.
 - [`docs/release.md`](docs/release.md) - signing, notarization, GitHub Release,
   and Homebrew cask strategy.
+- [`docs/logcat.md`](docs/logcat.md) - target interaction and architecture for
+  the future per-device Logcat window.

@@ -22,6 +22,9 @@ MenuBarExtra
 
 Settings sheet (owned by the main window)
   Shared media destination and automatic screenshot clipboard-copy preference
+
+Logcat WindowGroup (one window per device serial)
+  Dedicated streaming viewer with window-scoped filters and follow state
 ```
 
 The app should retain normal application behavior with a visible main window
@@ -30,6 +33,10 @@ It opts out of automatic window tabbing because the main window is a focused
 utility surface, not a document workspace.
 Its window frame cannot be resized narrower than its initial or restored width,
 so device controls and toolbar actions remain usable.
+
+The future per-device Logcat scene and its streaming service are specified in
+[`logcat.md`](logcat.md). Planning that scene does not move Logcat into the
+current implementation phase.
 
 ## Initial source layout
 

@@ -82,7 +82,8 @@ Do not create placeholder interfaces or implementation for these until their
 respective preceding slices are complete:
 
 - installed AVD listing and emulator launch or stop controls;
-- Logcat streaming, filters, search, pause, and export;
+- Logcat implementation, whose first standalone window target is specified in
+  [`logcat.md`](logcat.md);
 - in-app automatic updates.
 
 The source structure should accommodate later phases without prebuilding their

@@ -22,6 +22,8 @@ Read these documents before changing product behavior:
 - `docs/development.md`
 - `docs/release.md`
 
+Read `docs/logcat.md` before planning or changing Logcat behavior.
+
 ## Product and platform decisions
 
 - Use Swift, SwiftUI, and macOS-native APIs. Target macOS 14 or newer.
