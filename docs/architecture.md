@@ -1,0 +1,141 @@
+# Architecture
+
+## Approach
+
+ADBuddy is a SwiftPM-based SwiftUI app. It keeps platform UI, Android SDK
+interaction, device state, and persistence separate without introducing a large
+protocol hierarchy.
+
+The app will target macOS 14 or newer and use SwiftUI as the source of truth.
+AppKit is reserved for a narrow platform need that SwiftUI cannot handle cleanly.
+
+## Scenes
+
+The app has separate, explicit scene roots:
+
+```text
+WindowGroup(id: "main")
+  Basic device overview and actions
+
+MenuBarExtra
+  Fast per-device screenshot commands and app navigation
+
+Settings
+  Reserved for persisted preferences as Settings UI is introduced
+```
+
+The app should retain normal application behavior with a visible main window
+and a Dock presence, rather than behaving as a menu-only accessory app.
+
+## Initial source layout
+
+```text
+App/
+  ADBuddyApp.swift
+  AppDelegate.swift
+Views/
+  ContentView.swift
+  DeviceListView.swift
+  MenuBarView.swift
+Models/
+  AndroidDevice.swift
+  DeviceConnectionState.swift
+  ProcessResult.swift
+Stores/
+  DeviceStore.swift
+  AppPreferences.swift
+Services/
+  AndroidSDKLocator.swift
+  ProcessRunner.swift
+  ADBClient.swift
+  ScreenshotService.swift
+Support/
+  ScreenshotFilename.swift
+  AppLogger.swift
+Tests/
+  ADBuddyTests/
+```
+
+This is a guide to responsibilities, not a mandate to create empty files. Add a
+file only when its corresponding behavior is implemented.
+
+## Data flow
+
+```text
+SwiftUI scene
+    -> DeviceStore
+        -> ADBClient
+            -> ProcessRunner
+                -> adb executable
+
+AndroidSDKLocator -> resolved adb path -> ADBClient
+AppPreferences -> screenshot destination -> ScreenshotService
+```
+
+`DeviceStore` owns refresh timing, selected device state, and presentation-ready
+errors. It does not parse process output itself. `ADBClient` translates ADB
+commands and parsed output into typed domain values. `ProcessRunner` owns
+subprocess lifecycle and exposes captured stdout, stderr, exit status, and
+cancellation.
+
+## Android SDK discovery
+
+`AndroidSDKLocator` should check candidates in this order:
+
+1. `ANDROID_HOME`;
+2. `ANDROID_SDK_ROOT`;
+3. `~/Library/Android/sdk`.
+
+For each candidate, it verifies that `platform-tools/adb` exists and is
+executable. A later preference can offer an explicit SDK path, but that is not
+needed for the first milestone.
+
+## Device model
+
+`AndroidDevice` is derived from `adb devices -l`, never exposed as raw command
+output. It should contain:
+
+- a stable serial identifier;
+- an optional human-friendly name;
+- typed connection state;
+- device kind: physical device or emulator;
+- optional transport metadata useful for troubleshooting.
+
+The parser must retain non-usable entries so the UI can explain why an action is
+not available. A lightweight periodic refresh is sufficient for Phase 0.
+
+## Screenshots
+
+`ScreenshotService` receives a typed device and destination URL. It invokes ADB
+with a fixed executable plus argument array, writes stdout as binary PNG data,
+and returns either a saved file URL or a structured failure.
+
+Screenshot filenames must be sanitized, timestamped, and collision-resistant.
+The service must not silently replace an existing file.
+
+## Preferences
+
+`AppPreferences` is an application-owned wrapper around `UserDefaults`.
+Initially it persists only a screenshot destination path. Its default is the
+current user's `~/Screenshots` directory. The service layer receives a URL from
+the preferences store rather than accessing `UserDefaults` itself.
+
+Because the app is non-sandboxed, store a regular absolute path. If future
+distribution requires sandboxing, replace this storage with a security-scoped
+bookmark through a deliberate migration.
+
+## Logging and tests
+
+Use Apple's `Logger` for app launch, SDK resolution, refresh attempts, ADB
+failures, screenshot actions, and major window or menu actions. Do not log
+screenshot image bytes or sensitive command input.
+
+Test pure behavior without a device:
+
+- `adb devices -l` parsing;
+- SDK candidate precedence and error classification;
+- filename sanitization and collision handling;
+- process result to user-facing error mapping.
+
+Live ADB validation supplements those tests when a device or emulator is
+available.
