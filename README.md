@@ -6,16 +6,17 @@ Android Studio.
 
 ## Current status
 
-The project is in its foundation phase. The first working release will provide:
+The native macOS app foundation is available as a SwiftPM package with a
+menu-bar scene, conventional main window, and a project-local build-and-run
+script. The active Phase 0 and Phase 1 work will provide:
 
 - Android SDK and ADB discovery;
 - connected-device discovery with clear connection states;
 - a macOS menu bar utility and a conventional main window;
 - fast PNG screenshots captured directly from a selected device.
 
-The first source implementation has not been scaffolded yet. See
-[`docs/product-scope.md`](docs/product-scope.md) for the defined Phase 0 and
-Phase 1 acceptance criteria.
+See [`docs/product-scope.md`](docs/product-scope.md) for the defined Phase 0
+and Phase 1 acceptance criteria.
 
 ## Requirements
 

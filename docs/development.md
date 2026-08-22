@@ -2,20 +2,20 @@
 
 ## Development model
 
-ADBuddy will use SwiftPM and a shell-first macOS development loop. The GUI
+ADBuddy uses SwiftPM and a shell-first macOS development loop. The GUI
 binary must be packaged and launched as an `.app` bundle, not only run as a raw
 SwiftPM executable, so local testing reflects normal macOS activation and
 bundle behavior.
 
-The initial scaffold will add:
+The project includes:
 
 ```text
 script/build_and_run.sh
 .codex/environments/environment.toml
 ```
 
-`script/build_and_run.sh` will stop a prior local app instance, build the
-project, package the `.app`, launch it, and report the app location or failure.
+`script/build_and_run.sh` stops a prior local app instance, builds the project,
+packages the `.app`, launches it, and reports the app location or failure.
 
 ## Local prerequisites
 
