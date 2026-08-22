@@ -6,6 +6,7 @@ struct ADBuddyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @AppStorage("hasAppliedCompactWindowLayout") private var hasAppliedCompactWindowLayout = false
     @State private var deviceStore: DeviceStore
+    @State private var emulatorStore: EmulatorStore
     @State private var preferences: AppPreferences
     @State private var isShowingSettings = false
 
@@ -13,6 +14,7 @@ struct ADBuddyApp: App {
         let preferences = AppPreferences()
         _preferences = State(initialValue: preferences)
         _deviceStore = State(initialValue: DeviceStore(preferences: preferences))
+        _emulatorStore = State(initialValue: EmulatorStore())
         AppLogger.lifecycle.info("ADBuddy launch requested")
     }
 
@@ -25,6 +27,7 @@ struct ADBuddyApp: App {
         WindowGroup("ADBuddy", id: "main") {
             ContentView(isShowingSettings: $isShowingSettings)
                 .environment(deviceStore)
+                .environment(emulatorStore)
                 .environment(preferences)
                 .overlay(alignment: .topLeading) {
                     InitialWindowSizer(
@@ -36,6 +39,7 @@ struct ADBuddyApp: App {
                 }
                 .task {
                     deviceStore.start()
+                    emulatorStore.refreshVirtualDevices()
                 }
         }
         .defaultSize(width: DeviceListLayout.windowWidth, height: 200)
@@ -67,6 +71,7 @@ struct ADBuddyApp: App {
                 isShowingSettings = true
             })
                 .environment(deviceStore)
+                .environment(emulatorStore)
                 .environment(preferences)
         }
         .menuBarExtraStyle(.menu)

@@ -66,6 +66,15 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - When Show taps is enabled, preserve the existing Android setting and restore
   it when the recording finishes.
 
+### Phase 3 - Emulator launch
+
+- List the installed Android Virtual Devices (AVDs) reported by the Android
+  Emulator executable.
+- Let users open an installed AVD from the main-window toolbar or menu bar.
+- Start each selection with the SDK's `emulator -avd <name>` command and no
+  Android Studio embedded-window flags, so the Android Emulator owns its
+  normal standalone macOS window and Dock presence.
+
 ## Initial acceptance flow
 
 1. Launch ADBuddy.
@@ -81,7 +90,7 @@ The first implementation is a complete vertical slice, not a visual mockup.
 Do not create placeholder interfaces or implementation for these until their
 respective preceding slices are complete:
 
-- installed AVD listing and emulator launch or stop controls;
+- emulator stop controls and AVD creation or configuration;
 - Logcat implementation, whose first standalone window target is specified in
   [`logcat.md`](logcat.md);
 - in-app automatic updates.

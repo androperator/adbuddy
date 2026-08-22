@@ -20,7 +20,8 @@ WindowGroup(id: "main")
   Compact device list and actions, or an explanatory unavailable state
 
 MenuBarExtra
-  Fast per-device screenshot and recording commands, app navigation, and Settings
+  Fast per-device screenshot and recording commands, installed-emulator launch,
+  app navigation, and Settings
 
 Settings sheet (owned by the main window)
   Shared media destination, screenshot clipboard-copy, and Logcat colors
@@ -88,6 +89,7 @@ AppPreferences -> recording options -> ScreenRecordingService
 DeviceStore -> ScreenRecordingService -> ADB screenrecord, pull, cleanup
 DeviceStore discovery by serial -> LogcatWindowView -> LogcatStore
 LogcatStore -> LogcatService -> StreamingProcessRunner -> adb logcat
+EmulatorStore -> AndroidEmulatorService -> Emulator executable -> standalone Emulator window
 ```
 
 `DeviceStore` owns automatic one-second refresh timing, selected device state,
@@ -96,6 +98,14 @@ and presentation-ready errors. It does not parse process output itself.
 `ProcessRunner` owns
 subprocess lifecycle and exposes captured stdout, stderr, exit status, and
 cancellation.
+
+`EmulatorStore` loads the installed AVD names on demand and owns concise launch
+feedback. `AndroidEmulatorService` asks the SDK's `emulator` executable for
+`-list-avds`, then starts a selected AVD through a short-lived foreground
+process launch with a fixed `-avd <name>` argument array. It must not use the
+Android Studio flags that hide or embed the Emulator window. Once launched,
+the Android Emulator owns its window and Dock presence independently of
+ADBuddy.
 
 `LogcatStore` owns only one Logcat window's retained entries, filters, pause,
 follow state, and reconnect lifecycle. Column visibility is likewise local to

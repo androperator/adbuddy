@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(DeviceStore.self) private var deviceStore
+    @Environment(EmulatorStore.self) private var emulatorStore
     @Environment(AppPreferences.self) private var preferences
     @Binding var isShowingSettings: Bool
 
@@ -23,11 +24,18 @@ struct ContentView: View {
                         deviceStore.clearScreenRecordingFeedback(ifMatching: feedback)
                     }
                 }
+
+                if let feedback = emulatorStore.feedback {
+                    EmulatorFeedbackBanner(feedback: feedback) {
+                        emulatorStore.clearFeedback(ifMatching: feedback)
+                    }
+                }
             }
             .padding()
         }
         .animation(.default, value: deviceStore.screenshotFeedback)
         .animation(.default, value: deviceStore.screenRecordingFeedback)
+        .animation(.default, value: emulatorStore.feedback)
         .sheet(item: $deviceStore.screenRecordingOptionsDevice) { device in
             ScreenRecordingOptionsView(
                 device: device,
@@ -43,6 +51,16 @@ struct ContentView: View {
         }
         .navigationTitle("ADBuddy")
         .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    EmulatorMenuContent()
+                } label: {
+                    Label("Open Android Emulator", systemImage: "play.rectangle")
+                        .labelStyle(.iconOnly)
+                }
+                .help("Open Android Emulator")
+            }
+
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     AppLogger.settings.info("Settings requested from the toolbar")
@@ -102,6 +120,31 @@ struct ContentView: View {
 
     private var deviceListHeight: CGFloat {
         DeviceListLayout.deviceListHeight(for: deviceStore.devices.count)
+    }
+}
+
+private struct EmulatorFeedbackBanner: View {
+    let feedback: EmulatorFeedback
+    let dismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: feedback.isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(feedback.isSuccess ? .green : .orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(feedback.title)
+                    .font(.subheadline.weight(.medium))
+                Text(feedback.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            Button("Dismiss", action: dismiss)
+                .buttonStyle(.borderless)
+        }
+        .padding(10)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .shadow(radius: 4, y: 2)
     }
 }
 

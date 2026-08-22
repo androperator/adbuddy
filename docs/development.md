@@ -66,6 +66,8 @@ Manual verification should cover, where locally available:
    as screenshots, followed by a successful Stop Recording action;
 9. a successful recording notification offering **Reveal in Finder**;
 10. Show taps returning to its original Android setting after recording.
+11. An installed AVD appearing in the ADBuddy launcher menus and opening in
+    the Android Emulator's own standalone window.
 
 ## Change discipline
 

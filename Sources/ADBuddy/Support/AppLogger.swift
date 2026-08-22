@@ -13,4 +13,5 @@ enum AppLogger {
     static let menuBar = Logger(subsystem: subsystem, category: "MenuBar")
     static let settings = Logger(subsystem: subsystem, category: "Settings")
     static let logcat = Logger(subsystem: subsystem, category: "Logcat")
+    static let emulator = Logger(subsystem: subsystem, category: "Emulator")
 }

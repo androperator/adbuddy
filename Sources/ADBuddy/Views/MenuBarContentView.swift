@@ -20,6 +20,12 @@ struct MenuBarContentView: View {
             Divider()
         }
 
+        Menu("Open Android Emulator") {
+            EmulatorMenuContent()
+        }
+
+        Divider()
+
         deviceItems
 
         Divider()
