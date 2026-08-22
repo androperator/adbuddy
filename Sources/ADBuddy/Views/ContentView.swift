@@ -177,7 +177,7 @@ private struct DeviceRow: View {
                 Label("Record Screen", systemImage: "record.circle")
                     .labelStyle(.iconOnly)
             }
-                .buttonStyle(.bordered)
+                .buttonStyle(.borderedProminent)
                 .disabled(!canStartScreenRecording)
                 .help("Record Screen")
         }
