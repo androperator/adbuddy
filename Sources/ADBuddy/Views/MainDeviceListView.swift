@@ -117,10 +117,15 @@ private struct ConnectedDeviceRow: View {
                     isScreenRecording: deviceStore.canStopScreenRecording(for: device),
                     isStoppingScreenRecording: deviceStore.isStoppingScreenRecording(for: device),
                     canStartScreenRecording: deviceStore.canStartScreenRecording(for: device),
+                    isPerformingAppAction: deviceStore.isPerformingAppAction(for: device),
                     takeScreenshot: { deviceStore.takeScreenshot(of: device) },
                     showScreenRecordingOptions: { deviceStore.presentScreenRecordingOptions(for: device) },
                     stopScreenRecording: { deviceStore.stopScreenRecording(for: device) },
-                    openLogcat: { openLogcat(device) }
+                    openLogcat: { openLogcat(device) },
+                    performAppAction: { deviceStore.performAppAction($0, for: device) },
+                    requestUninstallForegroundApp: {
+                        deviceStore.requestUninstallForegroundApp(for: device)
+                    }
                 )
             } else {
                 Text(device.connectionState.displayName)
@@ -216,10 +221,15 @@ private struct VirtualDeviceRow: View {
                 isScreenRecording: deviceStore.canStopScreenRecording(for: device),
                 isStoppingScreenRecording: deviceStore.isStoppingScreenRecording(for: device),
                 canStartScreenRecording: deviceStore.canStartScreenRecording(for: device),
+                isPerformingAppAction: deviceStore.isPerformingAppAction(for: device),
                 takeScreenshot: { deviceStore.takeScreenshot(of: device) },
                 showScreenRecordingOptions: { deviceStore.presentScreenRecordingOptions(for: device) },
                 stopScreenRecording: { deviceStore.stopScreenRecording(for: device) },
-                openLogcat: { openLogcat(device) }
+                openLogcat: { openLogcat(device) },
+                performAppAction: { deviceStore.performAppAction($0, for: device) },
+                requestUninstallForegroundApp: {
+                    deviceStore.requestUninstallForegroundApp(for: device)
+                }
             )
         case .stopping:
             ProgressView()

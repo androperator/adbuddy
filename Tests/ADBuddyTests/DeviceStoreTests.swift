@@ -38,10 +38,72 @@ final class DeviceStoreTests: XCTestCase {
         await fulfillment(of: [changeExpectation], timeout: 0.1)
     }
 
-    private func makeDeviceStore() -> DeviceStore {
+    func testRunsForegroundAppActionAndReportsTheResolvedPackage() async throws {
+        let runner = ScriptedDeviceStoreProcessRunner(results: [
+            successfulResult(standardOutput: "List of devices attached\nserial\tdevice model:Pixel_9\n"),
+            successfulResult(
+                standardOutput: "mResumedActivity: ActivityRecord{123 u0 com.example.app/.MainActivity t42}\n"
+            ),
+            successfulResult(),
+        ])
+        let store = makeDeviceStore(processRunner: runner)
+        store.refreshFromPolling()
+        await waitForDeviceRefresh()
+        let device = try XCTUnwrap(store.devices.first)
+
+        store.performAppAction(.forceStop, for: device)
+        await waitForAppActionFeedback(in: store)
+
+        XCTAssertEqual(
+            store.appActionFeedback,
+            .success(
+                AndroidAppActionOutcome(
+                    action: .forceStop,
+                    application: AndroidForegroundApplication(packageID: "com.example.app")
+                )
+            )
+        )
+        let invocations = await runner.invocations
+        XCTAssertEqual(
+            invocations,
+            [
+                ["devices", "-l"],
+                ["-s", "serial", "shell", "dumpsys", "activity", "activities"],
+                ["-s", "serial", "shell", "am", "force-stop", "com.example.app"],
+            ]
+        )
+    }
+
+    func testRequestsUninstallConfirmationForTheResolvedForegroundApp() async throws {
+        let runner = ScriptedDeviceStoreProcessRunner(results: [
+            successfulResult(standardOutput: "List of devices attached\nserial\tdevice model:Pixel_9\n"),
+            successfulResult(
+                standardOutput: "topResumedActivity=ActivityRecord{123 u0 com.example.app/.MainActivity t42}\n"
+            ),
+        ])
+        let store = makeDeviceStore(processRunner: runner)
+        store.refreshFromPolling()
+        await waitForDeviceRefresh()
+        let device = try XCTUnwrap(store.devices.first)
+
+        store.requestUninstallForegroundApp(for: device)
+        await waitForUninstallRequest(in: store)
+
+        XCTAssertEqual(
+            store.foregroundAppUninstallRequest,
+            ForegroundAppUninstallRequest(
+                device: device,
+                application: AndroidForegroundApplication(packageID: "com.example.app")
+            )
+        )
+    }
+
+    private func makeDeviceStore(
+        processRunner: any ProcessRunning = DeviceListProcessRunner()
+    ) -> DeviceStore {
         DeviceStore(
             sdkLocator: sdkLocator,
-            processRunner: DeviceListProcessRunner(),
+            processRunner: processRunner,
             screenshotClipboard: TestScreenshotClipboard(),
             mediaNotifier: TestMediaNotifier()
         )
@@ -61,6 +123,37 @@ final class DeviceStoreTests: XCTestCase {
             await Task.yield()
         }
     }
+
+    private func waitForAppActionFeedback(in store: DeviceStore) async {
+        for _ in 0..<100 {
+            if store.appActionFeedback != nil {
+                return
+            }
+            await Task.yield()
+        }
+        XCTFail("Timed out waiting for foreground app action feedback.")
+    }
+
+    private func waitForUninstallRequest(in store: DeviceStore) async {
+        for _ in 0..<100 {
+            if store.foregroundAppUninstallRequest != nil {
+                return
+            }
+            await Task.yield()
+        }
+        XCTFail("Timed out waiting for foreground app uninstall request.")
+    }
+
+    private func successfulResult(standardOutput: String = "") -> ProcessResult {
+        ProcessResult(
+            standardOutput: Data(standardOutput.utf8),
+            standardError: Data(),
+            exitStatus: 0,
+            durationMilliseconds: 1,
+            failureDescription: nil,
+            wasCancelled: false
+        )
+    }
 }
 
 private struct DeviceListProcessRunner: ProcessRunning {
@@ -73,6 +166,24 @@ private struct DeviceListProcessRunner: ProcessRunning {
             failureDescription: nil,
             wasCancelled: false
         )
+    }
+}
+
+private actor ScriptedDeviceStoreProcessRunner: ProcessRunning {
+    private var results: [ProcessResult]
+    private var recordedInvocations: [[String]] = []
+
+    init(results: [ProcessResult]) {
+        self.results = results
+    }
+
+    var invocations: [[String]] {
+        recordedInvocations
+    }
+
+    func run(executablePath: String, arguments: [String]) async -> ProcessResult {
+        recordedInvocations.append(arguments)
+        return results.removeFirst()
     }
 }
 

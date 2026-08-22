@@ -88,6 +88,36 @@ struct MenuBarContentView: View {
                             openWindow(value: LogcatWindowID(serial: device.serial))
                             NSApp.activate(ignoringOtherApps: true)
                         }
+
+                        Menu("Foreground App") {
+                            Button("Start App") {
+                                deviceStore.performAppAction(.start, for: device)
+                            }
+                            Button("Kill App") {
+                                deviceStore.performAppAction(.forceStop, for: device)
+                            }
+                            Button("Restart App") {
+                                deviceStore.performAppAction(.restart, for: device)
+                            }
+
+                            Divider()
+
+                            Button("Clear App Data") {
+                                deviceStore.performAppAction(.clearData, for: device)
+                            }
+                            Button("Clear App Data and Restart") {
+                                deviceStore.performAppAction(.clearDataAndRestart, for: device)
+                            }
+
+                            Divider()
+
+                            Button("Uninstall App…", role: .destructive) {
+                                openWindow(id: "main")
+                                NSApp.activate(ignoringOtherApps: true)
+                                deviceStore.requestUninstallForegroundApp(for: device)
+                            }
+                        }
+                        .disabled(deviceStore.isPerformingAppAction(for: device))
                     } else {
                         Text(device.connectionState.displayName)
                     }

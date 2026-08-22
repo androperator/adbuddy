@@ -73,6 +73,10 @@ Manual verification should cover, where locally available:
 13. A running AVD stopping through its control. Exercise **Wipe Data and
     Start** only as far as its confirmation in routine manual testing; do not
     erase a developer's AVD unless that reset is intentional.
+14. Each foreground-app action resolves the active package on the selected
+    device, shows success or actionable failure feedback, and uses the resolved
+    package in the uninstall confirmation. Do not confirm an uninstall during
+    routine verification unless that removal is intentional.
 
 ## Change discipline
 

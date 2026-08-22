@@ -6,10 +6,13 @@ struct DeviceActionControls: View {
     let isScreenRecording: Bool
     let isStoppingScreenRecording: Bool
     let canStartScreenRecording: Bool
+    let isPerformingAppAction: Bool
     let takeScreenshot: () -> Void
     let showScreenRecordingOptions: () -> Void
     let stopScreenRecording: () -> Void
     let openLogcat: () -> Void
+    let performAppAction: (AndroidAppAction) -> Void
+    let requestUninstallForegroundApp: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -40,7 +43,44 @@ struct DeviceActionControls: View {
             .buttonStyle(.bordered)
             .accessibilityLabel("Open Logcat")
             .help("Open Logcat")
+
+            foregroundAppActionsMenu
         }
+    }
+
+    private var foregroundAppActionsMenu: some View {
+        Menu {
+            Button("Start Foreground App") {
+                performAppAction(.start)
+            }
+            Button("Kill Foreground App") {
+                performAppAction(.forceStop)
+            }
+            Button("Restart Foreground App") {
+                performAppAction(.restart)
+            }
+
+            Divider()
+
+            Button("Clear Foreground App Data") {
+                performAppAction(.clearData)
+            }
+            Button("Clear App Data and Restart") {
+                performAppAction(.clearDataAndRestart)
+            }
+
+            Divider()
+
+            Button("Uninstall Foreground App…", role: .destructive) {
+                requestUninstallForegroundApp()
+            }
+        } label: {
+            Label("Foreground App Actions", systemImage: "app.badge")
+                .labelStyle(.iconOnly)
+        }
+        .disabled(isPerformingAppAction)
+        .accessibilityLabel("Foreground App Actions")
+        .help("Foreground App Actions")
     }
 
     @ViewBuilder

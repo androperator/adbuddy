@@ -16,6 +16,7 @@ final class DeviceStore {
     private var isLoadingDevices = false
     private var capturingDeviceSerials = Set<String>()
     private var activeScreenRecording: ScreenRecordingSession?
+    private var appActionDeviceSerials = Set<String>()
 
     private(set) var devices: [AndroidDevice] = []
     private(set) var status: DeviceDiscoveryStatus = .loading
@@ -24,6 +25,8 @@ final class DeviceStore {
     var screenRecordingOptionsDevice: AndroidDevice?
     private(set) var screenRecordingActivity: ScreenRecordingActivity?
     private(set) var screenRecordingFeedback: ScreenRecordingFeedback?
+    private(set) var appActionFeedback: AppActionFeedback?
+    private(set) var foregroundAppUninstallRequest: ForegroundAppUninstallRequest?
 
     init(
         preferences: AppPreferences = AppPreferences(),
@@ -312,6 +315,80 @@ final class DeviceStore {
         screenRecordingFeedback = nil
     }
 
+    func isPerformingAppAction(for device: AndroidDevice) -> Bool {
+        appActionDeviceSerials.contains(device.serial)
+    }
+
+    func performAppAction(_ action: AndroidAppAction, for device: AndroidDevice) {
+        guard let service = beginAppAction(for: device) else {
+            return
+        }
+
+        Task { [weak self] in
+            let result = await service.perform(action, for: device.serial)
+            guard let self, !Task.isCancelled else {
+                return
+            }
+            finishAppAction(for: device, result: result)
+        }
+    }
+
+    func requestUninstallForegroundApp(for device: AndroidDevice) {
+        guard let service = beginAppAction(for: device) else {
+            return
+        }
+
+        Task { [weak self] in
+            let result = await service.foregroundApplication(for: device.serial)
+            guard let self, !Task.isCancelled else {
+                return
+            }
+
+            appActionDeviceSerials.remove(device.serial)
+            switch result {
+            case .success(let application):
+                foregroundAppUninstallRequest = ForegroundAppUninstallRequest(
+                    device: device,
+                    application: application
+                )
+            case .failure(let failure):
+                AppLogger.appActions.error("Could not resolve foreground Android app: \(failure.message, privacy: .public)")
+                showAppActionFeedback(.failure(failure.message))
+            }
+        }
+    }
+
+    func cancelForegroundAppUninstall() {
+        foregroundAppUninstallRequest = nil
+    }
+
+    func confirmForegroundAppUninstall(_ request: ForegroundAppUninstallRequest) {
+        guard foregroundAppUninstallRequest == request,
+              let service = beginAppAction(for: request.device) else {
+            return
+        }
+        foregroundAppUninstallRequest = nil
+
+        Task { [weak self] in
+            let result = await service.perform(
+                .uninstall,
+                on: request.application,
+                deviceSerial: request.device.serial
+            )
+            guard let self, !Task.isCancelled else {
+                return
+            }
+            finishAppAction(for: request.device, result: result)
+        }
+    }
+
+    func clearAppActionFeedback(ifMatching feedback: AppActionFeedback) {
+        guard appActionFeedback == feedback else {
+            return
+        }
+        appActionFeedback = nil
+    }
+
     private func loadDevices() async -> DeviceLoadOutcome {
         switch sdkLocator.resolve() {
         case .unavailable(let failure):
@@ -416,6 +493,48 @@ final class DeviceStore {
         Task { [weak self, feedback] in
             try? await Task.sleep(for: timeout)
             self?.clearScreenRecordingFeedback(ifMatching: feedback)
+        }
+    }
+
+    private func beginAppAction(for device: AndroidDevice) -> AndroidAppActionsService? {
+        guard device.isUsable else {
+            showAppActionFeedback(.failure("\(device.displayName) is not available for app actions."))
+            return nil
+        }
+        guard let resolvedSDK else {
+            showAppActionFeedback(.failure("ADB is not currently available. Device discovery will retry automatically."))
+            return nil
+        }
+        guard appActionDeviceSerials.insert(device.serial).inserted else {
+            return nil
+        }
+
+        appActionFeedback = nil
+        AppLogger.appActions.info("Foreground Android app action requested")
+        return AndroidAppActionsService(adbPath: resolvedSDK.adbPath, processRunner: processRunner)
+    }
+
+    private func finishAppAction(
+        for device: AndroidDevice,
+        result: AndroidAppActionServiceResult<AndroidAppActionOutcome>
+    ) {
+        appActionDeviceSerials.remove(device.serial)
+
+        switch result {
+        case .success(let outcome):
+            showAppActionFeedback(.success(outcome))
+        case .failure(let failure):
+            showAppActionFeedback(.failure(failure.message))
+        }
+    }
+
+    private func showAppActionFeedback(_ feedback: AppActionFeedback) {
+        appActionFeedback = feedback
+        let timeout: Duration = feedback.isSuccess ? .seconds(4) : .seconds(8)
+
+        Task { [weak self, feedback] in
+            try? await Task.sleep(for: timeout)
+            self?.clearAppActionFeedback(ifMatching: feedback)
         }
     }
 

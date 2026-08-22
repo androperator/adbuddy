@@ -21,6 +21,8 @@ currently provides:
 - native screenshot and recording notifications with media previews and a
   **Reveal in Finder** action;
 - automatic PNG clipboard copy, enabled by default;
+- foreground-app actions per device: start, kill, restart, clear app data,
+  clear app data and restart, and confirmed uninstall;
 - a dedicated Logcat window per device, with recent history, live streaming,
   application and minimum-level filtering, pause, copy, follow, and optional
   PID/TID columns;
@@ -63,6 +65,15 @@ text.
 
 Logcat keeps at most 50,000 entries per window. Disconnecting a device retains
 its visible logs; reconnecting the same serial resumes that window automatically.
+
+## Foreground app actions
+
+Use the app-badge menu beside a usable device, or its **Foreground App** menu
+in the menu bar, for lifecycle actions without entering a package name.
+ADBuddy resolves the app currently in the foreground on that device when an
+action begins. It can start, kill, restart, clear app data, or clear data and
+restart that app. Uninstall shows a confirmation with the resolved package name
+before removing it.
 
 ## MCP
 

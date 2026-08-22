@@ -83,6 +83,17 @@ The first implementation is a complete vertical slice, not a visual mockup.
   macOS window and Dock presence.
 - Stop a running AVD through `adb -s <serial> emu kill`.
 
+### Foreground app actions
+
+- Offer a compact **Foreground App Actions** menu for every usable device from
+  the main window and menu bar.
+- Resolve the foreground package from the device when an action begins; do not
+  require a persistent package selection or an Android Studio project.
+- Support start, kill, restart, clear app data, and clear app data and restart.
+- Require a native confirmation that names the resolved package before
+  uninstalling it.
+- Keep all ADB invocation in a typed service using fixed argument arrays.
+
 ### Local MCP access
 
 - Provide a local stdio MCP server for agents that need the completed device,

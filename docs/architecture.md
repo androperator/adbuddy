@@ -96,6 +96,11 @@ and presentation-ready errors. It does not parse process output itself.
 subprocess lifecycle and exposes captured stdout, stderr, exit status, and
 cancellation.
 
+`AndroidAppActionsService` resolves a device's foreground package through the
+Android activity manager, then performs one app lifecycle action with fixed ADB
+arguments. `DeviceStore` owns short-lived action state, non-blocking feedback,
+and the exact-package confirmation required before uninstalling an app.
+
 `EmulatorStore` loads installed AVD names on demand, maps usable ADB emulator
 serials back to their AVD names, and owns lifecycle state plus concise user
 feedback. The main window renders physical devices only in **Connected
@@ -118,8 +123,8 @@ minimum-level, crash-and-exception, and text-search filters, pause/follow
 state, and reconnect lifecycle. Column visibility is likewise local to the
 window session. The store observes the shared `DeviceStore` result by serial,
 cancels its stream when that device is unavailable, and resumes it when the
-same serial is usable again. It
-keeps at most 50,000 typed entries and derives the visible list incrementally
+same serial is usable again. It keeps at most 50,000 typed entries and derives
+the visible list incrementally
 for ordinary batches. Text search and the crash and exception toggle narrow the
 retained visible result without restarting the ADB stream. `LogcatService`
 parses `adb logcat -v threadtime` off the main actor and delivers modest
