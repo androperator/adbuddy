@@ -456,9 +456,10 @@ The toolbar contains:
 
 1. an editable application-ID picker;
 2. a minimum-level segmented control with `V`, `D`, `I`, `W`, `E`, and `A`;
-3. **Pause** or **Resume**;
-4. **Clear**;
-5. **Jump to Latest**, shown or emphasized when follow mode is disabled.
+3. a local **Search Logcat** field, focused with `Command-F`;
+4. **Pause** or **Resume**;
+5. **Clear**;
+6. **Jump to Latest**, shown or emphasized when follow mode is disabled.
 
 Controls need labels in accessibility and Help text even when their visible
 form is only a glyph or level letter. Filters should update the visible result
@@ -515,6 +516,14 @@ The default minimum is Debug, so Verbose messages are initially hidden.
 
 The selected minimum level is window-specific and does not alter device-wide
 Logcat settings.
+
+## Text search
+
+Each Logcat window has a local text search field that matches tag and message
+text case-insensitively. Press `Command-F` to focus it. Search narrows the
+already retained entries, does not restart ADB Logcat, and combines with the
+application and minimum-level filters. It is window-scoped and is not
+persisted between launches.
 
 ## Color theme
 
@@ -625,7 +634,7 @@ not survive app relaunch.
 The first standalone Logcat slice does not need:
 
 - device-buffer mutation or `adb logcat -c`;
-- regex, tag, PID, or TID filters;
+- regex or field-specific tag, PID, or TID filters;
 - saved filter presets;
 - exporting a log file;
 - remote log-level configuration;
@@ -655,9 +664,11 @@ Manual verification should confirm:
 2. reopening focuses the existing window, while a second device opens another;
 3. recent history appears before live messages continue;
 4. application and minimum-level filters update correctly;
-5. rows remain smooth under sustained high-volume logging;
-6. the window follows new messages until the user scrolls up;
-7. **Jump to Latest** restores follow mode;
-8. custom colors persist and update open windows;
-9. disconnecting and reconnecting a device preserves the window and resumes
+5. `Command-F` focuses search and filters tag and message text without
+   restarting the stream;
+6. rows remain smooth under sustained high-volume logging;
+7. the window follows new messages until the user scrolls up;
+8. **Jump to Latest** restores follow mode;
+9. custom colors persist and update open windows;
+10. disconnecting and reconnecting a device preserves the window and resumes
    streaming.

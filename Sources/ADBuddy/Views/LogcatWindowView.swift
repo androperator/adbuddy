@@ -8,6 +8,7 @@ struct LogcatWindowView: View {
     @State private var logcatStore: LogcatStore
     @State private var showsProcessID = false
     @State private var showsThreadID = false
+    @State private var isSearchPresented = false
 
     init(windowID: LogcatWindowID) {
         self.windowID = windowID
@@ -68,6 +69,15 @@ struct LogcatWindowView: View {
             alignment: .topLeading
         )
         .navigationTitle("Logcat - \(deviceName)")
+        .searchable(
+            text: $logcatStore.searchText,
+            isPresented: $isSearchPresented,
+            placement: .toolbar,
+            prompt: "Search Logcat"
+        )
+        .focusedSceneValue(\.logcatSearchAction) {
+            isSearchPresented = true
+        }
         .task(id: deviceAvailability) {
             logcatStore.updateDeviceAvailability(deviceAvailability)
         }

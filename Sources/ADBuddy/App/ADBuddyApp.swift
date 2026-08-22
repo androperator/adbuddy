@@ -5,6 +5,7 @@ import SwiftUI
 struct ADBuddyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @AppStorage("hasAppliedSectionedWindowLayout") private var hasAppliedSectionedWindowLayout = false
+    @FocusedValue(\.logcatSearchAction) private var logcatSearchAction
     @State private var deviceStore: DeviceStore
     @State private var emulatorStore: EmulatorStore
     @State private var preferences: AppPreferences
@@ -65,6 +66,15 @@ struct ADBuddyApp: App {
         }
         .defaultSize(width: 920, height: 600)
         .windowResizability(.contentMinSize)
+        .commands {
+            CommandGroup(after: .toolbar) {
+                Button("Find in Logcat") {
+                    logcatSearchAction?()
+                }
+                .keyboardShortcut("f", modifiers: .command)
+                .disabled(logcatSearchAction == nil)
+            }
+        }
 
         MenuBarExtra(
             "ADBuddy",

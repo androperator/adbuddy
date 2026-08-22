@@ -57,6 +57,57 @@ final class LogcatStoreTests: XCTestCase {
         store.stop()
     }
 
+    func testSearchFiltersTagsAndMessagesWithoutRestartingTheStream() async throws {
+        let service = ControllableLogcatService()
+        let store = makeStore(service: service)
+        let entries = [
+            LogcatEntry(
+                id: 1,
+                timestamp: .now,
+                priority: .debug,
+                processID: 101,
+                threadID: 201,
+                tag: "NetworkClient",
+                message: "Request succeeded"
+            ),
+            LogcatEntry(
+                id: 2,
+                timestamp: .now,
+                priority: .info,
+                processID: 102,
+                threadID: 202,
+                tag: "Activity",
+                message: "Loaded search result"
+            ),
+            LogcatEntry(
+                id: 3,
+                timestamp: .now,
+                priority: .warn,
+                processID: 103,
+                threadID: 203,
+                tag: "Database",
+                message: "Retrying query"
+            ),
+        ]
+
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForStreamCount(service, expectedCount: 1)
+        service.yield(.entries(entries))
+        try await waitForEntryCount(store, expectedCount: entries.count)
+
+        store.searchText = "network"
+        XCTAssertEqual(store.visibleEntries.map(\.id), [1])
+
+        store.searchText = "SEARCH"
+        XCTAssertEqual(store.visibleEntries.map(\.id), [2])
+
+        store.searchText = "   "
+        XCTAssertEqual(store.visibleEntries.map(\.id), [1, 2, 3])
+        XCTAssertEqual(store.entries, entries)
+        XCTAssertEqual(service.streamCount, 1)
+        store.stop()
+    }
+
     func testWaitsForADBResolutionBeforeStartingTheStream() async throws {
         let service = ControllableLogcatService()
         let store = makeStore(service: service)

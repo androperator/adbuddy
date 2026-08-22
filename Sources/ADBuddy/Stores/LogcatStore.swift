@@ -46,6 +46,14 @@ final class LogcatStore {
     private(set) var runningApplicationIDs: [String] = []
     private(set) var isFollowing = true
     private(set) var isPaused = false
+    var searchText = "" {
+        didSet {
+            guard oldValue != searchText else {
+                return
+            }
+            rebuildVisibleEntries()
+        }
+    }
     var minimumPriority: LogcatPriority = .debug {
         didSet {
             guard oldValue != minimumPriority else {
@@ -520,9 +528,7 @@ final class LogcatStore {
             return
         }
 
-        let newlyVisibleEntries = newEntries.filter {
-            $0.priority.severity >= minimumPriority.severity && activeApplicationScope.includes($0)
-        }
+        let newlyVisibleEntries = newEntries.filter(matchesVisibleFilters)
         guard !newlyVisibleEntries.isEmpty else {
             return
         }
@@ -534,13 +540,26 @@ final class LogcatStore {
     }
 
     private func rebuildVisibleEntries() {
-        visibleEntries = entries.filter {
-            $0.priority.severity >= minimumPriority.severity && activeApplicationScope.includes($0)
-        }
+        visibleEntries = entries.filter(matchesVisibleFilters)
         guard !isPaused else {
             return
         }
         markDisplayedEntriesChanged()
+    }
+
+    private func matchesVisibleFilters(_ entry: LogcatEntry) -> Bool {
+        guard entry.priority.severity >= minimumPriority.severity,
+              activeApplicationScope.includes(entry) else {
+            return false
+        }
+
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            return true
+        }
+
+        return entry.tag.localizedCaseInsensitiveContains(query) ||
+            entry.message.localizedCaseInsensitiveContains(query)
     }
 
     private func markDisplayedEntriesChanged() {

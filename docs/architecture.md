@@ -119,15 +119,17 @@ use Android Studio flags that hide or embed the Emulator window. Once launched,
 the Android Emulator owns its window and Dock presence independently of
 ADBuddy.
 
-`LogcatStore` owns only one Logcat window's retained entries, filters, pause,
-follow state, and reconnect lifecycle. Column visibility is likewise local to
-the window session. The store observes the shared `DeviceStore` result by
-serial, cancels its stream when that device is unavailable, and resumes it when
-the same serial is usable again. It keeps at most 50,000 typed entries and
-derives the visible list incrementally for ordinary batches. `LogcatService`
-parses `adb logcat -v threadtime` off the main actor and delivers modest batches.
-The `NSTableView` bridge virtualizes visible row views and reads rows by
-count/revision so it does not retain a second 50,000-entry array.
+`LogcatStore` owns only one Logcat window's retained entries, application,
+minimum-level, and text-search filters, pause/follow state, and reconnect
+lifecycle. Column visibility is likewise local to the window session. The store
+observes the shared `DeviceStore` result by serial, cancels its stream when that
+device is unavailable, and resumes it when the same serial is usable again. It
+keeps at most 50,000 typed entries and derives the visible list incrementally
+for ordinary batches. Text search narrows the retained visible result without
+restarting the ADB stream. `LogcatService` parses `adb logcat -v threadtime`
+off the main actor and delivers modest batches. The `NSTableView` bridge
+virtualizes visible row views and reads rows by count/revision so it does not
+retain a second 50,000-entry array.
 
 ## Android SDK discovery
 
