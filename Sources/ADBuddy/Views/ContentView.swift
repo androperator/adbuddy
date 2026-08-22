@@ -36,6 +36,18 @@ struct ContentView: View {
         .animation(.default, value: deviceStore.screenshotFeedback)
         .animation(.default, value: deviceStore.screenRecordingFeedback)
         .animation(.default, value: emulatorStore.feedback)
+        .onChange(of: deviceStore.devices) { _, devices in
+            emulatorStore.updateRunningStatus(using: devices, sdk: deviceStore.resolvedSDK)
+        }
+        .onChange(of: deviceStore.resolvedSDK) { _, sdk in
+            emulatorStore.updateRunningStatus(using: deviceStore.devices, sdk: sdk)
+        }
+        .task {
+            emulatorStore.updateRunningStatus(
+                using: deviceStore.devices,
+                sdk: deviceStore.resolvedSDK
+            )
+        }
         .sheet(item: $deviceStore.screenRecordingOptionsDevice) { device in
             ScreenRecordingOptionsView(
                 device: device,
@@ -48,6 +60,27 @@ struct ContentView: View {
         }
         .sheet(isPresented: $isShowingSettings) {
             SettingsSheet(preferences: preferences)
+        }
+        .alert(
+            "Wipe Emulator Data?",
+            isPresented: Binding(
+                get: { emulatorStore.wipeDataConfirmationVirtualDevice != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        emulatorStore.cancelWipeDataAndStart()
+                    }
+                }
+            ),
+            presenting: emulatorStore.wipeDataConfirmationVirtualDevice
+        ) { virtualDevice in
+            Button("Cancel", role: .cancel) {
+                emulatorStore.cancelWipeDataAndStart()
+            }
+            Button("Wipe Data and Start", role: .destructive) {
+                emulatorStore.confirmWipeDataAndStart(virtualDevice)
+            }
+        } message: { virtualDevice in
+            Text("This removes all installed apps and settings from \(virtualDevice.name).")
         }
         .navigationTitle("ADBuddy")
         .toolbar {
@@ -82,44 +115,28 @@ struct ContentView: View {
                 systemImage: "arrow.triangle.2.circlepath",
                 description: Text("Checking the Android SDK and connected devices.")
             )
-        case .sdkUnavailable, .adbFailure, .noDevices:
+        case .sdkUnavailable, .adbFailure:
             ContentUnavailableView {
                 Label(deviceStore.status.title, systemImage: deviceStore.status.symbolName)
             } description: {
                 Text(deviceStore.status.detail)
             }
             .frame(minWidth: 440, minHeight: 220)
-        case .devicesAvailable:
-            List(deviceStore.devices) { device in
-                DeviceRow(
-                    device: device,
-                    isCapturing: deviceStore.isCapturingScreenshot(for: device),
-                    isPreparingScreenRecording: deviceStore.isPreparingScreenRecording(for: device),
-                    isScreenRecording: deviceStore.canStopScreenRecording(for: device),
-                    isStoppingScreenRecording: deviceStore.isStoppingScreenRecording(for: device),
-                    canStartScreenRecording: deviceStore.canStartScreenRecording(for: device),
-                    takeScreenshot: {
-                        deviceStore.takeScreenshot(of: device)
-                    },
-                    showScreenRecordingOptions: {
-                        deviceStore.presentScreenRecordingOptions(for: device)
-                    },
-                    stopScreenRecording: {
-                        deviceStore.stopScreenRecording(for: device)
-                    },
-                    openLogcat: {
-                        AppLogger.devices.info("Logcat requested from the main window")
-                        openWindow(value: LogcatWindowID(serial: device.serial))
-                    }
-                )
-            }
-            .listStyle(.inset)
-            .frame(height: deviceListHeight)
+        case .noDevices, .devicesAvailable:
+            MainDeviceListView(
+                connectedDevices: deviceStore.devices.filter { $0.kind == .physical },
+                virtualDevices: emulatorStore.virtualDevices,
+                emulatorStatus: emulatorStore.status,
+                deviceStore: deviceStore,
+                emulatorStore: emulatorStore,
+                openLogcat: openLogcat
+            )
         }
     }
 
-    private var deviceListHeight: CGFloat {
-        DeviceListLayout.deviceListHeight(for: deviceStore.devices.count)
+    private func openLogcat(for device: AndroidDevice) {
+        AppLogger.devices.info("Logcat requested from the main window")
+        openWindow(value: LogcatWindowID(serial: device.serial))
     }
 }
 
@@ -145,102 +162,6 @@ private struct EmulatorFeedbackBanner: View {
         .padding(10)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
         .shadow(radius: 4, y: 2)
-    }
-}
-
-private struct DeviceRow: View {
-    let device: AndroidDevice
-    let isCapturing: Bool
-    let isPreparingScreenRecording: Bool
-    let isScreenRecording: Bool
-    let isStoppingScreenRecording: Bool
-    let canStartScreenRecording: Bool
-    let takeScreenshot: () -> Void
-    let showScreenRecordingOptions: () -> Void
-    let stopScreenRecording: () -> Void
-    let openLogcat: () -> Void
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: device.kind.symbolName)
-                .foregroundStyle(.secondary)
-                .frame(width: 18)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(device.displayName)
-                    .fontWeight(.medium)
-                Text(device.serial)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            if device.isUsable {
-                HStack(spacing: 8) {
-                    screenRecordingControl
-
-                    Button {
-                        takeScreenshot()
-                    } label: {
-                        if isCapturing {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Label("Take Screenshot", systemImage: "camera")
-                                .labelStyle(.iconOnly)
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(isCapturing)
-                    .help("Take Screenshot")
-
-                    Divider()
-                        .frame(height: 20)
-
-                    Button(action: openLogcat) {
-                        Label("Open Logcat", systemImage: "text.alignleft")
-                            .labelStyle(.iconOnly)
-                    }
-                    .buttonStyle(.bordered)
-                    .accessibilityLabel("Open Logcat")
-                    .help("Open Logcat")
-                }
-            } else {
-                Text(device.connectionState.displayName)
-                    .font(.caption)
-                    .foregroundStyle(device.connectionState.tint)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-
-    @ViewBuilder
-    private var screenRecordingControl: some View {
-        if isPreparingScreenRecording {
-            ProgressView()
-                .controlSize(.small)
-                .help("Preparing Screen Recording")
-        } else if isScreenRecording {
-            Button(action: stopScreenRecording) {
-                Label("Stop Recording", systemImage: "stop.fill")
-                    .labelStyle(.iconOnly)
-            }
-                .buttonStyle(.bordered)
-                .help("Stop Recording")
-        } else if isStoppingScreenRecording {
-            ProgressView()
-                .controlSize(.small)
-                .help("Stopping Screen Recording")
-        } else {
-            Button(action: showScreenRecordingOptions) {
-                Label("Record Screen", systemImage: "record.circle")
-                    .labelStyle(.iconOnly)
-            }
-                .buttonStyle(.borderedProminent)
-                .disabled(!canStartScreenRecording)
-                .help("Record Screen")
-        }
     }
 }
 

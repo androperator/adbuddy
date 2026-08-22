@@ -4,7 +4,7 @@ import SwiftUI
 @main
 struct ADBuddyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @AppStorage("hasAppliedCompactWindowLayout") private var hasAppliedCompactWindowLayout = false
+    @AppStorage("hasAppliedSectionedWindowLayout") private var hasAppliedSectionedWindowLayout = false
     @State private var deviceStore: DeviceStore
     @State private var emulatorStore: EmulatorStore
     @State private var preferences: AppPreferences
@@ -19,9 +19,12 @@ struct ADBuddyApp: App {
     }
 
     var body: some Scene {
+        let connectedDeviceCount = deviceStore.devices.filter { $0.kind == .physical }.count
         let initialWindowContentSize = DeviceListLayout.initialWindowContentSize(
             for: deviceStore.status,
-            deviceCount: deviceStore.devices.count
+            connectedDeviceCount: connectedDeviceCount,
+            virtualDeviceCount: emulatorStore.virtualDevices.count,
+            isEmulatorListReady: emulatorStore.status != .loading
         )
 
         WindowGroup("ADBuddy", id: "main") {
@@ -32,7 +35,7 @@ struct ADBuddyApp: App {
                 .overlay(alignment: .topLeading) {
                     InitialWindowSizer(
                         targetContentSize: initialWindowContentSize,
-                        hasAppliedCompactLayout: $hasAppliedCompactWindowLayout
+                        hasAppliedCompactLayout: $hasAppliedSectionedWindowLayout
                     )
                     .frame(width: 0, height: 0)
                     .allowsHitTesting(false)
@@ -42,7 +45,7 @@ struct ADBuddyApp: App {
                     emulatorStore.refreshVirtualDevices()
                 }
         }
-        .defaultSize(width: DeviceListLayout.windowWidth, height: 200)
+        .defaultSize(width: DeviceListLayout.windowWidth, height: 280)
         .commands {
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {

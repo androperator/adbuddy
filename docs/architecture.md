@@ -17,7 +17,8 @@ The app has separate, explicit scene roots:
 
 ```text
 WindowGroup(id: "main")
-  Compact device list and actions, or an explanatory unavailable state
+  Compact Connected Devices and Android Emulators sections, or an explanatory
+  unavailable state
 
 MenuBarExtra
   Fast per-device screenshot and recording commands, installed-emulator launch,
@@ -88,8 +89,10 @@ DeviceStore -> MediaNotificationService -> macOS notification center
 AppPreferences -> recording options -> ScreenRecordingService
 DeviceStore -> ScreenRecordingService -> ADB screenrecord, pull, cleanup
 DeviceStore discovery by serial -> LogcatWindowView -> LogcatStore
-LogcatStore -> LogcatService -> StreamingProcessRunner -> adb logcat
+DeviceStore emulator entries -> EmulatorStore -> AndroidEmulatorService
 EmulatorStore -> AndroidEmulatorService -> Emulator executable -> standalone Emulator window
+EmulatorStore -> AndroidEmulatorService -> adb emulator-console commands
+LogcatStore -> LogcatService -> StreamingProcessRunner -> adb logcat
 ```
 
 `DeviceStore` owns automatic one-second refresh timing, selected device state,
@@ -99,11 +102,20 @@ and presentation-ready errors. It does not parse process output itself.
 subprocess lifecycle and exposes captured stdout, stderr, exit status, and
 cancellation.
 
-`EmulatorStore` loads the installed AVD names on demand and owns concise launch
-feedback. `AndroidEmulatorService` asks the SDK's `emulator` executable for
+`EmulatorStore` loads installed AVD names on demand, maps usable ADB emulator
+serials back to their AVD names, and owns lifecycle state plus concise user
+feedback. The main window renders physical devices only in **Connected
+Devices**, and renders every installed AVD under **Android Emulators**. A
+running AVD then exposes the same capture and Logcat actions as a connected
+device.
+
+`AndroidEmulatorService` asks the SDK's `emulator` executable for
 `-list-avds`, then starts a selected AVD through a short-lived foreground
-process launch with a fixed `-avd <name>` argument array. It must not use the
-Android Studio flags that hide or embed the Emulator window. Once launched,
+process launch with a fixed argument array. Quick Boot uses `-avd <name>`, Cold
+Boot adds `-no-snapshot-load`, and an explicitly confirmed reset adds
+`-wipe-data`. It resolves a running AVD through the ADB emulator-console
+`avd name` command and stops it with `adb -s <serial> emu kill`. It must not
+use Android Studio flags that hide or embed the Emulator window. Once launched,
 the Android Emulator owns its window and Dock presence independently of
 ADBuddy.
 
@@ -223,6 +235,8 @@ Test pure behavior without a device:
   and non-overwriting MP4 retrieval.
 - incremental Logcat parsing, filtering, retention, process cancellation,
   reconnect policy, preferences, and window-scoped inspection controls.
+- installed-AVD parsing, emulator launch and lifecycle argument construction,
+  and running-AVD serial mapping.
 
 Live ADB validation supplements those tests when a device or emulator is
 available.

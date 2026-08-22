@@ -36,4 +36,41 @@ final class DeviceListLayoutTests: XCTestCase {
         )
         XCTAssertNil(DeviceListLayout.initialWindowContentSize(for: .loading, deviceCount: 0))
     }
+
+    func testSectionedListReservesRowsForBothDeviceGroups() {
+        XCTAssertEqual(
+            DeviceListLayout.sectionedListHeight(
+                connectedDeviceCount: 0,
+                virtualDeviceCount: 3
+            ),
+            296
+        )
+        XCTAssertEqual(
+            DeviceListLayout.sectionedListHeight(
+                connectedDeviceCount: 4,
+                virtualDeviceCount: 5
+            ),
+            412
+        )
+    }
+
+    func testSectionedInitialWindowSizeWaitsForEmulatorDiscovery() {
+        XCTAssertNil(
+            DeviceListLayout.initialWindowContentSize(
+                for: .noDevices,
+                connectedDeviceCount: 0,
+                virtualDeviceCount: 0,
+                isEmulatorListReady: false
+            )
+        )
+        XCTAssertEqual(
+            DeviceListLayout.initialWindowContentSize(
+                for: .devicesAvailable,
+                connectedDeviceCount: 1,
+                virtualDeviceCount: 2,
+                isEmulatorListReady: true
+            ),
+            CGSize(width: 520, height: 238)
+        )
+    }
 }

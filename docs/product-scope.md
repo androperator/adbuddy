@@ -66,14 +66,22 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - When Show taps is enabled, preserve the existing Android setting and restore
   it when the recording finishes.
 
-### Phase 3 - Emulator launch
+### Phase 3 - Emulator management
 
-- List the installed Android Virtual Devices (AVDs) reported by the Android
-  Emulator executable.
-- Let users open an installed AVD from the main-window toolbar or menu bar.
-- Start each selection with the SDK's `emulator -avd <name>` command and no
-  Android Studio embedded-window flags, so the Android Emulator owns its
-  normal standalone macOS window and Dock presence.
+- Separate usable physical devices from installed Android Virtual Devices
+  (AVDs) in the compact main-window list.
+- Show every installed AVD and whether it is stopped, starting, running, or
+  stopping. A running AVD maps to its ADB serial before device actions appear.
+- Let users start a stopped AVD with Quick Boot, use Cold Boot from its action
+  menu, or stop a running AVD.
+- Require an explicit confirmation before **Wipe Data and Start**, because it
+  removes the AVD's installed apps and settings.
+- Start each mode with the SDK's `emulator` executable and fixed arguments:
+  `-avd <name>` for Quick Boot, `-no-snapshot-load` for Cold Boot, and
+  `-wipe-data` for a confirmed reset. Do not use Android Studio
+  embedded-window flags, so the Android Emulator owns its normal standalone
+  macOS window and Dock presence.
+- Stop a running AVD through `adb -s <serial> emu kill`.
 
 ## Initial acceptance flow
 
@@ -90,7 +98,7 @@ The first implementation is a complete vertical slice, not a visual mockup.
 Do not create placeholder interfaces or implementation for these until their
 respective preceding slices are complete:
 
-- emulator stop controls and AVD creation or configuration;
+- AVD creation, configuration, and snapshot management;
 - Logcat implementation, whose first standalone window target is specified in
   [`logcat.md`](logcat.md);
 - in-app automatic updates.

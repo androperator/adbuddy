@@ -66,8 +66,13 @@ Manual verification should cover, where locally available:
    as screenshots, followed by a successful Stop Recording action;
 9. a successful recording notification offering **Reveal in Finder**;
 10. Show taps returning to its original Android setting after recording.
-11. An installed AVD appearing in the ADBuddy launcher menus and opening in
-    the Android Emulator's own standalone window.
+11. Installed AVDs appearing in the **Android Emulators** section with correct
+    stopped or running status.
+12. Quick Boot and Cold Boot opening an AVD in the Android Emulator's own
+    standalone window, with its ADB serial shown after discovery.
+13. A running AVD stopping through its control. Exercise **Wipe Data and
+    Start** only as far as its confirmation in routine manual testing; do not
+    erase a developer's AVD unless that reset is intentional.
 
 ## Change discipline
 
