@@ -11,12 +11,16 @@ final class DeviceStore {
     private let screenshotNotifier: any ScreenshotNotifying
     private var pollingTask: Task<Void, Never>?
     private var capturingDeviceSerials = Set<String>()
+    private var activeScreenRecording: ScreenRecordingSession?
 
     private(set) var devices: [AndroidDevice] = []
     private(set) var status: DeviceDiscoveryStatus = .loading
     private(set) var resolvedSDK: AndroidSDK?
     private(set) var isRefreshing = false
     private(set) var screenshotFeedback: ScreenshotFeedback?
+    var screenRecordingOptionsDevice: AndroidDevice?
+    private(set) var screenRecordingActivity: ScreenRecordingActivity?
+    private(set) var screenRecordingFeedback: ScreenRecordingFeedback?
 
     init(
         preferences: AppPreferences = AppPreferences(),
@@ -144,6 +148,147 @@ final class DeviceStore {
         screenshotFeedback = nil
     }
 
+    var screenRecordingOptions: ScreenRecordingOptions {
+        ScreenRecordingOptions(
+            bitRateMegabitsPerSecond: preferences.screenRecordingBitRateMegabitsPerSecond,
+            resolution: ScreenRecordingResolution(rawValue: preferences.screenRecordingResolutionPercentage) ?? .native,
+            showsTaps: preferences.screenRecordingShowsTaps
+        )
+    }
+
+    func presentScreenRecordingOptions(for device: AndroidDevice) {
+        guard device.isUsable else {
+            showScreenRecordingFeedback(.failure("\(device.displayName) is not available for recording."))
+            return
+        }
+        guard activeScreenRecording == nil else {
+            showScreenRecordingFeedback(.failure("Finish the current recording before starting another one."))
+            return
+        }
+
+        AppLogger.recording.info("Screen recording options requested")
+        screenRecordingOptionsDevice = device
+    }
+
+    func dismissScreenRecordingOptions() {
+        screenRecordingOptionsDevice = nil
+    }
+
+    func startScreenRecording(of device: AndroidDevice, options: ScreenRecordingOptions) {
+        screenRecordingOptionsDevice = nil
+
+        guard device.isUsable else {
+            showScreenRecordingFeedback(.failure("\(device.displayName) is not available for recording."))
+            return
+        }
+        guard let resolvedSDK else {
+            showScreenRecordingFeedback(.failure("ADB is not available. Refresh device discovery and try again."))
+            return
+        }
+        guard activeScreenRecording == nil else {
+            showScreenRecordingFeedback(.failure("Finish the current recording before starting another one."))
+            return
+        }
+        if let validationMessage = options.validationMessage {
+            showScreenRecordingFeedback(.failure(validationMessage))
+            return
+        }
+
+        preferences.screenRecordingBitRateMegabitsPerSecond = options.bitRateMegabitsPerSecond
+        preferences.screenRecordingResolutionPercentage = options.resolution.rawValue
+        preferences.screenRecordingShowsTaps = options.showsTaps
+
+        let session = ScreenRecordingSession(device: device)
+        activeScreenRecording = session
+        screenRecordingActivity = .preparing(session)
+        screenRecordingFeedback = nil
+        AppLogger.recording.info("Preparing screen recording")
+
+        let screenRecordingService = ScreenRecordingService(
+            adbPath: resolvedSDK.adbPath,
+            processRunner: processRunner
+        )
+        let destination = preferences.screenshotDirectory
+
+        Task { [weak self] in
+            let result = await screenRecordingService.record(
+                session: session,
+                options: options,
+                destination: destination,
+                onScreenRecorderStarted: { @MainActor [weak self] in
+                    self?.markScreenRecordingStarted(session)
+                }
+            )
+            guard let self else {
+                return
+            }
+            self.finishScreenRecording(session: session, result: result)
+        }
+    }
+
+    func canStartScreenRecording(for device: AndroidDevice) -> Bool {
+        device.isUsable && activeScreenRecording == nil
+    }
+
+    func canStopScreenRecording(for device: AndroidDevice) -> Bool {
+        guard case .recording(let session) = screenRecordingActivity else {
+            return false
+        }
+        return session.device.serial == device.serial
+    }
+
+    func isPreparingScreenRecording(for device: AndroidDevice) -> Bool {
+        guard case .preparing(let session) = screenRecordingActivity else {
+            return false
+        }
+        return session.device.serial == device.serial
+    }
+
+    func isStoppingScreenRecording(for device: AndroidDevice) -> Bool {
+        guard case .stopping(let session) = screenRecordingActivity else {
+            return false
+        }
+        return session.device.serial == device.serial
+    }
+
+    func stopScreenRecording(for device: AndroidDevice) {
+        guard case .recording(let session) = screenRecordingActivity,
+              session.device.serial == device.serial,
+              let resolvedSDK else {
+            return
+        }
+
+        screenRecordingActivity = .stopping(session)
+        AppLogger.recording.info("Stopping screen recording")
+        let screenRecordingService = ScreenRecordingService(
+            adbPath: resolvedSDK.adbPath,
+            processRunner: processRunner
+        )
+
+        Task { [weak self] in
+            let result = await screenRecordingService.stop(session: session)
+            guard let self, self.activeScreenRecording == session else {
+                return
+            }
+
+            switch result {
+            case .stopped:
+                break
+            case .failure(let message):
+                self.screenRecordingActivity = .recording(session)
+                AppLogger.recording.error("Could not stop screen recording: \(message, privacy: .public)")
+                self.showScreenRecordingFeedback(.failure("Could not stop recording: \(message)"))
+            }
+        }
+    }
+
+    func clearScreenRecordingFeedback(ifMatching feedback: ScreenRecordingFeedback) {
+        guard screenRecordingFeedback == feedback else {
+            return
+        }
+        screenRecordingFeedback = nil
+    }
+
     private func loadDevices() async -> DeviceLoadOutcome {
         switch sdkLocator.resolve() {
         case .unavailable(let failure):
@@ -184,6 +329,45 @@ final class DeviceStore {
         Task { [weak self, feedback] in
             try? await Task.sleep(for: timeout)
             self?.clearScreenshotFeedback(ifMatching: feedback)
+        }
+    }
+
+    private func markScreenRecordingStarted(_ session: ScreenRecordingSession) {
+        guard activeScreenRecording == session else {
+            return
+        }
+        screenRecordingActivity = .recording(session)
+        AppLogger.recording.info("Screen recording started")
+    }
+
+    private func finishScreenRecording(
+        session: ScreenRecordingSession,
+        result: ScreenRecordingResult
+    ) {
+        guard activeScreenRecording == session else {
+            return
+        }
+
+        activeScreenRecording = nil
+        screenRecordingActivity = nil
+
+        switch result {
+        case .success(let fileURL, let warning):
+            AppLogger.recording.info("Screen recording saved")
+            showScreenRecordingFeedback(.success(fileURL, warning: warning))
+        case .failure(let error):
+            AppLogger.recording.error("Screen recording failed: \(error.message, privacy: .public)")
+            showScreenRecordingFeedback(.failure(error.message))
+        }
+    }
+
+    private func showScreenRecordingFeedback(_ feedback: ScreenRecordingFeedback) {
+        screenRecordingFeedback = feedback
+        let timeout: Duration = feedback.isSuccess ? .seconds(6) : .seconds(8)
+
+        Task { [weak self, feedback] in
+            try? await Task.sleep(for: timeout)
+            self?.clearScreenRecordingFeedback(ifMatching: feedback)
         }
     }
 

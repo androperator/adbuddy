@@ -14,6 +14,8 @@ currently provides:
 - connected-device discovery with clear connection states;
 - a macOS menu bar utility and a conventional main window;
 - direct PNG screenshot capture from a selected connected device;
+- screen recording with configurable bit rate, native-resolution percentage,
+  and Show taps;
 - native capture notifications with a **Reveal in Finder** action;
 - automatic PNG clipboard copy, enabled by default.
 
@@ -31,13 +33,14 @@ ADBuddy will find the Android SDK through `ANDROID_HOME`, `ANDROID_SDK_ROOT`,
 or the standard `~/Library/Android/sdk` installation. It will not assume that a
 GUI app inherits a useful shell `PATH`.
 
-## Screenshot destination
+## Media destination
 
-Screenshots default to `~/Screenshots`, which is
-`/Users/chrislacy/Screenshots` on the initial development machine. The
-destination and automatic clipboard-copy preference are saved in `UserDefaults`.
-Automatic copying defaults to enabled. Both controls will be exposed together
-through Settings in a later UI pass.
+Screenshots and screen recordings share one destination. It defaults to
+`~/Screenshots`, which is `/Users/chrislacy/Screenshots` on the initial
+development machine. The destination, automatic clipboard-copy preference, and
+screen-recording options are saved in `UserDefaults`. Automatic PNG copying
+defaults to enabled. These controls will be exposed through Settings in a later
+UI pass.
 
 ## Planned installation
 
@@ -72,7 +75,7 @@ source layout.
 2. **Phase 1 - Screenshots:** direct PNG capture from the menu bar or main
    window, timestamped local files, and useful success or failure feedback.
 3. **Phase 2 - Screen recording:** start and stop recording, retrieval, and
-   scaled output presets.
+   bit-rate, scaled-output, and Show taps controls.
 4. **Phase 3 - Emulator management:** list, launch, stop, and refresh AVDs.
 5. **Phase 4 - Logcat:** a native streaming viewer with selection, filtering,
    search, pause, copying, and scroll-follow controls.

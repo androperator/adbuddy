@@ -7,6 +7,9 @@ final class AppPreferences {
     private enum Key {
         static let screenshotDirectoryPath = "screenshotDirectoryPath"
         static let automaticallyCopyScreenshots = "automaticallyCopyScreenshots"
+        static let screenRecordingBitRateMegabitsPerSecond = "screenRecordingBitRateMegabitsPerSecond"
+        static let screenRecordingResolutionPercentage = "screenRecordingResolutionPercentage"
+        static let screenRecordingShowsTaps = "screenRecordingShowsTaps"
     }
 
     private let userDefaults: UserDefaults
@@ -21,6 +24,24 @@ final class AppPreferences {
     var automaticallyCopyScreenshots: Bool {
         didSet {
             userDefaults.set(automaticallyCopyScreenshots, forKey: Key.automaticallyCopyScreenshots)
+        }
+    }
+
+    var screenRecordingBitRateMegabitsPerSecond: Int {
+        didSet {
+            userDefaults.set(screenRecordingBitRateMegabitsPerSecond, forKey: Key.screenRecordingBitRateMegabitsPerSecond)
+        }
+    }
+
+    var screenRecordingResolutionPercentage: Int {
+        didSet {
+            userDefaults.set(screenRecordingResolutionPercentage, forKey: Key.screenRecordingResolutionPercentage)
+        }
+    }
+
+    var screenRecordingShowsTaps: Bool {
+        didSet {
+            userDefaults.set(screenRecordingShowsTaps, forKey: Key.screenRecordingShowsTaps)
         }
     }
 
@@ -39,6 +60,12 @@ final class AppPreferences {
         }
 
         automaticallyCopyScreenshots = userDefaults.object(forKey: Key.automaticallyCopyScreenshots) as? Bool ?? true
+        screenRecordingBitRateMegabitsPerSecond = userDefaults.object(forKey: Key.screenRecordingBitRateMegabitsPerSecond) as? Int
+            ?? ScreenRecordingOptions.default.bitRateMegabitsPerSecond
+        screenRecordingResolutionPercentage = userDefaults.object(forKey: Key.screenRecordingResolutionPercentage) as? Int
+            ?? ScreenRecordingOptions.default.resolution.rawValue
+        screenRecordingShowsTaps = userDefaults.object(forKey: Key.screenRecordingShowsTaps) as? Bool
+            ?? ScreenRecordingOptions.default.showsTaps
     }
 
     func resetScreenshotDirectory() {

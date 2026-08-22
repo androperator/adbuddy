@@ -44,6 +44,24 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Copy successful PNG captures to the clipboard by default. This behavior is a
   persisted preference that the future Settings UI will expose.
 
+### Phase 2 - Screen recording
+
+- Offer **Record Screen** for each usable connected device from the menu bar
+  and main window.
+- Present native controls for the requested recording options:
+  - bit rate in Mbps, defaulting to 8 Mbps;
+  - resolution as 100%, 75%, 50%, or 25% of physical display size, defaulting
+    to 100%;
+  - Show taps, defaulting to disabled.
+- Use `adb shell screenrecord` with a fixed argument array, passing a bit rate
+  and scaled size when selected.
+- Stop the selected device's recording with a targeted interrupt, retrieve its
+  MP4, and remove its temporary device-side file.
+- Save MP4s into the same configured destination as screenshots. Do not create
+  a separate recording directory or a destination picker in this phase.
+- When Show taps is enabled, preserve the existing Android setting and restore
+  it when the recording finishes.
+
 ## Initial acceptance flow
 
 1. Launch ADBuddy.
@@ -56,10 +74,9 @@ The first implementation is a complete vertical slice, not a visual mockup.
 
 ## Explicitly deferred work
 
-Do not create placeholder interfaces or implementation for these until the
-screenshot slice is complete:
+Do not create placeholder interfaces or implementation for these until their
+respective preceding slices are complete:
 
-- screen recording and resolution scaling;
 - installed AVD listing and emulator launch or stop controls;
 - Logcat streaming, filters, search, pause, and export;
 - configurable screenshot directory UI;

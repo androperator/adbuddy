@@ -5,6 +5,7 @@ enum ScreenshotFilename {
         in directoryURL: URL,
         deviceName: String,
         date: Date,
+        fileExtension: String = "png",
         timeZone: TimeZone = .current,
         fileExists: (URL) -> Bool
     ) -> URL {
@@ -14,7 +15,7 @@ enum ScreenshotFilename {
         var attempt = 1
         while true {
             let suffix = attempt == 1 ? "" : "-\(attempt)"
-            let fileURL = directoryURL.appendingPathComponent("\(baseName)\(suffix).png")
+            let fileURL = directoryURL.appendingPathComponent("\(baseName)\(suffix).\(fileExtension)")
             if !fileExists(fileURL) {
                 return fileURL
             }

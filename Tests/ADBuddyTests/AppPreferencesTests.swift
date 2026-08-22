@@ -56,4 +56,35 @@ final class AppPreferencesTests: XCTestCase {
         )
         XCTAssertFalse(reloadedPreferences.automaticallyCopyScreenshots)
     }
+
+    func testScreenRecordingOptionsUseStableDefaultsAndPersistChanges() {
+        let suiteName = "AppPreferencesTests.\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Could not create isolated user defaults")
+        }
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let preferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: URL(fileURLWithPath: "/tmp/default-screenshots", isDirectory: true)
+        )
+
+        XCTAssertEqual(preferences.screenRecordingBitRateMegabitsPerSecond, 8)
+        XCTAssertEqual(preferences.screenRecordingResolutionPercentage, 100)
+        XCTAssertFalse(preferences.screenRecordingShowsTaps)
+
+        preferences.screenRecordingBitRateMegabitsPerSecond = 12
+        preferences.screenRecordingResolutionPercentage = 50
+        preferences.screenRecordingShowsTaps = true
+
+        let reloadedPreferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: URL(fileURLWithPath: "/tmp/default-screenshots", isDirectory: true)
+        )
+        XCTAssertEqual(reloadedPreferences.screenRecordingBitRateMegabitsPerSecond, 12)
+        XCTAssertEqual(reloadedPreferences.screenRecordingResolutionPercentage, 50)
+        XCTAssertTrue(reloadedPreferences.screenRecordingShowsTaps)
+    }
 }

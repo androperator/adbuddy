@@ -46,6 +46,22 @@ struct MenuBarContentView: View {
                             deviceStore.takeScreenshot(of: device)
                         }
                         .disabled(deviceStore.isCapturingScreenshot(for: device))
+
+                        if deviceStore.canStopScreenRecording(for: device) {
+                            Button("Stop Recording") {
+                                AppLogger.menuBar.info("Stop recording selected from menu bar")
+                                deviceStore.stopScreenRecording(for: device)
+                            }
+                        } else if !deviceStore.isPreparingScreenRecording(for: device),
+                                  !deviceStore.isStoppingScreenRecording(for: device) {
+                            Button("Record Screen…") {
+                                AppLogger.menuBar.info("Screen recording selected from menu bar")
+                                openWindow(id: "main")
+                                NSApp.activate(ignoringOtherApps: true)
+                                deviceStore.presentScreenRecordingOptions(for: device)
+                            }
+                            .disabled(!deviceStore.canStartScreenRecording(for: device))
+                        }
                     } else {
                         Text(device.connectionState.displayName)
                     }

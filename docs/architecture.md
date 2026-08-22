@@ -18,7 +18,7 @@ WindowGroup(id: "main")
   Basic device overview and actions
 
 MenuBarExtra
-  Fast per-device screenshot commands and app navigation
+  Fast per-device screenshot and recording commands, plus app navigation
 
 Settings
   Reserved for persisted preferences as Settings UI is introduced
@@ -72,6 +72,8 @@ AndroidSDKLocator -> resolved adb path -> ADBClient
 AppPreferences -> screenshot destination -> ScreenshotService
 AppPreferences -> clipboard preference -> ScreenshotClipboardService
 DeviceStore -> ScreenshotNotificationService -> macOS notification center
+AppPreferences -> recording options -> ScreenRecordingService
+DeviceStore -> ScreenRecordingService -> ADB screenrecord, pull, cleanup
 ```
 
 `DeviceStore` owns refresh timing, selected device state, and presentation-ready
@@ -125,14 +127,34 @@ registers a **Reveal in Finder** notification action and routes that action to
 
 `AppPreferences` is an application-owned wrapper around `UserDefaults`.
 It persists a screenshot destination path and whether successful captures are
-automatically copied to the clipboard. The directory defaults to the current
-user's `~/Screenshots` directory and automatic copying defaults to enabled.
-The service layer receives values from the preferences store rather than
-accessing `UserDefaults` itself.
+automatically copied to the clipboard. The same path is the shared media
+destination for screenshots and MP4 recordings. It also stores a recording bit
+rate, resolution percentage, and Show taps value for the next recording. The
+directory defaults to the current user's `~/Screenshots` directory and
+automatic copying defaults to enabled. The service layer receives values from
+the preferences store rather than accessing `UserDefaults` itself.
 
 Because the app is non-sandboxed, store a regular absolute path. If future
 distribution requires sandboxing, replace this storage with a security-scoped
 bookmark through a deliberate migration.
+
+## Screen recording
+
+`ScreenRecordingService` constructs direct ADB calls through `ProcessRunner`.
+For native resolution it leaves out `--size`; for a reduced percentage it asks
+ADB for `wm size`, parses the physical dimensions, and supplies an even-sized
+scaled `--size` value. It passes `--bit-rate` in bits per second.
+
+The recording itself writes to a generated file in `/data/local/tmp`. The
+service asks `pkill` to send `SIGINT` only to the process that contains that
+generated path, allowing Android's recorder to finish the MP4. It pulls to a
+temporary local file in the shared media directory, then moves that file to a
+collision-resistant final name. This avoids replacing an existing media file.
+
+Show taps is implemented through Android's `show_touches` system setting. The
+service reads the prior setting, enables it for the recording, and restores the
+saved value after the recorder exits. If restoration fails, the saved recording
+is retained and the user receives a warning.
 
 ## Logging and tests
 
@@ -146,6 +168,8 @@ Test pure behavior without a device:
 - SDK candidate precedence and error classification;
 - filename sanitization and collision handling;
 - process result to user-facing error mapping.
+- display-size parsing, recording argument construction, Show taps restoration,
+  and non-overwriting MP4 retrieval.
 
 Live ADB validation supplements those tests when a device or emulator is
 available.

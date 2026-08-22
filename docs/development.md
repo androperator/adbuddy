@@ -62,6 +62,9 @@ Manual verification should cover, where locally available:
 5. a successful screenshot notification offering **Reveal in Finder**;
 6. automatic clipboard copy when that preference is enabled;
 7. a failed ADB invocation presenting an actionable error.
+8. a screen recording with each selected option reaching the same media folder
+   as screenshots, followed by a successful Stop Recording action;
+9. Show taps returning to its original Android setting after recording.
 
 ## Change discipline
 

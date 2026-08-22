@@ -4,6 +4,8 @@ struct ContentView: View {
     @Environment(DeviceStore.self) private var deviceStore
 
     var body: some View {
+        @Bindable var deviceStore = deviceStore
+
         VStack(spacing: 0) {
             statusSummary
 
@@ -12,14 +14,33 @@ struct ContentView: View {
             deviceContent
         }
         .overlay(alignment: .bottom) {
-            if let feedback = deviceStore.screenshotFeedback {
-                ScreenshotFeedbackBanner(feedback: feedback) {
-                    deviceStore.clearScreenshotFeedback(ifMatching: feedback)
+            VStack(spacing: 8) {
+                if let feedback = deviceStore.screenshotFeedback {
+                    ScreenshotFeedbackBanner(feedback: feedback) {
+                        deviceStore.clearScreenshotFeedback(ifMatching: feedback)
+                    }
                 }
-                .padding()
+
+                if let feedback = deviceStore.screenRecordingFeedback {
+                    ScreenRecordingFeedbackBanner(feedback: feedback) {
+                        deviceStore.clearScreenRecordingFeedback(ifMatching: feedback)
+                    }
+                }
             }
+            .padding()
         }
         .animation(.default, value: deviceStore.screenshotFeedback)
+        .animation(.default, value: deviceStore.screenRecordingFeedback)
+        .sheet(item: $deviceStore.screenRecordingOptionsDevice) { device in
+            ScreenRecordingOptionsView(
+                device: device,
+                options: deviceStore.screenRecordingOptions,
+                dismiss: deviceStore.dismissScreenRecordingOptions,
+                startRecording: { options in
+                    deviceStore.startScreenRecording(of: device, options: options)
+                }
+            )
+        }
         .navigationTitle("ADBuddy")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -81,8 +102,18 @@ struct ContentView: View {
                 DeviceRow(
                     device: device,
                     isCapturing: deviceStore.isCapturingScreenshot(for: device),
+                    isPreparingScreenRecording: deviceStore.isPreparingScreenRecording(for: device),
+                    isScreenRecording: deviceStore.canStopScreenRecording(for: device),
+                    isStoppingScreenRecording: deviceStore.isStoppingScreenRecording(for: device),
+                    canStartScreenRecording: deviceStore.canStartScreenRecording(for: device),
                     takeScreenshot: {
                         deviceStore.takeScreenshot(of: device)
+                    },
+                    showScreenRecordingOptions: {
+                        deviceStore.presentScreenRecordingOptions(for: device)
+                    },
+                    stopScreenRecording: {
+                        deviceStore.stopScreenRecording(for: device)
                     }
                 )
             }
@@ -94,7 +125,13 @@ struct ContentView: View {
 private struct DeviceRow: View {
     let device: AndroidDevice
     let isCapturing: Bool
+    let isPreparingScreenRecording: Bool
+    let isScreenRecording: Bool
+    let isStoppingScreenRecording: Bool
+    let canStartScreenRecording: Bool
     let takeScreenshot: () -> Void
+    let showScreenRecordingOptions: () -> Void
+    let stopScreenRecording: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -113,18 +150,22 @@ private struct DeviceRow: View {
             Spacer()
 
             if device.isUsable {
-                Button {
-                    takeScreenshot()
-                } label: {
-                    if isCapturing {
-                        ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Text("Take Screenshot")
+                HStack(spacing: 8) {
+                    screenRecordingControl
+
+                    Button {
+                        takeScreenshot()
+                    } label: {
+                        if isCapturing {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Text("Take Screenshot")
+                        }
                     }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isCapturing)
                 }
-                .buttonStyle(.borderedProminent)
-                .disabled(isCapturing)
             } else {
                 Text(device.connectionState.displayName)
                     .font(.caption)
@@ -133,10 +174,53 @@ private struct DeviceRow: View {
         }
         .padding(.vertical, 2)
     }
+
+    @ViewBuilder
+    private var screenRecordingControl: some View {
+        if isPreparingScreenRecording {
+            Label("Preparing", systemImage: "record.circle")
+                .foregroundStyle(.secondary)
+        } else if isScreenRecording {
+            Button("Stop Recording", action: stopScreenRecording)
+                .buttonStyle(.bordered)
+        } else if isStoppingScreenRecording {
+            Label("Stopping", systemImage: "stop.circle")
+                .foregroundStyle(.secondary)
+        } else {
+            Button("Record Screen…", action: showScreenRecordingOptions)
+                .buttonStyle(.bordered)
+                .disabled(!canStartScreenRecording)
+        }
+    }
 }
 
 private struct ScreenshotFeedbackBanner: View {
     let feedback: ScreenshotFeedback
+    let dismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: feedback.isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(feedback.isSuccess ? .green : .orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(feedback.title)
+                    .font(.subheadline.weight(.medium))
+                Text(feedback.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            Button("Dismiss", action: dismiss)
+                .buttonStyle(.borderless)
+        }
+        .padding(10)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .shadow(radius: 4, y: 2)
+    }
+}
+
+private struct ScreenRecordingFeedbackBanner: View {
+    let feedback: ScreenRecordingFeedback
     let dismiss: () -> Void
 
     var body: some View {
