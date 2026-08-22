@@ -51,7 +51,6 @@ final class DeviceStore {
         }
 
         isRefreshing = true
-        status = .loading
         AppLogger.devices.info("Refreshing Android devices")
 
         Task { [weak self] in
