@@ -15,7 +15,7 @@ The app has separate, explicit scene roots:
 
 ```text
 WindowGroup(id: "main")
-  Basic device overview and actions
+  Compact device list and actions, or an explanatory unavailable state
 
 MenuBarExtra
   Fast per-device screenshot and recording commands, plus app navigation

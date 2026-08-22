@@ -12,7 +12,7 @@ currently provides:
 
 - Android SDK and ADB discovery;
 - connected-device discovery with clear connection states;
-- a macOS menu bar utility and a conventional main window;
+- a macOS menu bar utility and a compact main-window device list;
 - direct PNG screenshot capture from a selected connected device;
 - screen recording with configurable bit rate, native-resolution percentage,
   and Show taps;

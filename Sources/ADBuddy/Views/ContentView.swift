@@ -6,13 +6,7 @@ struct ContentView: View {
     var body: some View {
         @Bindable var deviceStore = deviceStore
 
-        VStack(spacing: 0) {
-            statusSummary
-
-            Divider()
-
-            deviceContent
-        }
+        deviceContent
         .overlay(alignment: .bottom) {
             VStack(spacing: 8) {
                 if let feedback = deviceStore.screenshotFeedback {
@@ -55,29 +49,6 @@ struct ContentView: View {
         }
     }
 
-    private var statusSummary: some View {
-        HStack(spacing: 10) {
-            Image(systemName: deviceStore.status.symbolName)
-                .foregroundStyle(deviceStore.status.tint)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(deviceStore.status.title)
-                    .font(.headline)
-                Text(deviceStore.status.detail)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            if deviceStore.isRefreshing {
-                ProgressView()
-                    .controlSize(.small)
-            }
-        }
-        .padding()
-    }
-
     @ViewBuilder
     private var deviceContent: some View {
         switch deviceStore.status {
@@ -97,6 +68,7 @@ struct ContentView: View {
                     deviceStore.refresh()
                 }
             }
+            .frame(minWidth: 440, minHeight: 220)
         case .devicesAvailable:
             List(deviceStore.devices) { device in
                 DeviceRow(
@@ -118,7 +90,12 @@ struct ContentView: View {
                 )
             }
             .listStyle(.inset)
+            .frame(height: deviceListHeight)
         }
+    }
+
+    private var deviceListHeight: CGFloat {
+        DeviceListLayout.deviceListHeight(for: deviceStore.devices.count)
     }
 }
 

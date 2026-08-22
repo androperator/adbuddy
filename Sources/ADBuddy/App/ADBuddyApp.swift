@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct ADBuddyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @AppStorage("hasAppliedCompactWindowLayout") private var hasAppliedCompactWindowLayout = false
     @State private var deviceStore: DeviceStore
     @State private var preferences: AppPreferences
 
@@ -15,15 +16,28 @@ struct ADBuddyApp: App {
     }
 
     var body: some Scene {
+        let initialWindowContentSize = DeviceListLayout.initialWindowContentSize(
+            for: deviceStore.status,
+            deviceCount: deviceStore.devices.count
+        )
+
         WindowGroup("ADBuddy", id: "main") {
             ContentView()
                 .environment(deviceStore)
                 .environment(preferences)
+                .overlay(alignment: .topLeading) {
+                    InitialWindowSizer(
+                        targetContentSize: initialWindowContentSize,
+                        hasAppliedCompactLayout: $hasAppliedCompactWindowLayout
+                    )
+                    .frame(width: 0, height: 0)
+                    .allowsHitTesting(false)
+                }
                 .task {
                     deviceStore.start()
                 }
         }
-        .defaultSize(width: 640, height: 420)
+        .defaultSize(width: DeviceListLayout.windowWidth, height: 200)
 
         MenuBarExtra(
             "ADBuddy",
