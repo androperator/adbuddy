@@ -13,9 +13,11 @@ struct ApplicationIDPicker: NSViewRepresentable {
     func makeNSView(context: Context) -> NSComboBox {
         let comboBox = NSComboBox()
         comboBox.isEditable = true
-        comboBox.completes = true
+        comboBox.completes = false
         comboBox.controlSize = .small
         comboBox.delegate = context.coordinator
+        comboBox.target = context.coordinator
+        comboBox.action = #selector(Coordinator.commitSelection(_:))
         comboBox.setAccessibilityLabel("Application ID")
         comboBox.toolTip = "Application ID"
         return comboBox
@@ -60,11 +62,22 @@ struct ApplicationIDPicker: NSViewRepresentable {
             commit(from: notification)
         }
 
+        @objc func commitSelection(_ sender: Any?) {
+            guard let comboBox = sender as? NSComboBox else {
+                return
+            }
+            commit(applicationID: comboBox.stringValue)
+        }
+
         private func commit(from notification: Notification) {
             guard let comboBox = notification.object as? NSComboBox else {
                 return
             }
-            onCommit(comboBox.stringValue == "All Applications" ? "" : comboBox.stringValue)
+            commit(applicationID: comboBox.stringValue)
+        }
+
+        private func commit(applicationID: String) {
+            onCommit(applicationID == "All Applications" ? "" : applicationID)
         }
     }
 }
