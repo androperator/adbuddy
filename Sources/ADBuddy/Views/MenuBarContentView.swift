@@ -24,6 +24,14 @@ struct MenuBarContentView: View {
             EmulatorMenuContent()
         }
 
+        Button("Open Link…") {
+            AppLogger.menuBar.info("Deep link launcher selected from menu bar")
+            openWindow(id: "main")
+            NSApp.activate(ignoringOtherApps: true)
+            deviceStore.presentDeepLinkLauncher()
+        }
+        .disabled(!deviceStore.devices.contains(where: \.isUsable))
+
         Divider()
 
         deviceItems

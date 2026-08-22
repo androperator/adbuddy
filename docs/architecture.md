@@ -78,6 +78,7 @@ DeviceStore discovery by serial -> LogcatWindowView -> LogcatStore
 DeviceStore emulator entries -> EmulatorStore -> AndroidEmulatorService
 EmulatorStore -> AndroidEmulatorService -> Emulator executable -> standalone Emulator window
 EmulatorStore -> AndroidEmulatorService -> adb emulator-console commands
+DeviceStore -> AndroidDeepLinkService -> adb activity manager ACTION_VIEW intent
 LogcatStore -> LogcatService -> StreamingProcessRunner -> adb logcat
 ADBuddyMCP stdio transport -> ADBuddyCore -> Android SDK services -> adb and Emulator executable
 ```
@@ -100,6 +101,12 @@ cancellation.
 Android activity manager, then performs one app lifecycle action with fixed ADB
 arguments. `DeviceStore` owns short-lived action state, non-blocking feedback,
 and the exact-package confirmation required before uninstalling an app.
+
+`AndroidDeepLinkService` receives a validated absolute URI, an optional Android
+package identifier, and an explicit device serial. It starts an `ACTION_VIEW`
+intent with fixed ADB arguments and reports both process failures and Android
+activity-manager error output. The compact launcher sheet owns URI entry and
+device selection; it delegates launch state and feedback to `DeviceStore`.
 
 `EmulatorStore` loads installed AVD names on demand, maps usable ADB emulator
 serials back to their AVD names, and owns lifecycle state plus concise user

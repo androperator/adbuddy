@@ -94,6 +94,16 @@ The first implementation is a complete vertical slice, not a visual mockup.
   uninstalling it.
 - Keep all ADB invocation in a typed service using fixed argument arrays.
 
+### Deep-link launcher
+
+- Offer a compact **Open Link** sheet from the main-window toolbar and menu
+  bar utility.
+- Let developers paste an absolute URI, select any usable device, and
+  optionally target a package such as `com.android.chrome`.
+- Launch the URI through Android's `ACTION_VIEW` intent using fixed ADB
+  arguments. Leave the target package blank to use Android's normal intent
+  resolution.
+
 ### Local MCP access
 
 - Provide a local stdio MCP server for agents that need the completed device,

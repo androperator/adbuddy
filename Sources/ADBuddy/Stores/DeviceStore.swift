@@ -17,6 +17,7 @@ final class DeviceStore {
     private var capturingDeviceSerials = Set<String>()
     private var activeScreenRecording: ScreenRecordingSession?
     private var appActionDeviceSerials = Set<String>()
+    private var deepLinkLaunchDeviceSerials = Set<String>()
 
     private(set) var devices: [AndroidDevice] = []
     private(set) var status: DeviceDiscoveryStatus = .loading
@@ -27,6 +28,9 @@ final class DeviceStore {
     private(set) var screenRecordingFeedback: ScreenRecordingFeedback?
     private(set) var appActionFeedback: AppActionFeedback?
     private(set) var foregroundAppUninstallRequest: ForegroundAppUninstallRequest?
+    var isPresentingDeepLinkLauncher = false
+    private(set) var deepLinkLauncherPreferredDeviceSerial: String?
+    private(set) var deepLinkLaunchFeedback: DeepLinkLaunchFeedback?
 
     init(
         preferences: AppPreferences = AppPreferences(),
@@ -389,6 +393,73 @@ final class DeviceStore {
         appActionFeedback = nil
     }
 
+    var isLaunchingDeepLink: Bool {
+        !deepLinkLaunchDeviceSerials.isEmpty
+    }
+
+    func presentDeepLinkLauncher(preselecting device: AndroidDevice? = nil) {
+        let usableDevices = devices.filter(\.isUsable)
+        guard !usableDevices.isEmpty else {
+            showDeepLinkLaunchFeedback(.failure("Connect a usable Android device before opening a link."))
+            return
+        }
+
+        if let device, device.isUsable {
+            deepLinkLauncherPreferredDeviceSerial = device.serial
+        } else {
+            deepLinkLauncherPreferredDeviceSerial = usableDevices.first?.serial
+        }
+        isPresentingDeepLinkLauncher = true
+    }
+
+    func dismissDeepLinkLauncher() {
+        guard !isLaunchingDeepLink else {
+            return
+        }
+        isPresentingDeepLinkLauncher = false
+    }
+
+    func launchDeepLink(_ deepLink: AndroidDeepLink, on device: AndroidDevice) {
+        guard device.isUsable else {
+            showDeepLinkLaunchFeedback(.failure("\(device.displayName) is not available for opening links."))
+            return
+        }
+        guard let resolvedSDK else {
+            showDeepLinkLaunchFeedback(.failure("ADB is not currently available. Device discovery will retry automatically."))
+            return
+        }
+        guard deepLinkLaunchDeviceSerials.insert(device.serial).inserted else {
+            return
+        }
+
+        deepLinkLaunchFeedback = nil
+        AppLogger.deepLinks.info("Android deep link launch requested")
+        let service = AndroidDeepLinkService(adbPath: resolvedSDK.adbPath, processRunner: processRunner)
+
+        Task { [weak self] in
+            let result = await service.launch(deepLink, on: device.serial)
+            guard let self, !Task.isCancelled else {
+                return
+            }
+
+            deepLinkLaunchDeviceSerials.remove(device.serial)
+            isPresentingDeepLinkLauncher = false
+            switch result {
+            case .success(let outcome):
+                showDeepLinkLaunchFeedback(.success(outcome, deviceName: device.displayName))
+            case .failure(let failure):
+                showDeepLinkLaunchFeedback(.failure(failure.message))
+            }
+        }
+    }
+
+    func clearDeepLinkLaunchFeedback(ifMatching feedback: DeepLinkLaunchFeedback) {
+        guard deepLinkLaunchFeedback == feedback else {
+            return
+        }
+        deepLinkLaunchFeedback = nil
+    }
+
     private func loadDevices() async -> DeviceLoadOutcome {
         switch sdkLocator.resolve() {
         case .unavailable(let failure):
@@ -535,6 +606,16 @@ final class DeviceStore {
         Task { [weak self, feedback] in
             try? await Task.sleep(for: timeout)
             self?.clearAppActionFeedback(ifMatching: feedback)
+        }
+    }
+
+    private func showDeepLinkLaunchFeedback(_ feedback: DeepLinkLaunchFeedback) {
+        deepLinkLaunchFeedback = feedback
+        let timeout: Duration = feedback.isSuccess ? .seconds(4) : .seconds(8)
+
+        Task { [weak self, feedback] in
+            try? await Task.sleep(for: timeout)
+            self?.clearDeepLinkLaunchFeedback(ifMatching: feedback)
         }
     }
 

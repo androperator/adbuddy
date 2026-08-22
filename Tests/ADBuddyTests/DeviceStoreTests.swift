@@ -98,6 +98,45 @@ final class DeviceStoreTests: XCTestCase {
         )
     }
 
+    func testLaunchesDeepLinkOnTheSelectedDevice() async throws {
+        let runner = ScriptedDeviceStoreProcessRunner(results: [
+            successfulResult(standardOutput: "List of devices attached\nserial\tdevice model:Pixel_9\n"),
+            successfulResult(standardOutput: "Status: ok\nComplete\n"),
+        ])
+        let store = makeDeviceStore(processRunner: runner)
+        store.refreshFromPolling()
+        await waitForDeviceRefresh()
+        let device = try XCTUnwrap(store.devices.first)
+        let deepLink = try XCTUnwrap(
+            AndroidDeepLink(uri: "https://techmeme.com", targetPackageID: "com.android.chrome")
+        )
+
+        store.launchDeepLink(deepLink, on: device)
+        await waitForDeepLinkLaunchFeedback(in: store)
+
+        XCTAssertEqual(
+            store.deepLinkLaunchFeedback,
+            .success(
+                AndroidDeepLinkLaunchOutcome(deepLink: deepLink, deviceSerial: "serial"),
+                deviceName: "Pixel 9"
+            )
+        )
+        let invocations = await runner.invocations
+        XCTAssertEqual(
+            invocations,
+            [
+                ["devices", "-l"],
+                [
+                    "-s", "serial",
+                    "shell", "am", "start", "-W",
+                    "-a", "android.intent.action.VIEW",
+                    "-d", "https://techmeme.com",
+                    "-p", "com.android.chrome",
+                ],
+            ]
+        )
+    }
+
     private func makeDeviceStore(
         processRunner: any ProcessRunning = DeviceListProcessRunner()
     ) -> DeviceStore {
@@ -142,6 +181,16 @@ final class DeviceStoreTests: XCTestCase {
             await Task.yield()
         }
         XCTFail("Timed out waiting for foreground app uninstall request.")
+    }
+
+    private func waitForDeepLinkLaunchFeedback(in store: DeviceStore) async {
+        for _ in 0..<100 {
+            if store.deepLinkLaunchFeedback != nil {
+                return
+            }
+            await Task.yield()
+        }
+        XCTFail("Timed out waiting for deep link launch feedback.")
     }
 
     private func successfulResult(standardOutput: String = "") -> ProcessResult {

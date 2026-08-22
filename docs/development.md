@@ -77,6 +77,9 @@ Manual verification should cover, where locally available:
     device, shows success or actionable failure feedback, and uses the resolved
     package in the uninstall confirmation. Do not confirm an uninstall during
     routine verification unless that removal is intentional.
+15. Open the Link sheet, select a usable device, and launch a URI. Verify an
+    optional package target such as `com.android.chrome` receives
+    `https://techmeme.com` when Chrome is installed on the selected device.
 
 ## Change discipline
 
