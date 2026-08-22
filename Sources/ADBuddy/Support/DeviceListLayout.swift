@@ -15,6 +15,10 @@ enum DeviceListLayout {
         CGSize(width: max(contentSize.width, windowWidth), height: contentSize.height)
     }
 
+    static func minimumWindowFrameWidth(for currentFrameWidth: CGFloat) -> CGFloat {
+        max(currentFrameWidth, windowWidth)
+    }
+
     static func initialWindowContentSize(
         for status: DeviceDiscoveryStatus,
         deviceCount: Int

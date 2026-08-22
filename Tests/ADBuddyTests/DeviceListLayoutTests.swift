@@ -20,6 +20,11 @@ final class DeviceListLayoutTests: XCTestCase {
         )
     }
 
+    func testClampsWindowFrameToItsInitialWidth() {
+        XCTAssertEqual(DeviceListLayout.minimumWindowFrameWidth(for: 240), 520)
+        XCTAssertEqual(DeviceListLayout.minimumWindowFrameWidth(for: 640), 640)
+    }
+
     func testUsesCompactDeviceHeightAndLargerUnavailableState() {
         XCTAssertEqual(
             DeviceListLayout.initialWindowContentSize(for: .devicesAvailable, deviceCount: 2),

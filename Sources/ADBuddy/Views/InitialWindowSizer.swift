@@ -47,18 +47,18 @@ struct InitialWindowSizer: NSViewRepresentable {
                 window.tabbingMode = .disallowed
                 window.contentMinSize = CGSize(width: DeviceListLayout.windowWidth, height: 0)
 
-                guard let contentView = window.contentView else {
-                    return
+                if let contentView = window.contentView {
+                    let correctedContentSize = DeviceListLayout.contentSizeRespectingMinimumWidth(
+                        contentView.bounds.size
+                    )
+                    if correctedContentSize != contentView.bounds.size {
+                        window.setContentSize(correctedContentSize)
+                    }
                 }
 
-                let correctedContentSize = DeviceListLayout.contentSizeRespectingMinimumWidth(
-                    contentView.bounds.size
+                window.minSize.width = DeviceListLayout.minimumWindowFrameWidth(
+                    for: window.frame.width
                 )
-                guard correctedContentSize != contentView.bounds.size else {
-                    return
-                }
-
-                window.setContentSize(correctedContentSize)
             }
         }
 
