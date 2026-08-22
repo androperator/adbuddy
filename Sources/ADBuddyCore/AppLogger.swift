@@ -14,4 +14,5 @@ public enum AppLogger {
     public static let settings = Logger(subsystem: subsystem, category: "Settings")
     public static let logcat = Logger(subsystem: subsystem, category: "Logcat")
     public static let emulator = Logger(subsystem: subsystem, category: "Emulator")
+    public static let appActions = Logger(subsystem: subsystem, category: "AppActions")
 }
