@@ -7,12 +7,14 @@ struct DeviceActionControls: View {
     let isStoppingScreenRecording: Bool
     let canStartScreenRecording: Bool
     let isPerformingAppAction: Bool
+    let isPerformingDeviceSetting: Bool
     let takeScreenshot: () -> Void
     let showScreenRecordingOptions: () -> Void
     let stopScreenRecording: () -> Void
     let openLogcat: () -> Void
     let performAppAction: (AndroidAppAction) -> Void
     let requestUninstallForegroundApp: () -> Void
+    let performDeviceSetting: (AndroidDeviceSettingAction) -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -45,6 +47,7 @@ struct DeviceActionControls: View {
             .help("Open Logcat")
 
             foregroundAppActionsMenu
+            deviceSettingsMenu
         }
     }
 
@@ -83,6 +86,18 @@ struct DeviceActionControls: View {
         .help("Foreground App Actions")
     }
 
+    private var deviceSettingsMenu: some View {
+        Menu {
+            DeviceSettingsMenuContent(perform: performDeviceSetting)
+        } label: {
+            Label("Device Settings", systemImage: "slider.horizontal.3")
+                .labelStyle(.iconOnly)
+        }
+        .disabled(isPerformingDeviceSetting)
+        .accessibilityLabel("Device Settings")
+        .help("Device Settings")
+    }
+
     @ViewBuilder
     private var screenRecordingControl: some View {
         if isPreparingScreenRecording {
@@ -108,6 +123,48 @@ struct DeviceActionControls: View {
             .buttonStyle(.borderedProminent)
             .disabled(!canStartScreenRecording)
             .help("Record Screen")
+        }
+    }
+}
+
+struct DeviceSettingsMenuContent: View {
+    let perform: (AndroidDeviceSettingAction) -> Void
+
+    var body: some View {
+        Menu("Theme") {
+            Button("Use Dark Theme") {
+                perform(.enableDarkTheme)
+            }
+            Button("Use Light Theme") {
+                perform(.enableLightTheme)
+            }
+        }
+
+        Menu("Navigation") {
+            Button("Use Gesture Navigation") {
+                perform(.enableGestureNavigation)
+            }
+            Button("Use 3-Button Navigation") {
+                perform(.enableThreeButtonNavigation)
+            }
+        }
+
+        Menu("Developer Rendering") {
+            Button("Show Layout Bounds") {
+                perform(.showLayoutBounds)
+            }
+            Button("Hide Layout Bounds") {
+                perform(.hideLayoutBounds)
+            }
+
+            Divider()
+
+            Button("Show GPU Rendering Bars") {
+                perform(.showGPURenderingBars)
+            }
+            Button("Hide GPU Rendering Bars") {
+                perform(.hideGPURenderingBars)
+            }
         }
     }
 }

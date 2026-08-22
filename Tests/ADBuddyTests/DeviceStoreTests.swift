@@ -137,6 +137,39 @@ final class DeviceStoreTests: XCTestCase {
         )
     }
 
+    func testUpdatesTheSelectedDeviceSystemSetting() async throws {
+        let runner = ScriptedDeviceStoreProcessRunner(results: [
+            successfulResult(standardOutput: "List of devices attached\nserial\tdevice model:Pixel_9\n"),
+            successfulResult(),
+        ])
+        let store = makeDeviceStore(processRunner: runner)
+        store.refreshFromPolling()
+        await waitForDeviceRefresh()
+        let device = try XCTUnwrap(store.devices.first)
+
+        store.performDeviceSetting(.showGPURenderingBars, for: device)
+        await waitForDeviceSettingFeedback(in: store)
+
+        XCTAssertEqual(
+            store.deviceSettingFeedback,
+            .success(
+                AndroidDeviceSettingOutcome(action: .showGPURenderingBars, deviceSerial: "serial"),
+                deviceName: "Pixel 9"
+            )
+        )
+        let invocations = await runner.invocations
+        XCTAssertEqual(
+            invocations,
+            [
+                ["devices", "-l"],
+                [
+                    "-s", "serial",
+                    "shell", "setprop", "debug.hwui.profile", "visual_bars",
+                ],
+            ]
+        )
+    }
+
     private func makeDeviceStore(
         processRunner: any ProcessRunning = DeviceListProcessRunner()
     ) -> DeviceStore {
@@ -191,6 +224,16 @@ final class DeviceStoreTests: XCTestCase {
             await Task.yield()
         }
         XCTFail("Timed out waiting for deep link launch feedback.")
+    }
+
+    private func waitForDeviceSettingFeedback(in store: DeviceStore) async {
+        for _ in 0..<100 {
+            if store.deviceSettingFeedback != nil {
+                return
+            }
+            await Task.yield()
+        }
+        XCTFail("Timed out waiting for device setting feedback.")
     }
 
     private func successfulResult(standardOutput: String = "") -> ProcessResult {

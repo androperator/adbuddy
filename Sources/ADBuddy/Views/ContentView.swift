@@ -37,6 +37,12 @@ struct ContentView: View {
                     }
                 }
 
+                if let feedback = deviceStore.deviceSettingFeedback {
+                    DeviceSettingFeedbackBanner(feedback: feedback) {
+                        deviceStore.clearDeviceSettingFeedback(ifMatching: feedback)
+                    }
+                }
+
                 if let feedback = emulatorStore.feedback {
                     EmulatorFeedbackBanner(feedback: feedback) {
                         emulatorStore.clearFeedback(ifMatching: feedback)
@@ -49,6 +55,7 @@ struct ContentView: View {
         .animation(.default, value: deviceStore.screenRecordingFeedback)
         .animation(.default, value: deviceStore.appActionFeedback)
         .animation(.default, value: deviceStore.deepLinkLaunchFeedback)
+        .animation(.default, value: deviceStore.deviceSettingFeedback)
         .animation(.default, value: emulatorStore.feedback)
         .onChange(of: deviceStore.devices) { _, devices in
             emulatorStore.updateRunningStatus(using: devices, sdk: deviceStore.resolvedSDK)
@@ -296,6 +303,31 @@ private struct AppActionFeedbackBanner: View {
 
 private struct DeepLinkLaunchFeedbackBanner: View {
     let feedback: DeepLinkLaunchFeedback
+    let dismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: feedback.isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(feedback.isSuccess ? .green : .orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(feedback.title)
+                    .font(.subheadline.weight(.medium))
+                Text(feedback.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            Button("Dismiss", action: dismiss)
+                .buttonStyle(.borderless)
+        }
+        .padding(10)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .shadow(radius: 4, y: 2)
+    }
+}
+
+private struct DeviceSettingFeedbackBanner: View {
+    let feedback: DeviceSettingFeedback
     let dismiss: () -> Void
 
     var body: some View {

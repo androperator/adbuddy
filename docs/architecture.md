@@ -79,6 +79,7 @@ DeviceStore emulator entries -> EmulatorStore -> AndroidEmulatorService
 EmulatorStore -> AndroidEmulatorService -> Emulator executable -> standalone Emulator window
 EmulatorStore -> AndroidEmulatorService -> adb emulator-console commands
 DeviceStore -> AndroidDeepLinkService -> adb activity manager ACTION_VIEW intent
+DeviceStore -> AndroidDeviceSettingsService -> adb system settings and properties
 LogcatStore -> LogcatService -> StreamingProcessRunner -> adb logcat
 ADBuddyMCP stdio transport -> ADBuddyCore -> Android SDK services -> adb and Emulator executable
 ```
@@ -107,6 +108,12 @@ package identifier, and an explicit device serial. It starts an `ACTION_VIEW`
 intent with fixed ADB arguments and reports both process failures and Android
 activity-manager error output. The compact launcher sheet owns URI entry and
 device selection; it delegates launch state and feedback to `DeviceStore`.
+
+`AndroidDeviceSettingsService` applies one explicit system setting to a usable
+device with fixed ADB arguments. It covers dark or light system theme, gesture
+or 3-button navigation, Show or Hide Layout Bounds, and Show or Hide GPU
+Rendering Bars. It does not run with device discovery polling: the menu starts
+one short-lived operation and `DeviceStore` presents the result.
 
 `EmulatorStore` loads installed AVD names on demand, maps usable ADB emulator
 serials back to their AVD names, and owns lifecycle state plus concise user

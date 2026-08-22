@@ -126,6 +126,13 @@ struct MenuBarContentView: View {
                             }
                         }
                         .disabled(deviceStore.isPerformingAppAction(for: device))
+
+                        Menu("Device Settings") {
+                            DeviceSettingsMenuContent { action in
+                                deviceStore.performDeviceSetting(action, for: device)
+                            }
+                        }
+                        .disabled(deviceStore.isPerformingDeviceSetting(for: device))
                     } else {
                         Text(device.connectionState.displayName)
                     }

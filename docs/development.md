@@ -80,6 +80,10 @@ Manual verification should cover, where locally available:
 15. Open the Link sheet, select a usable device, and launch a URI. Verify an
     optional package target such as `com.android.chrome` receives
     `https://techmeme.com` when Chrome is installed on the selected device.
+16. On an emulator, apply each Device Settings action, check the corresponding
+    Android system value, then restore light mode, gesture navigation, and
+    disabled rendering overlays. Do not change a physical device's system
+    settings during routine verification unless that is intentional.
 
 ## Change discipline
 

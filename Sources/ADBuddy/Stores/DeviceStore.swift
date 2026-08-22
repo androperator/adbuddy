@@ -18,6 +18,7 @@ final class DeviceStore {
     private var activeScreenRecording: ScreenRecordingSession?
     private var appActionDeviceSerials = Set<String>()
     private var deepLinkLaunchDeviceSerials = Set<String>()
+    private var deviceSettingDeviceSerials = Set<String>()
 
     private(set) var devices: [AndroidDevice] = []
     private(set) var status: DeviceDiscoveryStatus = .loading
@@ -31,6 +32,7 @@ final class DeviceStore {
     var isPresentingDeepLinkLauncher = false
     private(set) var deepLinkLauncherPreferredDeviceSerial: String?
     private(set) var deepLinkLaunchFeedback: DeepLinkLaunchFeedback?
+    private(set) var deviceSettingFeedback: DeviceSettingFeedback?
 
     init(
         preferences: AppPreferences = AppPreferences(),
@@ -393,6 +395,53 @@ final class DeviceStore {
         appActionFeedback = nil
     }
 
+    func isPerformingDeviceSetting(for device: AndroidDevice) -> Bool {
+        deviceSettingDeviceSerials.contains(device.serial)
+    }
+
+    func performDeviceSetting(_ action: AndroidDeviceSettingAction, for device: AndroidDevice) {
+        guard device.isUsable else {
+            showDeviceSettingFeedback(.failure("\(device.displayName) is not available for device settings."))
+            return
+        }
+        guard let resolvedSDK else {
+            showDeviceSettingFeedback(.failure("ADB is not currently available. Device discovery will retry automatically."))
+            return
+        }
+        guard deviceSettingDeviceSerials.insert(device.serial).inserted else {
+            return
+        }
+
+        deviceSettingFeedback = nil
+        AppLogger.deviceSettings.info("Android device setting requested")
+        let service = AndroidDeviceSettingsService(
+            adbPath: resolvedSDK.adbPath,
+            processRunner: processRunner
+        )
+
+        Task { [weak self] in
+            let result = await service.apply(action, to: device.serial)
+            guard let self, !Task.isCancelled else {
+                return
+            }
+
+            deviceSettingDeviceSerials.remove(device.serial)
+            switch result {
+            case .success(let outcome):
+                showDeviceSettingFeedback(.success(outcome, deviceName: device.displayName))
+            case .failure(let failure):
+                showDeviceSettingFeedback(.failure(failure.message))
+            }
+        }
+    }
+
+    func clearDeviceSettingFeedback(ifMatching feedback: DeviceSettingFeedback) {
+        guard deviceSettingFeedback == feedback else {
+            return
+        }
+        deviceSettingFeedback = nil
+    }
+
     var isLaunchingDeepLink: Bool {
         !deepLinkLaunchDeviceSerials.isEmpty
     }
@@ -616,6 +665,16 @@ final class DeviceStore {
         Task { [weak self, feedback] in
             try? await Task.sleep(for: timeout)
             self?.clearDeepLinkLaunchFeedback(ifMatching: feedback)
+        }
+    }
+
+    private func showDeviceSettingFeedback(_ feedback: DeviceSettingFeedback) {
+        deviceSettingFeedback = feedback
+        let timeout: Duration = feedback.isSuccess ? .seconds(4) : .seconds(8)
+
+        Task { [weak self, feedback] in
+            try? await Task.sleep(for: timeout)
+            self?.clearDeviceSettingFeedback(ifMatching: feedback)
         }
     }
 
