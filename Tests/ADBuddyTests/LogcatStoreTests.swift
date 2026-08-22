@@ -109,6 +109,80 @@ final class LogcatStoreTests: XCTestCase {
         store.stop()
     }
 
+    func testCrashAndExceptionFilterKeepsStackTracesWithoutRestartingTheStream() async throws {
+        let service = ControllableLogcatService()
+        let store = makeStore(service: service)
+        let entries = [
+            LogcatEntry(
+                id: 1,
+                timestamp: .now,
+                priority: .info,
+                processID: 101,
+                threadID: 201,
+                tag: "Activity",
+                message: "Resumed activity"
+            ),
+            LogcatEntry(
+                id: 2,
+                timestamp: .now,
+                priority: .warn,
+                processID: 101,
+                threadID: 201,
+                tag: "System.err",
+                message: "java.lang.IllegalStateException: Unexpected state"
+            ),
+            LogcatEntry(
+                id: 3,
+                timestamp: .now,
+                priority: .warn,
+                processID: 101,
+                threadID: 201,
+                tag: "System.err",
+                message: "at com.example.app.MainActivity.onCreate(MainActivity.kt:42)"
+            ),
+            LogcatEntry(
+                id: 4,
+                timestamp: .now,
+                priority: .error,
+                processID: 101,
+                threadID: 201,
+                tag: "AndroidRuntime",
+                message: "FATAL EXCEPTION: main"
+            ),
+            LogcatEntry(
+                id: 5,
+                timestamp: .now,
+                priority: .error,
+                processID: 101,
+                threadID: 201,
+                tag: "AndroidRuntime",
+                message: "at android.app.ActivityThread.main(ActivityThread.java:8000)"
+            ),
+            LogcatEntry(
+                id: 6,
+                timestamp: .now,
+                priority: .debug,
+                processID: 102,
+                threadID: 202,
+                tag: "ActivityManager",
+                message: "ANR in com.example.app"
+            ),
+        ]
+
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForStreamCount(service, expectedCount: 1)
+        service.yield(.entries(entries))
+        try await waitForEntryCount(store, expectedCount: entries.count)
+
+        XCTAssertFalse(store.showsOnlyCrashesAndExceptions)
+        store.showsOnlyCrashesAndExceptions = true
+
+        XCTAssertEqual(store.visibleEntries.map(\.id), [2, 3, 4, 5, 6])
+        XCTAssertEqual(store.entries, entries)
+        XCTAssertEqual(service.streamCount, 1)
+        store.stop()
+    }
+
     func testWaitsForADBResolutionBeforeStartingTheStream() async throws {
         let service = ControllableLogcatService()
         let store = makeStore(service: service)

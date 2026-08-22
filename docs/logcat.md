@@ -457,9 +457,10 @@ The toolbar contains:
 1. an editable application-ID picker;
 2. a minimum-level segmented control with `V`, `D`, `I`, `W`, `E`, and `A`;
 3. a local **Search Logcat** field, focused with `Command-F`;
-4. **Pause** or **Resume**;
-5. **Clear**;
-6. **Jump to Latest**, shown or emphasized when follow mode is disabled.
+4. a toggle to show crashes and exceptions;
+5. **Pause** or **Resume**;
+6. **Clear**;
+7. **Jump to Latest**, shown or emphasized when follow mode is disabled.
 
 Controls need labels in accessibility and Help text even when their visible
 form is only a glyph or level letter. Filters should update the visible result
@@ -523,6 +524,15 @@ Each Logcat window has a local text search field that matches tag and message
 text case-insensitively. Press `Command-F` to focus it. Search narrows the
 already retained entries, does not restart ADB Logcat, and combines with the
 application and minimum-level filters. It is window-scoped and is not
+persisted between launches.
+
+## Crash and exception filter
+
+Each Logcat window has a one-click **Show Crashes and Exceptions** toolbar
+toggle. It narrows retained entries without restarting ADB Logcat, retaining
+Error and Assert messages plus entries that identify an exception, crash,
+fatal condition, ANR, or stack-trace frame. It combines with the application,
+minimum-level, and text-search filters. The toggle is window-scoped and is not
 persisted between launches.
 
 ## Color theme
@@ -625,9 +635,9 @@ continuation lines without crashing or silently terminating the stream.
 ## Persistence
 
 Persist only global Logcat color preferences in the first slice. Application
-selection, minimum level, pause state, follow state, retained entries, column
-visibility, and scroll position belong to the individual window session and do
-not survive app relaunch.
+selection, minimum level, crash and exception filter, pause state, follow
+state, retained entries, column visibility, and scroll position belong to the
+individual window session and do not survive app relaunch.
 
 ## First-slice exclusions
 

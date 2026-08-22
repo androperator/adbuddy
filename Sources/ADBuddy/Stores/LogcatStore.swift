@@ -62,6 +62,14 @@ final class LogcatStore {
             rebuildVisibleEntries()
         }
     }
+    var showsOnlyCrashesAndExceptions = false {
+        didSet {
+            guard oldValue != showsOnlyCrashesAndExceptions else {
+                return
+            }
+            rebuildVisibleEntries()
+        }
+    }
 
     var displayedEntries: [LogcatEntry] {
         pausedEntries ?? visibleEntries
@@ -549,7 +557,8 @@ final class LogcatStore {
 
     private func matchesVisibleFilters(_ entry: LogcatEntry) -> Bool {
         guard entry.priority.severity >= minimumPriority.severity,
-              activeApplicationScope.includes(entry) else {
+              activeApplicationScope.includes(entry),
+              !showsOnlyCrashesAndExceptions || LogcatCrashFilter.includes(entry) else {
             return false
         }
 

@@ -109,6 +109,16 @@ struct LogcatWindowView: View {
             }
 
             ToolbarItemGroup(placement: .automatic) {
+                Toggle(isOn: $logcatStore.showsOnlyCrashesAndExceptions) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                }
+                .toggleStyle(.button)
+                .accessibilityLabel("Show Crashes and Exceptions")
+                .accessibilityValue(
+                    logcatStore.showsOnlyCrashesAndExceptions ? "On" : "Off"
+                )
+                .help("Show Crashes and Exceptions")
+
                 Menu {
                     Toggle("Process ID", isOn: $showsProcessID)
                     Toggle("Thread ID", isOn: $showsThreadID)
