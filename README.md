@@ -20,7 +20,11 @@ currently provides:
   and Show taps;
 - native screenshot and recording notifications with media previews and a
   **Reveal in Finder** action;
-- automatic PNG clipboard copy, enabled by default.
+- automatic PNG clipboard copy, enabled by default;
+- a dedicated Logcat window per device, with recent history, live streaming,
+  application and minimum-level filtering, pause, copy, follow, and optional
+  PID/TID columns;
+- global Logcat severity colors in Settings.
 
 See [`docs/product-scope.md`](docs/product-scope.md) for the defined Phase 0
 and Phase 1 acceptance criteria.
@@ -42,8 +46,20 @@ Screenshots and screen recordings share one destination. It defaults to
 `~/Screenshots`, which is `/Users/chrislacy/Screenshots` on the initial
 development machine. The destination, automatic clipboard-copy preference, and
 screen-recording options are saved in `UserDefaults`. Automatic PNG copying
-defaults to enabled. These controls will be exposed through Settings in a later
-UI pass.
+defaults to enabled. Use **ADBuddy → Settings…** to change them, or to adjust
+the global Logcat severity colors.
+
+## Logcat
+
+Select **Open Logcat** beside a connected device in the main window or its
+menu-bar submenu. Each device serial gets its own window with up to 5,000 recent
+messages followed by its live stream. The toolbar provides an editable
+application-ID filter, a minimum severity, pause/resume, clear, follow, and
+column controls. PID and TID are hidden by default. Select rows and press
+`⌘C` to copy readable text.
+
+Logcat keeps at most 50,000 entries per window. Disconnecting a device retains
+its visible logs; reconnecting the same serial resumes that window automatically.
 
 ## Planned installation
 
@@ -80,18 +96,18 @@ source layout.
 3. **Phase 2 - Screen recording:** start and stop recording, retrieval, and
    bit-rate, scaled-output, and Show taps controls.
 4. **Phase 3 - Emulator management:** list, launch, stop, and refresh AVDs.
-5. **Phase 4 - Logcat:** a native streaming viewer with selection, filtering,
-   search, pause, copying, and scroll-follow controls.
+5. **Phase 4 - Logcat:** delivered as a native per-device streaming viewer.
+   Saved filters, search, and exporting remain future work.
 
 ## Documentation
 
 - [`docs/product-scope.md`](docs/product-scope.md) - initial product boundary
   and acceptance criteria.
-- [`docs/architecture.md`](docs/architecture.md) - planned scene, service, and
+- [`docs/architecture.md`](docs/architecture.md) - scene, service, and
   persistence design.
 - [`docs/development.md`](docs/development.md) - build, test, and live-device
   validation conventions.
 - [`docs/release.md`](docs/release.md) - signing, notarization, GitHub Release,
   and Homebrew cask strategy.
-- [`docs/logcat.md`](docs/logcat.md) - target interaction and architecture for
-  the future per-device Logcat window.
+- [`docs/logcat.md`](docs/logcat.md) - Logcat behavior, architecture, and
+  verification contract.

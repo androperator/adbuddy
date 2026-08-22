@@ -6,6 +6,8 @@ struct LogcatWindowView: View {
 
     let windowID: LogcatWindowID
     @State private var logcatStore: LogcatStore
+    @State private var showsProcessID = false
+    @State private var showsThreadID = false
 
     init(windowID: LogcatWindowID) {
         self.windowID = windowID
@@ -47,8 +49,12 @@ struct LogcatWindowView: View {
             Divider()
 
             LogcatTableView(
-                entries: logcatStore.displayedEntries,
+                entryCount: logcatStore.displayedEntryCount,
+                entryRevision: logcatStore.displayedEntryRevision,
+                entryAt: logcatStore.displayedEntry(at:),
                 followsLatest: logcatStore.isFollowing,
+                showsProcessID: showsProcessID,
+                showsThreadID: showsThreadID,
                 priorityColors: preferences.logcatColors,
                 onUserScrollAwayFromLatest: logcatStore.userScrolledAwayFromLatest
             )
@@ -75,7 +81,7 @@ struct LogcatWindowView: View {
                     suggestions: logcatStore.runningApplicationIDs,
                     onCommit: logcatStore.selectApplicationID
                 )
-                .frame(width: 260)
+                .frame(width: 220)
             }
 
             ToolbarItem(placement: .principal) {
@@ -83,15 +89,25 @@ struct LogcatWindowView: View {
                     ForEach(LogcatPriority.allCases, id: \.self) { priority in
                         Text(priority.rawValue)
                             .tag(priority)
+                            .accessibilityLabel(priority.displayName)
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 220)
+                .frame(width: 190)
                 .accessibilityLabel("Minimum Log Level")
                 .help("Minimum Log Level")
             }
 
             ToolbarItemGroup(placement: .automatic) {
+                Menu {
+                    Toggle("Process ID", isOn: $showsProcessID)
+                    Toggle("Thread ID", isOn: $showsThreadID)
+                } label: {
+                    Label("Columns", systemImage: "rectangle.3.group")
+                }
+                .accessibilityLabel("Logcat Columns")
+                .help("Show Logcat Columns")
+
                 Button {
                     logcatStore.togglePause()
                 } label: {
@@ -107,7 +123,9 @@ struct LogcatWindowView: View {
                 }
                 .accessibilityLabel("Clear Logcat")
                 .help("Clear Logcat")
+            }
 
+            ToolbarItem(placement: .primaryAction) {
                 Button {
                     logcatStore.jumpToLatest()
                 } label: {

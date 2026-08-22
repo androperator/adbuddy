@@ -39,21 +39,36 @@ final class LogcatStore {
     private var followedLatestBeforePausing = true
 
     private(set) var entries: [LogcatEntry] = []
+    private(set) var visibleEntries: [LogcatEntry] = []
+    private(set) var displayedEntryRevision: UInt64 = 0
     private(set) var streamState: LogcatStreamState = .connecting
     private(set) var applicationID: String?
     private(set) var runningApplicationIDs: [String] = []
     private(set) var isFollowing = true
     private(set) var isPaused = false
-    var minimumPriority: LogcatPriority = .debug
-
-    var visibleEntries: [LogcatEntry] {
-        entries.filter {
-            $0.priority.severity >= minimumPriority.severity && activeApplicationScope.includes($0)
+    var minimumPriority: LogcatPriority = .debug {
+        didSet {
+            guard oldValue != minimumPriority else {
+                return
+            }
+            rebuildVisibleEntries()
         }
     }
 
     var displayedEntries: [LogcatEntry] {
         pausedEntries ?? visibleEntries
+    }
+
+    var displayedEntryCount: Int {
+        pausedEntries?.count ?? visibleEntries.count
+    }
+
+    func displayedEntry(at index: Int) -> LogcatEntry? {
+        let displayedEntries = pausedEntries ?? visibleEntries
+        guard displayedEntries.indices.contains(index) else {
+            return nil
+        }
+        return displayedEntries[index]
     }
 
     var displayedStreamState: LogcatStreamState {
@@ -145,7 +160,11 @@ final class LogcatStore {
         applicationID = newApplicationID
         packageUserID = nil
         prefersUserIDFiltering = true
-        activeApplicationScope = newApplicationID == nil ? .allApplications : .waitingForProcess
+        let initialScope: LogcatApplicationScope = newApplicationID == nil ? .allApplications : .waitingForProcess
+        if activeApplicationScope != initialScope {
+            activeApplicationScope = initialScope
+            rebuildVisibleEntries()
+        }
         guard isDeviceUsable, !isStopped else {
             streamState = .disconnected
             return
@@ -174,6 +193,7 @@ final class LogcatStore {
             isPaused = false
             pausedEntries = nil
             isFollowing = followedLatestBeforePausing
+            markDisplayedEntriesChanged()
         } else {
             followedLatestBeforePausing = isFollowing
             pausedEntries = visibleEntries
@@ -183,7 +203,9 @@ final class LogcatStore {
 
     func clear() {
         entries.removeAll(keepingCapacity: true)
+        visibleEntries.removeAll(keepingCapacity: true)
         pausedEntries = isPaused ? [] : nil
+        markDisplayedEntriesChanged()
     }
 
     private func beginApplicationMonitoring() {
@@ -281,7 +303,11 @@ final class LogcatStore {
         }
 
         let previousStreamScope = activeStreamScope
+        let scopeChanged = activeApplicationScope != scope
         activeApplicationScope = scope
+        if scopeChanged {
+            rebuildVisibleEntries()
+        }
 
         if case .waitingForProcess = scope {
             cancelStreamAndClearEntries()
@@ -352,7 +378,9 @@ final class LogcatStore {
 
     private func clearEntries() {
         entries.removeAll(keepingCapacity: false)
+        visibleEntries.removeAll(keepingCapacity: false)
         pausedEntries = isPaused ? [] : nil
+        markDisplayedEntriesChanged()
     }
 
     private func receive(_ event: LogcatServiceEvent, generation: Int) {
@@ -476,6 +504,7 @@ final class LogcatStore {
         }
 
         entries.append(contentsOf: newEntries)
+        var trimmedEntries = false
         while entries.count > Self.retentionLimit {
             let overflow = entries.count - Self.retentionLimit
             let removalCount = min(
@@ -483,7 +512,39 @@ final class LogcatStore {
                 entries.count
             )
             entries.removeFirst(removalCount)
+            trimmedEntries = true
         }
+
+        if trimmedEntries {
+            rebuildVisibleEntries()
+            return
+        }
+
+        let newlyVisibleEntries = newEntries.filter {
+            $0.priority.severity >= minimumPriority.severity && activeApplicationScope.includes($0)
+        }
+        guard !newlyVisibleEntries.isEmpty else {
+            return
+        }
+
+        visibleEntries.append(contentsOf: newlyVisibleEntries)
+        if !isPaused {
+            markDisplayedEntriesChanged()
+        }
+    }
+
+    private func rebuildVisibleEntries() {
+        visibleEntries = entries.filter {
+            $0.priority.severity >= minimumPriority.severity && activeApplicationScope.includes($0)
+        }
+        guard !isPaused else {
+            return
+        }
+        markDisplayedEntriesChanged()
+    }
+
+    private func markDisplayedEntriesChanged() {
+        displayedEntryRevision &+= 1
     }
 
     private func message(for failure: LogcatServiceFailure) -> String {

@@ -6,8 +6,10 @@ ADBuddy is a SwiftPM-based SwiftUI app. It keeps platform UI, Android SDK
 interaction, device state, and persistence separate without introducing a large
 protocol hierarchy.
 
-The app will target macOS 14 or newer and use SwiftUI as the source of truth.
-AppKit is reserved for a narrow platform need that SwiftUI cannot handle cleanly.
+The app targets macOS 14 or newer and uses SwiftUI for scenes, window chrome,
+and controls. AppKit is reserved for narrow platform needs that SwiftUI cannot
+handle cleanly: the editable Logcat application picker and virtualized native
+Logcat table.
 
 ## Scenes
 
@@ -21,10 +23,10 @@ MenuBarExtra
   Fast per-device screenshot and recording commands, app navigation, and Settings
 
 Settings sheet (owned by the main window)
-  Shared media destination and automatic screenshot clipboard-copy preference
+  Shared media destination, screenshot clipboard-copy, and Logcat colors
 
 Logcat WindowGroup (one window per device serial)
-  Dedicated streaming viewer with window-scoped filters and follow state
+  Dedicated streaming viewer with window-scoped filters, follow state, and retention
 ```
 
 The app should retain normal application behavior with a visible main window
@@ -34,9 +36,8 @@ utility surface, not a document workspace.
 Its window frame cannot be resized narrower than its initial or restored width,
 so device controls and toolbar actions remain usable.
 
-The future per-device Logcat scene and its streaming service are specified in
-[`logcat.md`](logcat.md). Planning that scene does not move Logcat into the
-current implementation phase.
+The per-device Logcat scene is specified in [`logcat.md`](logcat.md). Its state
+remains isolated from the shared device-discovery store.
 
 ## Initial source layout
 
@@ -85,6 +86,8 @@ AppPreferences -> clipboard preference -> ScreenshotClipboardService
 DeviceStore -> MediaNotificationService -> macOS notification center
 AppPreferences -> recording options -> ScreenRecordingService
 DeviceStore -> ScreenRecordingService -> ADB screenrecord, pull, cleanup
+DeviceStore discovery by serial -> LogcatWindowView -> LogcatStore
+LogcatStore -> LogcatService -> StreamingProcessRunner -> adb logcat
 ```
 
 `DeviceStore` owns automatic one-second refresh timing, selected device state,
@@ -93,6 +96,16 @@ and presentation-ready errors. It does not parse process output itself.
 `ProcessRunner` owns
 subprocess lifecycle and exposes captured stdout, stderr, exit status, and
 cancellation.
+
+`LogcatStore` owns only one Logcat window's retained entries, filters, pause,
+follow state, and reconnect lifecycle. Column visibility is likewise local to
+the window session. The store observes the shared `DeviceStore` result by
+serial, cancels its stream when that device is unavailable, and resumes it when
+the same serial is usable again. It keeps at most 50,000 typed entries and
+derives the visible list incrementally for ordinary batches. `LogcatService`
+parses `adb logcat -v threadtime` off the main actor and delivers modest batches.
+The `NSTableView` bridge virtualizes visible row views and reads rows by
+count/revision so it does not retain a second 50,000-entry array.
 
 ## Android SDK discovery
 
@@ -152,6 +165,11 @@ directory defaults to the current user's `~/Screenshots` directory and
 automatic copying defaults to enabled. The service layer receives values from
 the preferences store rather than accessing `UserDefaults` itself.
 
+The same store persists six serializable sRGB component values for global
+Logcat severity colors. Settings changes update every open Logcat window
+immediately; application filters, pause/follow state, retained rows, and
+column visibility remain window-session state.
+
 Because the app is non-sandboxed, store a regular absolute path. If future
 distribution requires sandboxing, replace this storage with a security-scoped
 bookmark through a deliberate migration.
@@ -193,6 +211,8 @@ Test pure behavior without a device:
 - process result to user-facing error mapping.
 - display-size parsing, recording argument construction, Show taps restoration,
   and non-overwriting MP4 retrieval.
+- incremental Logcat parsing, filtering, retention, process cancellation,
+  reconnect policy, preferences, and window-scoped inspection controls.
 
 Live ADB validation supplements those tests when a device or emulator is
 available.

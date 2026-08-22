@@ -35,6 +35,28 @@ final class LogcatStoreTests: XCTestCase {
         XCTAssertFalse(store.visibleEntries.contains(where: { $0.id == 7 }))
     }
 
+    func testFilteringRebuildsVisibleRowsWithoutReenablingFollowMode() async throws {
+        let service = ControllableLogcatService()
+        let store = makeStore(service: service)
+        let entries = LogcatPriority.allCases.enumerated().map { index, priority in
+            entry(id: UInt64(index + 1), priority: priority)
+        }
+
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForStreamCount(service, expectedCount: 1)
+        service.yield(.entries(entries))
+        try await waitForEntryCount(store, expectedCount: entries.count)
+        store.userScrolledAwayFromLatest()
+        let revisionBeforeFiltering = store.displayedEntryRevision
+
+        store.minimumPriority = .error
+
+        XCTAssertFalse(store.isFollowing)
+        XCTAssertEqual(store.visibleEntries.map(\.priority), [.error, .assert])
+        XCTAssertGreaterThan(store.displayedEntryRevision, revisionBeforeFiltering)
+        store.stop()
+    }
+
     func testWaitsForADBResolutionBeforeStartingTheStream() async throws {
         let service = ControllableLogcatService()
         let store = makeStore(service: service)
@@ -140,6 +162,27 @@ final class LogcatStoreTests: XCTestCase {
 
         XCTAssertEqual(store.entries.first?.id, 601)
         XCTAssertEqual(store.entries.last?.id, 50_600)
+    }
+
+    func testProcessesSustainedBatchesWithoutExceedingRetention() async throws {
+        let service = ControllableLogcatService()
+        let store = makeStore(service: service)
+        let batchSize = 250
+        let batchCount = 240
+
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForStreamCount(service, expectedCount: 1)
+
+        for batch in 0..<batchCount {
+            let firstID = batch * batchSize + 1
+            let entries = (firstID..<firstID + batchSize).map { entry(id: UInt64($0)) }
+            service.yield(.entries(entries))
+        }
+
+        try await waitForLastEntryID(store, expectedID: UInt64(batchSize * batchCount))
+        XCTAssertEqual(store.entries.count, LogcatStore.retentionLimit)
+        XCTAssertEqual(store.visibleEntries.count, LogcatStore.retentionLimit)
+        store.stop()
     }
 
     func testStopCancelsOnlyTheWindowStreamAndReportsStopped() async throws {

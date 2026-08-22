@@ -2,8 +2,12 @@
 import SwiftUI
 
 struct LogcatTableView: NSViewRepresentable {
-    let entries: [LogcatEntry]
+    let entryCount: Int
+    let entryRevision: UInt64
+    let entryAt: (Int) -> LogcatEntry?
     let followsLatest: Bool
+    let showsProcessID: Bool
+    let showsThreadID: Bool
     let priorityColors: [LogcatPriority: LogcatColorComponents]
     let onUserScrollAwayFromLatest: () -> Void
 
@@ -13,10 +17,10 @@ struct LogcatTableView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> LogcatTableContainer {
         let tableView = CopyableLogcatTableView()
-        tableView.addTableColumn(column(identifier: "time", title: "Time", width: 88))
-        tableView.addTableColumn(column(identifier: "level", title: "Level", width: 42))
-        tableView.addTableColumn(column(identifier: "tag", title: "Tag", width: 160))
-        tableView.addTableColumn(column(identifier: "message", title: "Message", width: 480))
+        let visibleColumns = Set(LogcatTableColumn.visibleColumns())
+        for definition in LogcatTableColumn.allCases {
+            tableView.addTableColumn(column(definition, isHidden: !visibleColumns.contains(definition)))
+        }
         tableView.columnAutoresizingStyle = .noColumnAutoresizing
         tableView.rowHeight = 18
         tableView.intercellSpacing = .zero
@@ -26,6 +30,7 @@ struct LogcatTableView: NSViewRepresentable {
         tableView.delegate = context.coordinator
         tableView.dataSource = context.coordinator
         tableView.setAccessibilityLabel("Logcat entries")
+        tableView.setAccessibilityHelp("Select one or more entries, then press Command-C to copy them.")
 
         let scrollView = LogcatScrollView()
         scrollView.documentView = tableView
@@ -41,18 +46,23 @@ struct LogcatTableView: NSViewRepresentable {
     func updateNSView(_ container: LogcatTableContainer, context: Context) {
         context.coordinator.onUserScrollAwayFromLatest = onUserScrollAwayFromLatest
         context.coordinator.update(
-            entries: entries,
+            entryCount: entryCount,
+            entryRevision: entryRevision,
+            entryAt: entryAt,
             followsLatest: followsLatest,
-            priorityColors: priorityColors
+            priorityColors: priorityColors,
+            showsProcessID: showsProcessID,
+            showsThreadID: showsThreadID
         )
     }
 
-    private func column(identifier: String, title: String, width: CGFloat) -> NSTableColumn {
-        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(identifier))
-        column.title = title
-        column.width = width
-        column.minWidth = width
+    private func column(_ definition: LogcatTableColumn, isHidden: Bool) -> NSTableColumn {
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(definition.identifier))
+        column.title = definition.title
+        column.width = definition.width
+        column.minWidth = definition.width
         column.resizingMask = .userResizingMask
+        column.isHidden = isHidden
         return column
     }
 
@@ -60,7 +70,9 @@ struct LogcatTableView: NSViewRepresentable {
     final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         var onUserScrollAwayFromLatest: () -> Void
 
-        private var entries: [LogcatEntry] = []
+        private var entryCount = 0
+        private var entryRevision: UInt64?
+        private var entryAt: (Int) -> LogcatEntry? = { _ in nil }
         private weak var tableView: CopyableLogcatTableView?
         private weak var scrollView: NSScrollView?
         private var boundsObserver: NSObjectProtocol?
@@ -86,10 +98,7 @@ struct LogcatTableView: NSViewRepresentable {
                     return ""
                 }
                 return selectedRows.compactMap { row in
-                    guard self.entries.indices.contains(row) else {
-                        return nil
-                    }
-                    return LogcatEntryTextFormatter.string(from: self.entries[row])
+                    self.entryAt(row).map(LogcatEntryTextFormatter.string(from:))
                 }
                 .joined(separator: "\n")
             }
@@ -105,19 +114,30 @@ struct LogcatTableView: NSViewRepresentable {
         }
 
         func update(
-            entries: [LogcatEntry],
+            entryCount: Int,
+            entryRevision: UInt64,
+            entryAt: @escaping (Int) -> LogcatEntry?,
             followsLatest: Bool,
-            priorityColors: [LogcatPriority: LogcatColorComponents]
+            priorityColors: [LogcatPriority: LogcatColorComponents],
+            showsProcessID: Bool,
+            showsThreadID: Bool
         ) {
             guard let tableView else {
                 return
             }
 
-            let entriesChanged = self.entries != entries
-            self.entries = entries
+            let entriesChanged = self.entryRevision != entryRevision
+            self.entryCount = entryCount
+            self.entryRevision = entryRevision
+            self.entryAt = entryAt
             let colorsChanged = self.priorityColors != priorityColors
             self.priorityColors = priorityColors
-            if entriesChanged || colorsChanged {
+            let columnVisibilityChanged = updateColumnVisibility(
+                in: tableView,
+                showsProcessID: showsProcessID,
+                showsThreadID: showsThreadID
+            )
+            if entriesChanged || colorsChanged || columnVisibilityChanged {
                 tableView.reloadData()
             }
 
@@ -128,7 +148,7 @@ struct LogcatTableView: NSViewRepresentable {
         }
 
         func numberOfRows(in tableView: NSTableView) -> Int {
-            entries.count
+            entryCount
         }
 
         func tableView(
@@ -136,11 +156,10 @@ struct LogcatTableView: NSViewRepresentable {
             viewFor tableColumn: NSTableColumn?,
             row: Int
         ) -> NSView? {
-            guard let tableColumn, entries.indices.contains(row) else {
+            guard let tableColumn, let entry = entryAt(row) else {
                 return nil
             }
 
-            let entry = entries[row]
             let identifier = tableColumn.identifier
 
             if identifier.rawValue == "level" {
@@ -152,11 +171,19 @@ struct LogcatTableView: NSViewRepresentable {
 
             let textField = (tableView.makeView(withIdentifier: identifier, owner: nil) as? NSTextField)
                 ?? makeTextField(identifier: identifier)
+            let definition = LogcatTableColumn.allCases.first { $0.identifier == identifier.rawValue }
+            textField.setAccessibilityLabel(definition?.accessibilityLabel ?? "Logcat entry")
 
             switch identifier.rawValue {
             case "time":
                 textField.stringValue = LogcatTimestampFormatter.string(from: entry.timestamp)
                 textField.alignment = .left
+            case "processID":
+                textField.stringValue = String(entry.processID)
+                textField.alignment = .right
+            case "threadID":
+                textField.stringValue = String(entry.threadID)
+                textField.alignment = .right
             case "tag":
                 textField.stringValue = entry.tag
                 textField.alignment = .left
@@ -165,6 +192,7 @@ struct LogcatTableView: NSViewRepresentable {
                 textField.alignment = .left
                 textField.textColor = messageColor(for: entry.priority)
             }
+            textField.setAccessibilityValue(textField.stringValue)
 
             return textField
         }
@@ -186,13 +214,31 @@ struct LogcatTableView: NSViewRepresentable {
             color(for: priority).blended(withFraction: 0.55, of: .labelColor) ?? .labelColor
         }
 
+        private func updateColumnVisibility(
+            in tableView: NSTableView,
+            showsProcessID: Bool,
+            showsThreadID: Bool
+        ) -> Bool {
+            let processIDColumn = tableView.tableColumn(
+                withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.processID.identifier)
+            )
+            let threadIDColumn = tableView.tableColumn(
+                withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.threadID.identifier)
+            )
+            let processIDChanged = processIDColumn?.isHidden == showsProcessID
+            let threadIDChanged = threadIDColumn?.isHidden == showsThreadID
+            processIDColumn?.isHidden = !showsProcessID
+            threadIDColumn?.isHidden = !showsThreadID
+            return processIDChanged || threadIDChanged
+        }
+
         private func scrollToLatest(in tableView: NSTableView) {
-            guard !entries.isEmpty else {
+            guard entryCount > 0 else {
                 return
             }
 
             isPerformingProgrammaticScroll = true
-            tableView.scrollRowToVisible(entries.count - 1)
+            tableView.scrollRowToVisible(entryCount - 1)
             DispatchQueue.main.async { [weak self] in
                 self?.isPerformingProgrammaticScroll = false
             }

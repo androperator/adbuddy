@@ -534,9 +534,9 @@ Colors apply to the level badge and message emphasis while preserving readable
 contrast in both Light and Dark appearances. The app should avoid tinting the
 entire row with a saturated background.
 
-All six colors are global persisted preferences. A future Logcat section in
-Settings provides a native color picker for each level plus **Reset to
-Defaults**. Changing a color updates all open Logcat windows.
+All six colors are global persisted preferences. The Logcat section in Settings
+provides a native color picker for each level plus **Reset to Defaults**.
+Changing a color updates all open Logcat windows.
 
 ## Initial history and retention
 
@@ -588,7 +588,7 @@ resolved ADB executable and fixed argument arrays, including the selected
 device serial. It must not concatenate a shell command string.
 
 The existing completion-based process runner is not sufficient for an
-unbounded stream. Add a focused streaming process service that:
+unbounded stream. The focused streaming process service:
 
 - reads stdout incrementally;
 - captures stderr and termination context;
