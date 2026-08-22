@@ -160,11 +160,13 @@ private struct DeviceRow: View {
                             ProgressView()
                                 .controlSize(.small)
                         } else {
-                            Text("Take Screenshot")
+                            Label("Take Screenshot", systemImage: "camera")
+                                .labelStyle(.iconOnly)
                         }
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(isCapturing)
+                    .help("Take Screenshot")
                 }
             } else {
                 Text(device.connectionState.displayName)
@@ -178,18 +180,28 @@ private struct DeviceRow: View {
     @ViewBuilder
     private var screenRecordingControl: some View {
         if isPreparingScreenRecording {
-            Label("Preparing", systemImage: "record.circle")
-                .foregroundStyle(.secondary)
+            ProgressView()
+                .controlSize(.small)
+                .help("Preparing Screen Recording")
         } else if isScreenRecording {
-            Button("Stop Recording", action: stopScreenRecording)
+            Button(action: stopScreenRecording) {
+                Label("Stop Recording", systemImage: "stop.fill")
+                    .labelStyle(.iconOnly)
+            }
                 .buttonStyle(.bordered)
+                .help("Stop Recording")
         } else if isStoppingScreenRecording {
-            Label("Stopping", systemImage: "stop.circle")
-                .foregroundStyle(.secondary)
+            ProgressView()
+                .controlSize(.small)
+                .help("Stopping Screen Recording")
         } else {
-            Button("Record Screen…", action: showScreenRecordingOptions)
+            Button(action: showScreenRecordingOptions) {
+                Label("Record Screen", systemImage: "record.circle")
+                    .labelStyle(.iconOnly)
+            }
                 .buttonStyle(.bordered)
                 .disabled(!canStartScreenRecording)
+                .help("Record Screen")
         }
     }
 }
