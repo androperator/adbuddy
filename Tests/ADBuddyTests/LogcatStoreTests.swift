@@ -171,6 +171,76 @@ final class LogcatStoreTests: XCTestCase {
         store.stop()
     }
 
+    func testPauseFreezesDisplayedEntriesWhileIngestionContinuesAndRestoresFollowState() async throws {
+        let service = ControllableLogcatService()
+        let store = makeStore(service: service)
+
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForStreamCount(service, expectedCount: 1)
+        service.yield(.entries([entry(id: 1)]))
+        try await waitForEntryCount(store, expectedCount: 1)
+
+        store.userScrolledAwayFromLatest()
+        store.togglePause()
+        XCTAssertTrue(store.isPaused)
+        XCTAssertEqual(store.displayedStreamState, .paused)
+        XCTAssertEqual(store.displayedEntries.map(\.id), [1])
+
+        service.yield(.entries([entry(id: 2)]))
+        try await waitForEntryCount(store, expectedCount: 2)
+        XCTAssertEqual(store.displayedEntries.map(\.id), [1])
+
+        store.togglePause()
+        XCTAssertFalse(store.isPaused)
+        XCTAssertFalse(store.isFollowing)
+        XCTAssertEqual(store.displayedEntries.map(\.id), [1, 2])
+
+        store.jumpToLatest()
+        XCTAssertTrue(store.isFollowing)
+        store.stop()
+    }
+
+    func testClearRemovesOnlyTheWindowEntries() async throws {
+        let service = ControllableLogcatService()
+        let store = makeStore(service: service)
+
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForStreamCount(service, expectedCount: 1)
+        service.yield(.entries([entry(id: 1), entry(id: 2)]))
+        try await waitForEntryCount(store, expectedCount: 2)
+        store.togglePause()
+
+        store.clear()
+
+        XCTAssertEqual(store.entries, [])
+        XCTAssertEqual(store.displayedEntries, [])
+        XCTAssertEqual(service.streamCount, 1)
+        store.stop()
+    }
+
+    func testPausedIngestionRemainsBounded() async throws {
+        let service = ControllableLogcatService()
+        let store = makeStore(service: service)
+        let initialEntries = (1...LogcatStore.retentionLimit).map { entry(id: UInt64($0)) }
+        let laterEntries = (LogcatStore.retentionLimit + 1...LogcatStore.retentionLimit + 600).map {
+            entry(id: UInt64($0))
+        }
+
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForStreamCount(service, expectedCount: 1)
+        service.yield(.entries(initialEntries))
+        try await waitForEntryCount(store, expectedCount: LogcatStore.retentionLimit)
+        store.togglePause()
+        service.yield(.entries(laterEntries))
+        try await waitForLastEntryID(store, expectedID: 50_600)
+
+        XCTAssertEqual(store.entries.first?.id, 601)
+        XCTAssertEqual(store.entries.last?.id, 50_600)
+        XCTAssertEqual(store.displayedEntries.first?.id, 1)
+        XCTAssertEqual(store.displayedEntries.last?.id, 50_000)
+        store.stop()
+    }
+
     private func entry(
         id: UInt64,
         priority: LogcatPriority = .debug,
@@ -263,6 +333,16 @@ final class LogcatStoreTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(10))
         }
         XCTFail("Expected visible process IDs \(expectedProcessIDs)")
+    }
+
+    private func waitForLastEntryID(_ store: LogcatStore, expectedID: UInt64) async throws {
+        for _ in 0..<80 {
+            if store.entries.last?.id == expectedID {
+                return
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("Expected last retained Logcat entry \(expectedID)")
     }
 }
 

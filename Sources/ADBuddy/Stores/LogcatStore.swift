@@ -4,6 +4,7 @@ import Observation
 enum LogcatStreamState: Equatable, Sendable {
     case connecting
     case streaming
+    case paused
     case waitingForApplication(String)
     case failed(String)
     case stopped
@@ -27,17 +28,29 @@ final class LogcatStore {
     private var latestRunningProcesses: [AndroidRunningProcess] = []
     private var packageUserID: Int?
     private var prefersUserIDFiltering = true
+    private var pausedEntries: [LogcatEntry]?
+    private var followedLatestBeforePausing = true
 
     private(set) var entries: [LogcatEntry] = []
     private(set) var streamState: LogcatStreamState = .connecting
     private(set) var applicationID: String?
     private(set) var runningApplicationIDs: [String] = []
+    private(set) var isFollowing = true
+    private(set) var isPaused = false
     var minimumPriority: LogcatPriority = .debug
 
     var visibleEntries: [LogcatEntry] {
         entries.filter {
             $0.priority.severity >= minimumPriority.severity && activeApplicationScope.includes($0)
         }
+    }
+
+    var displayedEntries: [LogcatEntry] {
+        pausedEntries ?? visibleEntries
+    }
+
+    var displayedStreamState: LogcatStreamState {
+        isPaused ? .paused : streamState
     }
 
     init(
@@ -103,6 +116,31 @@ final class LogcatStore {
         } else {
             applyApplicationScope(.allApplications)
         }
+    }
+
+    func userScrolledAwayFromLatest() {
+        isFollowing = false
+    }
+
+    func jumpToLatest() {
+        isFollowing = true
+    }
+
+    func togglePause() {
+        if isPaused {
+            isPaused = false
+            pausedEntries = nil
+            isFollowing = followedLatestBeforePausing
+        } else {
+            followedLatestBeforePausing = isFollowing
+            pausedEntries = visibleEntries
+            isPaused = true
+        }
+    }
+
+    func clear() {
+        entries.removeAll(keepingCapacity: true)
+        pausedEntries = isPaused ? [] : nil
     }
 
     private func beginApplicationMonitoring() {
@@ -245,6 +283,7 @@ final class LogcatStore {
         streamTask?.cancel()
         streamTask = nil
         entries.removeAll(keepingCapacity: false)
+        pausedEntries = isPaused ? [] : nil
     }
 
     private func receive(_ event: LogcatServiceEvent, generation: Int) {

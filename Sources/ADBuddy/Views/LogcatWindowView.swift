@@ -32,13 +32,24 @@ struct LogcatWindowView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
 
-            LogcatStateBanner(streamState: logcatStore.streamState)
+            LogcatStateBanner(streamState: logcatStore.displayedStreamState)
 
             Divider()
 
-            LogcatTableView(entries: logcatStore.visibleEntries)
+            LogcatTableView(
+                entries: logcatStore.displayedEntries,
+                followsLatest: logcatStore.isFollowing,
+                onUserScrollAwayFromLatest: logcatStore.userScrolledAwayFromLatest
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(minWidth: 700, minHeight: 420, alignment: .topLeading)
+        .frame(
+            minWidth: 700,
+            maxWidth: .infinity,
+            minHeight: 420,
+            maxHeight: .infinity,
+            alignment: .topLeading
+        )
         .navigationTitle("Logcat - \(deviceName)")
         .task(id: deviceStore.resolvedSDK?.adbPath) {
             logcatStore.start(adbPath: deviceStore.resolvedSDK?.adbPath)
@@ -68,6 +79,33 @@ struct LogcatWindowView: View {
                 .accessibilityLabel("Minimum Log Level")
                 .help("Minimum Log Level")
             }
+
+            ToolbarItemGroup(placement: .automatic) {
+                Button {
+                    logcatStore.togglePause()
+                } label: {
+                    Image(systemName: logcatStore.isPaused ? "play.fill" : "pause.fill")
+                }
+                .accessibilityLabel(logcatStore.isPaused ? "Resume Logcat" : "Pause Logcat")
+                .help(logcatStore.isPaused ? "Resume Logcat" : "Pause Logcat")
+
+                Button {
+                    logcatStore.clear()
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .accessibilityLabel("Clear Logcat")
+                .help("Clear Logcat")
+
+                Button {
+                    logcatStore.jumpToLatest()
+                } label: {
+                    Image(systemName: "arrow.down.to.line.compact")
+                }
+                .disabled(logcatStore.isFollowing)
+                .accessibilityLabel("Jump to Latest")
+                .help("Jump to Latest")
+            }
         }
     }
 }
@@ -94,6 +132,8 @@ private struct LogcatStateBanner: View {
             "arrow.triangle.2.circlepath"
         case .streaming:
             "dot.radiowaves.left.and.right"
+        case .paused:
+            "pause.circle"
         case .waitingForApplication:
             "hourglass"
         case .failed:
@@ -109,6 +149,8 @@ private struct LogcatStateBanner: View {
             .secondary
         case .streaming:
             .green
+        case .paused:
+            .secondary
         case .waitingForApplication:
             .secondary
         case .failed:
@@ -124,6 +166,8 @@ private struct LogcatStateBanner: View {
             "Connecting to Logcat…"
         case .streaming:
             "Streaming Logcat"
+        case .paused:
+            "Logcat paused"
         case .waitingForApplication(let applicationID):
             "Waiting for \(applicationID) to start"
         case .failed(let message):
