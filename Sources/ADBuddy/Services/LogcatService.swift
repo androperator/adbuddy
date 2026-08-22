@@ -13,7 +13,13 @@ enum LogcatServiceFailure: Equatable, Sendable {
 }
 
 protocol LogcatStreaming: Sendable {
-    func stream(for deviceSerial: String) -> AsyncStream<LogcatServiceEvent>
+    func stream(for deviceSerial: String, scope: LogcatStreamScope) -> AsyncStream<LogcatServiceEvent>
+}
+
+extension LogcatStreaming {
+    func stream(for deviceSerial: String) -> AsyncStream<LogcatServiceEvent> {
+        stream(for: deviceSerial, scope: .allApplications)
+    }
 }
 
 struct LogcatService: LogcatStreaming, Sendable {
@@ -36,10 +42,13 @@ struct LogcatService: LogcatStreaming, Sendable {
         self.batchFlushInterval = batchFlushInterval
     }
 
-    func stream(for deviceSerial: String) -> AsyncStream<LogcatServiceEvent> {
+    func stream(
+        for deviceSerial: String,
+        scope: LogcatStreamScope = .allApplications
+    ) -> AsyncStream<LogcatServiceEvent> {
         let processEvents = processRunner.stream(
             executablePath: adbPath,
-            arguments: Self.arguments(for: deviceSerial)
+            arguments: Self.arguments(for: deviceSerial, scope: scope)
         )
         let taskController = LogcatStreamTaskController()
 
@@ -109,13 +118,19 @@ struct LogcatService: LogcatStreaming, Sendable {
         }
     }
 
-    static func arguments(for deviceSerial: String) -> [String] {
-        [
+    static func arguments(for deviceSerial: String, scope: LogcatStreamScope = .allApplications) -> [String] {
+        var arguments = [
             "-s", deviceSerial,
             "logcat",
             "-v", "threadtime",
             "-T", String(initialHistoryLimit),
         ]
+
+        if case .userID(let userID) = scope {
+            arguments.append("--uid=\(userID)")
+        }
+
+        return arguments
     }
 
     private static func failureContext(from standardError: Data) -> String {

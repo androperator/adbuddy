@@ -48,6 +48,15 @@ struct LogcatWindowView: View {
         }
         .toolbar {
             ToolbarItem(placement: .principal) {
+                ApplicationIDPicker(
+                    applicationID: logcatStore.applicationID,
+                    suggestions: logcatStore.runningApplicationIDs,
+                    onCommit: logcatStore.selectApplicationID
+                )
+                .frame(width: 260)
+            }
+
+            ToolbarItem(placement: .principal) {
                 Picker("Minimum Log Level", selection: $logcatStore.minimumPriority) {
                     ForEach(LogcatPriority.allCases, id: \.self) { priority in
                         Text(priority.rawValue)
@@ -85,6 +94,8 @@ private struct LogcatStateBanner: View {
             "arrow.triangle.2.circlepath"
         case .streaming:
             "dot.radiowaves.left.and.right"
+        case .waitingForApplication:
+            "hourglass"
         case .failed:
             "exclamationmark.triangle"
         case .stopped:
@@ -98,6 +109,8 @@ private struct LogcatStateBanner: View {
             .secondary
         case .streaming:
             .green
+        case .waitingForApplication:
+            .secondary
         case .failed:
             .orange
         case .stopped:
@@ -111,6 +124,8 @@ private struct LogcatStateBanner: View {
             "Connecting to Logcat…"
         case .streaming:
             "Streaming Logcat"
+        case .waitingForApplication(let applicationID):
+            "Waiting for \(applicationID) to start"
         case .failed(let message):
             message
         case .stopped:

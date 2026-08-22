@@ -64,6 +64,22 @@ final class LogcatServiceTests: XCTestCase {
         XCTAssertEqual(entries[0].message, "message")
     }
 
+    func testAddsUserIDFilterToTheFixedADBArguments() async {
+        let runner = RecordingStreamingProcessRunner(events: [
+            .terminated(exitStatus: 0, standardError: Data()),
+        ])
+        let service = LogcatService(adbPath: "/SDK/platform-tools/adb", processRunner: runner)
+
+        _ = await collectEvents(
+            from: service.stream(for: "device-serial", scope: .userID(10374))
+        )
+
+        XCTAssertEqual(
+            runner.invocations.first?.arguments,
+            ["-s", "device-serial", "logcat", "-v", "threadtime", "-T", "5000", "--uid=10374"]
+        )
+    }
+
     func testMapsFailuresAndCancellationWithoutRawTextEvents() async {
         let launchFailure = await collectEvents(
             from: LogcatService(

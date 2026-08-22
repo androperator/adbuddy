@@ -6,7 +6,7 @@ import XCTest
 final class LogcatStoreTests: XCTestCase {
     func testFiltersEveryMinimumPriorityWithoutDiscardingEntries() async throws {
         let service = ControllableLogcatService()
-        let store = LogcatStore(deviceSerial: "device-serial", makeService: { _ in service })
+        let store = makeStore(service: service)
         let entries = LogcatPriority.allCases.enumerated().map { index, priority in
             entry(id: UInt64(index + 1), priority: priority)
         }
@@ -37,7 +37,7 @@ final class LogcatStoreTests: XCTestCase {
 
     func testWaitsForADBResolutionBeforeStartingTheStream() async throws {
         let service = ControllableLogcatService()
-        let store = LogcatStore(deviceSerial: "device-serial", makeService: { _ in service })
+        let store = makeStore(service: service)
 
         store.start(adbPath: nil)
 
@@ -50,7 +50,7 @@ final class LogcatStoreTests: XCTestCase {
 
     func testStartsOnlyOneStreamAndRetainsEntriesAfterFailure() async throws {
         let service = ControllableLogcatService()
-        let store = LogcatStore(deviceSerial: "device-serial", makeService: { _ in service })
+        let store = makeStore(service: service)
 
         store.start(adbPath: "/SDK/platform-tools/adb")
         store.start(adbPath: "/SDK/platform-tools/adb")
@@ -66,7 +66,7 @@ final class LogcatStoreTests: XCTestCase {
 
     func testCapsRetainedEntriesAtFiftyThousand() async throws {
         let service = ControllableLogcatService()
-        let store = LogcatStore(deviceSerial: "device-serial", makeService: { _ in service })
+        let store = makeStore(service: service)
         let entries = (1...50_600).map { entry(id: UInt64($0)) }
 
         store.start(adbPath: "/SDK/platform-tools/adb")
@@ -80,7 +80,7 @@ final class LogcatStoreTests: XCTestCase {
 
     func testStopCancelsOnlyTheWindowStreamAndReportsStopped() async throws {
         let service = ControllableLogcatService()
-        let store = LogcatStore(deviceSerial: "device-serial", makeService: { _ in service })
+        let store = makeStore(service: service)
 
         store.start(adbPath: "/SDK/platform-tools/adb")
         try await waitForStreamCount(service, expectedCount: 1)
@@ -90,15 +90,112 @@ final class LogcatStoreTests: XCTestCase {
         try await waitForCancellation(of: service)
     }
 
-    private func entry(id: UInt64, priority: LogcatPriority = .debug) -> LogcatEntry {
+    func testApplicationSelectionUsesUIDScopeForPrimaryAndSecondaryProcesses() async throws {
+        let service = ControllableLogcatService()
+        let applicationService = ControllableLogcatApplicationService(
+            processes: [
+                AndroidRunningProcess(userID: 10374, processID: 101, name: "com.example.app"),
+                AndroidRunningProcess(userID: 10374, processID: 102, name: "com.example.app:worker"),
+            ],
+            packageUserID: 10374
+        )
+        let store = makeStore(service: service, applicationService: applicationService)
+
+        store.selectApplicationID("com.example.app")
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForScope(of: service, matching: .userID(10374))
+
+        service.yield(.entries([
+            entry(id: 1, processID: 101),
+            entry(id: 2, processID: 102),
+        ]))
+        try await waitForEntryCount(store, expectedCount: 2)
+
+        XCTAssertEqual(store.runningApplicationIDs, ["com.example.app"])
+        XCTAssertEqual(store.visibleEntries.map(\.processID), [101, 102])
+        store.stop()
+    }
+
+    func testPIDFilteringIncludesSecondaryProcessesAndRecoversAfterRestart() async throws {
+        let service = ControllableLogcatService()
+        let applicationService = ControllableLogcatApplicationService(
+            processes: [
+                AndroidRunningProcess(userID: 10374, processID: 101, name: "com.example.app"),
+                AndroidRunningProcess(userID: 10374, processID: 102, name: "com.example.app:worker"),
+            ],
+            packageUserID: nil
+        )
+        let store = makeStore(service: service, applicationService: applicationService)
+
+        store.selectApplicationID("com.example.app")
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForScope(of: service, matching: .allApplications)
+
+        service.yield(.entries([
+            entry(id: 1, processID: 101),
+            entry(id: 2, processID: 102),
+            entry(id: 3, processID: 999),
+        ]))
+        try await waitForEntryCount(store, expectedCount: 3)
+        XCTAssertEqual(store.visibleEntries.map(\.processID), [101, 102])
+
+        applicationService.setProcesses([
+            AndroidRunningProcess(userID: 10374, processID: 303, name: "com.example.app"),
+        ])
+        try await waitForVisibleProcessIDs(store, expectedProcessIDs: [])
+        service.yield(.entries([entry(id: 4, processID: 303)]))
+        try await waitForVisibleProcessIDs(store, expectedProcessIDs: [303])
+
+        XCTAssertEqual(service.streamCount, 1)
+        store.stop()
+    }
+
+    func testApplicationSelectionWaitsUntilANotRunningPackageStarts() async throws {
+        let service = ControllableLogcatService()
+        let applicationService = ControllableLogcatApplicationService(
+            processes: [],
+            packageUserID: nil
+        )
+        let store = makeStore(service: service, applicationService: applicationService)
+
+        store.selectApplicationID("com.example.app")
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForState(store, matching: .waitingForApplication("com.example.app"))
+        XCTAssertEqual(service.streamCount, 0)
+
+        applicationService.setProcesses([
+            AndroidRunningProcess(userID: 10374, processID: 303, name: "com.example.app"),
+        ])
+        try await waitForScope(of: service, matching: .allApplications)
+        XCTAssertEqual(store.streamState, .streaming)
+        store.stop()
+    }
+
+    private func entry(
+        id: UInt64,
+        priority: LogcatPriority = .debug,
+        processID: Int = 101
+    ) -> LogcatEntry {
         LogcatEntry(
             id: id,
             timestamp: Date(timeIntervalSince1970: TimeInterval(id)),
             priority: priority,
-            processID: 101,
+            processID: processID,
             threadID: 201,
             tag: "Tag",
             message: "Message \(id)"
+        )
+    }
+
+    private func makeStore(
+        service: ControllableLogcatService,
+        applicationService: any LogcatApplicationQuerying = EmptyLogcatApplicationService()
+    ) -> LogcatStore {
+        LogcatStore(
+            deviceSerial: "device-serial",
+            makeService: { _ in service },
+            makeApplicationService: { _ in applicationService },
+            applicationRefreshInterval: .milliseconds(10)
         )
     }
 
@@ -141,12 +238,39 @@ final class LogcatStoreTests: XCTestCase {
         }
         XCTFail("Expected the Logcat stream to be cancelled")
     }
+
+    private func waitForScope(
+        of service: ControllableLogcatService,
+        matching expectedScope: LogcatStreamScope
+    ) async throws {
+        for _ in 0..<80 {
+            if service.scopes.last == expectedScope {
+                return
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("Expected Logcat stream scope \(expectedScope)")
+    }
+
+    private func waitForVisibleProcessIDs(
+        _ store: LogcatStore,
+        expectedProcessIDs: [Int]
+    ) async throws {
+        for _ in 0..<80 {
+            if store.visibleEntries.map(\.processID) == expectedProcessIDs {
+                return
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("Expected visible process IDs \(expectedProcessIDs)")
+    }
 }
 
 private final class ControllableLogcatService: LogcatStreaming, @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: AsyncStream<LogcatServiceEvent>.Continuation?
     private var recordedStreamCount = 0
+    private var recordedScopes: [LogcatStreamScope] = []
     private var cancelled = false
 
     var streamCount: Int {
@@ -161,9 +285,19 @@ private final class ControllableLogcatService: LogcatStreaming, @unchecked Senda
         return cancelled
     }
 
-    func stream(for deviceSerial: String) -> AsyncStream<LogcatServiceEvent> {
+    var scopes: [LogcatStreamScope] {
+        lock.lock()
+        defer { lock.unlock() }
+        return recordedScopes
+    }
+
+    func stream(
+        for deviceSerial: String,
+        scope: LogcatStreamScope
+    ) -> AsyncStream<LogcatServiceEvent> {
         lock.lock()
         recordedStreamCount += 1
+        recordedScopes.append(scope)
         lock.unlock()
 
         return AsyncStream { continuation in
@@ -184,5 +318,46 @@ private final class ControllableLogcatService: LogcatStreaming, @unchecked Senda
         let continuation = continuation
         lock.unlock()
         continuation?.yield(event)
+    }
+}
+
+private struct EmptyLogcatApplicationService: LogcatApplicationQuerying {
+    func runningProcesses(for deviceSerial: String) async -> LogcatApplicationServiceResult<[AndroidRunningProcess]> {
+        .success([])
+    }
+
+    func packageUserID(
+        for packageID: String,
+        deviceSerial: String
+    ) async -> LogcatApplicationServiceResult<Int?> {
+        .success(nil)
+    }
+}
+
+private final class ControllableLogcatApplicationService: LogcatApplicationQuerying, @unchecked Sendable {
+    private let lock = NSLock()
+    private var currentProcesses: [AndroidRunningProcess]
+    private let currentPackageUserID: Int?
+
+    init(processes: [AndroidRunningProcess], packageUserID: Int?) {
+        currentProcesses = processes
+        currentPackageUserID = packageUserID
+    }
+
+    func setProcesses(_ processes: [AndroidRunningProcess]) {
+        lock.lock()
+        currentProcesses = processes
+        lock.unlock()
+    }
+
+    func runningProcesses(for deviceSerial: String) async -> LogcatApplicationServiceResult<[AndroidRunningProcess]> {
+        .success(lock.withLock { currentProcesses })
+    }
+
+    func packageUserID(
+        for packageID: String,
+        deviceSerial: String
+    ) async -> LogcatApplicationServiceResult<Int?> {
+        .success(currentPackageUserID)
     }
 }
