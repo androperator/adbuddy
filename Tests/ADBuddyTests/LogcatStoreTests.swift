@@ -4,6 +4,37 @@ import XCTest
 
 @MainActor
 final class LogcatStoreTests: XCTestCase {
+    func testFiltersEveryMinimumPriorityWithoutDiscardingEntries() async throws {
+        let service = ControllableLogcatService()
+        let store = LogcatStore(deviceSerial: "device-serial", makeService: { _ in service })
+        let entries = LogcatPriority.allCases.enumerated().map { index, priority in
+            entry(id: UInt64(index + 1), priority: priority)
+        }
+
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForStreamCount(service, expectedCount: 1)
+        service.yield(.entries(entries))
+        try await waitForEntryCount(store, expectedCount: entries.count)
+
+        XCTAssertEqual(store.minimumPriority, .debug)
+        XCTAssertEqual(store.visibleEntries.map(\.priority), [.debug, .info, .warn, .error, .assert])
+
+        for minimumPriority in LogcatPriority.allCases {
+            store.minimumPriority = minimumPriority
+            XCTAssertEqual(
+                store.visibleEntries.map(\.priority),
+                LogcatPriority.allCases.filter { $0.severity >= minimumPriority.severity }
+            )
+        }
+
+        store.minimumPriority = .info
+        service.yield(.entries([entry(id: 7, priority: .debug)]))
+        try await waitForEntryCount(store, expectedCount: 7)
+
+        XCTAssertEqual(store.entries.count, 7)
+        XCTAssertFalse(store.visibleEntries.contains(where: { $0.id == 7 }))
+    }
+
     func testWaitsForADBResolutionBeforeStartingTheStream() async throws {
         let service = ControllableLogcatService()
         let store = LogcatStore(deviceSerial: "device-serial", makeService: { _ in service })
@@ -36,7 +67,7 @@ final class LogcatStoreTests: XCTestCase {
     func testCapsRetainedEntriesAtFiftyThousand() async throws {
         let service = ControllableLogcatService()
         let store = LogcatStore(deviceSerial: "device-serial", makeService: { _ in service })
-        let entries = (1...50_600).map(entry)
+        let entries = (1...50_600).map { entry(id: UInt64($0)) }
 
         store.start(adbPath: "/SDK/platform-tools/adb")
         try await waitForStreamCount(service, expectedCount: 1)
@@ -59,11 +90,11 @@ final class LogcatStoreTests: XCTestCase {
         try await waitForCancellation(of: service)
     }
 
-    private func entry(id: UInt64) -> LogcatEntry {
+    private func entry(id: UInt64, priority: LogcatPriority = .debug) -> LogcatEntry {
         LogcatEntry(
             id: id,
             timestamp: Date(timeIntervalSince1970: TimeInterval(id)),
-            priority: .debug,
+            priority: priority,
             processID: 101,
             threadID: 201,
             tag: "Tag",

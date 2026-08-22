@@ -20,6 +20,11 @@ final class LogcatStore {
 
     private(set) var entries: [LogcatEntry] = []
     private(set) var streamState: LogcatStreamState = .connecting
+    var minimumPriority: LogcatPriority = .debug
+
+    var visibleEntries: [LogcatEntry] {
+        entries.filter { $0.priority.severity >= minimumPriority.severity }
+    }
 
     init(
         deviceSerial: String,

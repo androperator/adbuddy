@@ -16,6 +16,8 @@ struct LogcatWindowView: View {
     }
 
     var body: some View {
+        @Bindable var logcatStore = logcatStore
+
         VStack(spacing: 0) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(deviceName)
@@ -34,7 +36,7 @@ struct LogcatWindowView: View {
 
             Divider()
 
-            LogcatTableView(entries: logcatStore.entries)
+            LogcatTableView(entries: logcatStore.visibleEntries)
         }
         .frame(minWidth: 700, minHeight: 420, alignment: .topLeading)
         .navigationTitle("Logcat - \(deviceName)")
@@ -43,6 +45,20 @@ struct LogcatWindowView: View {
         }
         .onDisappear {
             logcatStore.stop()
+        }
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Picker("Minimum Log Level", selection: $logcatStore.minimumPriority) {
+                    ForEach(LogcatPriority.allCases, id: \.self) { priority in
+                        Text(priority.rawValue)
+                            .tag(priority)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 220)
+                .accessibilityLabel("Minimum Log Level")
+                .help("Minimum Log Level")
+            }
         }
     }
 }
