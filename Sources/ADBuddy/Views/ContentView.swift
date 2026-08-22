@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.openWindow) private var openWindow
     @Environment(DeviceStore.self) private var deviceStore
     @Environment(AppPreferences.self) private var preferences
     @Binding var isShowingSettings: Bool
@@ -87,6 +88,10 @@ struct ContentView: View {
                     },
                     stopScreenRecording: {
                         deviceStore.stopScreenRecording(for: device)
+                    },
+                    openLogcat: {
+                        AppLogger.devices.info("Logcat requested from the main window")
+                        openWindow(value: LogcatWindowID(serial: device.serial))
                     }
                 )
             }
@@ -110,6 +115,7 @@ private struct DeviceRow: View {
     let takeScreenshot: () -> Void
     let showScreenRecordingOptions: () -> Void
     let stopScreenRecording: () -> Void
+    let openLogcat: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -145,6 +151,17 @@ private struct DeviceRow: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(isCapturing)
                     .help("Take Screenshot")
+
+                    Divider()
+                        .frame(height: 20)
+
+                    Button(action: openLogcat) {
+                        Label("Open Logcat", systemImage: "text.alignleft")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.bordered)
+                    .accessibilityLabel("Open Logcat")
+                    .help("Open Logcat")
                 }
             } else {
                 Text(device.connectionState.displayName)

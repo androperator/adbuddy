@@ -49,6 +49,15 @@ struct ADBuddyApp: App {
             }
         }
 
+        WindowGroup(for: LogcatWindowID.self) { $windowID in
+            if let windowID {
+                LogcatWindowView(windowID: windowID)
+                    .environment(deviceStore)
+            }
+        }
+        .defaultSize(width: 920, height: 600)
+        .windowResizability(.contentMinSize)
+
         MenuBarExtra(
             "ADBuddy",
             systemImage: deviceStore.hasActiveScreenRecording ? "stop.fill" : "camera"

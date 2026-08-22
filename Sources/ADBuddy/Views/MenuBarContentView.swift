@@ -76,6 +76,12 @@ struct MenuBarContentView: View {
                             }
                             .disabled(!deviceStore.canStartScreenRecording(for: device))
                         }
+
+                        Button("Open Logcat") {
+                            AppLogger.menuBar.info("Logcat selected from menu bar")
+                            openWindow(value: LogcatWindowID(serial: device.serial))
+                            NSApp.activate(ignoringOtherApps: true)
+                        }
                     } else {
                         Text(device.connectionState.displayName)
                     }
