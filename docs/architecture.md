@@ -26,6 +26,8 @@ Settings
 
 The app should retain normal application behavior with a visible main window
 and a Dock presence, rather than behaving as a menu-only accessory app.
+It opts out of automatic window tabbing because the main window is a focused
+utility surface, not a document workspace.
 
 ## Initial source layout
 
