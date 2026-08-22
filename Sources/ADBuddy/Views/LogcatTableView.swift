@@ -4,6 +4,7 @@ import SwiftUI
 struct LogcatTableView: NSViewRepresentable {
     let entries: [LogcatEntry]
     let followsLatest: Bool
+    let priorityColors: [LogcatPriority: LogcatColorComponents]
     let onUserScrollAwayFromLatest: () -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -41,7 +42,8 @@ struct LogcatTableView: NSViewRepresentable {
         context.coordinator.onUserScrollAwayFromLatest = onUserScrollAwayFromLatest
         context.coordinator.update(
             entries: entries,
-            followsLatest: followsLatest
+            followsLatest: followsLatest,
+            priorityColors: priorityColors
         )
     }
 
@@ -64,6 +66,7 @@ struct LogcatTableView: NSViewRepresentable {
         private var boundsObserver: NSObjectProtocol?
         private var isPerformingProgrammaticScroll = false
         private var wasFollowingLatest = false
+        private var priorityColors = LogcatPriority.defaultColors
 
         init(onUserScrollAwayFromLatest: @escaping () -> Void) {
             self.onUserScrollAwayFromLatest = onUserScrollAwayFromLatest
@@ -103,7 +106,8 @@ struct LogcatTableView: NSViewRepresentable {
 
         func update(
             entries: [LogcatEntry],
-            followsLatest: Bool
+            followsLatest: Bool,
+            priorityColors: [LogcatPriority: LogcatColorComponents]
         ) {
             guard let tableView else {
                 return
@@ -111,7 +115,9 @@ struct LogcatTableView: NSViewRepresentable {
 
             let entriesChanged = self.entries != entries
             self.entries = entries
-            if entriesChanged {
+            let colorsChanged = self.priorityColors != priorityColors
+            self.priorityColors = priorityColors
+            if entriesChanged || colorsChanged {
                 tableView.reloadData()
             }
 
@@ -134,24 +140,30 @@ struct LogcatTableView: NSViewRepresentable {
                 return nil
             }
 
+            let entry = entries[row]
             let identifier = tableColumn.identifier
+
+            if identifier.rawValue == "level" {
+                let badge = (tableView.makeView(withIdentifier: identifier, owner: nil) as? LogcatLevelBadgeView)
+                    ?? LogcatLevelBadgeView(identifier: identifier)
+                badge.configure(priority: entry.priority, color: color(for: entry.priority))
+                return badge
+            }
+
             let textField = (tableView.makeView(withIdentifier: identifier, owner: nil) as? NSTextField)
                 ?? makeTextField(identifier: identifier)
-            let entry = entries[row]
 
             switch identifier.rawValue {
             case "time":
                 textField.stringValue = LogcatTimestampFormatter.string(from: entry.timestamp)
                 textField.alignment = .left
-            case "level":
-                textField.stringValue = entry.priority.rawValue
-                textField.alignment = .center
             case "tag":
                 textField.stringValue = entry.tag
                 textField.alignment = .left
             default:
                 textField.stringValue = entry.message
                 textField.alignment = .left
+                textField.textColor = messageColor(for: entry.priority)
             }
 
             return textField
@@ -164,6 +176,14 @@ struct LogcatTableView: NSViewRepresentable {
             textField.lineBreakMode = .byClipping
             textField.maximumNumberOfLines = 1
             return textField
+        }
+
+        private func color(for priority: LogcatPriority) -> NSColor {
+            priorityColors[priority, default: LogcatPriority.defaultColors[priority]!].nsColor
+        }
+
+        private func messageColor(for priority: LogcatPriority) -> NSColor {
+            color(for: priority).blended(withFraction: 0.55, of: .labelColor) ?? .labelColor
         }
 
         private func scrollToLatest(in tableView: NSTableView) {
@@ -192,6 +212,37 @@ struct LogcatTableView: NSViewRepresentable {
                 onUserScrollAwayFromLatest()
             }
         }
+    }
+}
+
+private final class LogcatLevelBadgeView: NSView {
+    private let label = NSTextField(labelWithString: "")
+
+    init(identifier: NSUserInterfaceItemIdentifier) {
+        super.init(frame: .zero)
+        self.identifier = identifier
+        wantsLayer = true
+        layer?.cornerRadius = 4
+        label.font = .monospacedSystemFont(ofSize: 11, weight: .semibold)
+        label.alignment = .center
+        addSubview(label)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        label.frame = bounds.insetBy(dx: 3, dy: 1)
+    }
+
+    func configure(priority: LogcatPriority, color: NSColor) {
+        label.stringValue = priority.rawValue
+        label.textColor = color
+        layer?.backgroundColor = color.withAlphaComponent(0.16).cgColor
+        setAccessibilityLabel("Log level")
+        setAccessibilityValue(priority.displayName)
     }
 }
 

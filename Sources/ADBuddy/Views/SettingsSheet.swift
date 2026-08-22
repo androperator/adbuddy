@@ -40,6 +40,38 @@ struct SettingsSheet: View {
                     "Automatically copy screenshots to the clipboard",
                     isOn: $preferences.automaticallyCopyScreenshots
                 )
+
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("Logcat colors")
+                            .font(.headline)
+
+                        Spacer()
+
+                        Button("Reset to Defaults") {
+                            preferences.resetLogcatColors()
+                        }
+                    }
+
+                    Grid(horizontalSpacing: 24, verticalSpacing: 8) {
+                        GridRow {
+                            colorPicker(for: .verbose)
+                            colorPicker(for: .debug)
+                        }
+                        GridRow {
+                            colorPicker(for: .info)
+                            colorPicker(for: .warn)
+                        }
+                        GridRow {
+                            colorPicker(for: .error)
+                            colorPicker(for: .assert)
+                        }
+                    }
+
+                    Text("Used for Logcat level badges and message emphasis.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(24)
@@ -72,5 +104,26 @@ struct SettingsSheet: View {
             preferences.screenshotDirectory = directoryURL
             AppLogger.settings.info("Selected a shared media save location")
         }
+    }
+
+    private func colorPicker(for priority: LogcatPriority) -> some View {
+        ColorPicker(
+            priority.displayName,
+            selection: Binding(
+                get: { currentLogcatColor(for: priority) },
+                set: { color in
+                    guard let components = LogcatColorComponents(color: color) else {
+                        return
+                    }
+                    preferences.setLogcatColor(components, for: priority)
+                }
+            ),
+            supportsOpacity: false
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func currentLogcatColor(for priority: LogcatPriority) -> Color {
+        preferences.logcatColors[priority]?.color ?? LogcatPriority.defaultColors[priority]!.color
     }
 }

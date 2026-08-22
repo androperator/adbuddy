@@ -10,6 +10,7 @@ final class AppPreferences {
         static let screenRecordingBitRateMegabitsPerSecond = "screenRecordingBitRateMegabitsPerSecond"
         static let screenRecordingResolutionPercentage = "screenRecordingResolutionPercentage"
         static let screenRecordingShowsTaps = "screenRecordingShowsTaps"
+        static let logcatColors = "logcatColors"
     }
 
     private let userDefaults: UserDefaults
@@ -45,6 +46,15 @@ final class AppPreferences {
         }
     }
 
+    private(set) var logcatColors: [LogcatPriority: LogcatColorComponents] {
+        didSet {
+            guard let encodedColors = try? JSONEncoder().encode(logcatColors) else {
+                return
+            }
+            userDefaults.set(encodedColors, forKey: Key.logcatColors)
+        }
+    }
+
     init(
         userDefaults: UserDefaults = .standard,
         defaultScreenshotDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
@@ -66,9 +76,27 @@ final class AppPreferences {
             ?? ScreenRecordingOptions.default.resolution.rawValue
         screenRecordingShowsTaps = userDefaults.object(forKey: Key.screenRecordingShowsTaps) as? Bool
             ?? ScreenRecordingOptions.default.showsTaps
+        logcatColors = Self.loadLogcatColors(from: userDefaults) ?? LogcatPriority.defaultColors
     }
 
     func resetScreenshotDirectory() {
         screenshotDirectory = defaultScreenshotDirectory
+    }
+
+    func setLogcatColor(_ color: LogcatColorComponents, for priority: LogcatPriority) {
+        logcatColors[priority] = color
+    }
+
+    func resetLogcatColors() {
+        logcatColors = LogcatPriority.defaultColors
+    }
+
+    private static func loadLogcatColors(from userDefaults: UserDefaults) -> [LogcatPriority: LogcatColorComponents]? {
+        guard let data = userDefaults.data(forKey: Key.logcatColors),
+              let colors = try? JSONDecoder().decode([LogcatPriority: LogcatColorComponents].self, from: data),
+              Set(colors.keys) == Set(LogcatPriority.allCases) else {
+            return nil
+        }
+        return colors
     }
 }

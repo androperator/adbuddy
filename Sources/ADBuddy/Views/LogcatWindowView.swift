@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LogcatWindowView: View {
     @Environment(DeviceStore.self) private var deviceStore
+    @Environment(AppPreferences.self) private var preferences
 
     let windowID: LogcatWindowID
     @State private var logcatStore: LogcatStore
@@ -39,6 +40,7 @@ struct LogcatWindowView: View {
             LogcatTableView(
                 entries: logcatStore.displayedEntries,
                 followsLatest: logcatStore.isFollowing,
+                priorityColors: preferences.logcatColors,
                 onUserScrollAwayFromLatest: logcatStore.userScrolledAwayFromLatest
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)

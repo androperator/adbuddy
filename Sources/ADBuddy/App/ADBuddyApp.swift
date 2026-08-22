@@ -53,6 +53,7 @@ struct ADBuddyApp: App {
             if let windowID {
                 LogcatWindowView(windowID: windowID)
                     .environment(deviceStore)
+                    .environment(preferences)
             }
         }
         .defaultSize(width: 920, height: 600)
