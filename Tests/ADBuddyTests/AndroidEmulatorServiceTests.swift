@@ -60,7 +60,7 @@ final class AndroidEmulatorServiceTests: XCTestCase {
         XCTAssertEqual(result, .failure(.commandFailed("Unable to find AVD")))
     }
 
-    func testLaunchesSelectedVirtualDeviceWithStandaloneArguments() {
+    func testStartsSelectedVirtualDeviceWithQuickBootArguments() {
         let launcher = EmulatorApplicationLauncher()
         let service = AndroidEmulatorService(
             sdk: sdk,
@@ -69,7 +69,7 @@ final class AndroidEmulatorServiceTests: XCTestCase {
             isExecutable: { $0 == "/SDK/emulator/emulator" }
         )
 
-        let result = service.launch(AndroidVirtualDevice(name: "Pixel_9_Pro"))
+        let result = service.start(AndroidVirtualDevice(name: "Pixel_9_Pro"))
 
         XCTAssertEqual(result, .launched)
         XCTAssertEqual(
@@ -78,6 +78,95 @@ final class AndroidEmulatorServiceTests: XCTestCase {
                 executablePath: "/SDK/emulator/emulator",
                 arguments: ["-avd", "Pixel_9_Pro"]
             )
+        )
+    }
+
+    func testStartsSelectedVirtualDeviceWithColdBootAndWipeDataArguments() {
+        let launcher = EmulatorApplicationLauncher()
+        let service = AndroidEmulatorService(
+            sdk: sdk,
+            processRunner: EmulatorProcessRunner(result: successfulResult()),
+            applicationLauncher: launcher,
+            isExecutable: { _ in true }
+        )
+
+        XCTAssertEqual(
+            service.start(AndroidVirtualDevice(name: "Pixel_9"), mode: .coldBoot),
+            .launched
+        )
+        XCTAssertEqual(
+            launcher.invocation?.arguments,
+            ["-avd", "Pixel_9", "-no-snapshot-load"]
+        )
+
+        XCTAssertEqual(
+            service.start(AndroidVirtualDevice(name: "Pixel_9"), mode: .wipeData),
+            .launched
+        )
+        XCTAssertEqual(
+            launcher.invocation?.arguments,
+            ["-avd", "Pixel_9", "-wipe-data"]
+        )
+    }
+
+    func testMapsConnectedEmulatorSerialsToVirtualDeviceNames() async {
+        let processRunner = EmulatorProcessRunner(results: [
+            successfulResult(standardOutput: "Pixel_9\nOK\n"),
+            successfulResult(standardOutput: "Pixel_9_Pro\nOK\n"),
+        ])
+        let service = AndroidEmulatorService(
+            sdk: sdk,
+            processRunner: processRunner,
+            isExecutable: { _ in true }
+        )
+
+        let devices = await service.runningVirtualDevices(in: [
+            connectedEmulator(serial: "emulator-5554"),
+            physicalDevice,
+            connectedEmulator(serial: "emulator-5556"),
+        ])
+
+        XCTAssertEqual(
+            devices,
+            [
+                "Pixel_9": connectedEmulator(serial: "emulator-5554"),
+                "Pixel_9_Pro": connectedEmulator(serial: "emulator-5556"),
+            ]
+        )
+        let invocations = await processRunner.invocations
+        XCTAssertEqual(
+            invocations,
+            [
+                EmulatorProcessInvocation(
+                    executablePath: "/SDK/platform-tools/adb",
+                    arguments: ["-s", "emulator-5554", "emu", "avd", "name"]
+                ),
+                EmulatorProcessInvocation(
+                    executablePath: "/SDK/platform-tools/adb",
+                    arguments: ["-s", "emulator-5556", "emu", "avd", "name"]
+                ),
+            ]
+        )
+    }
+
+    func testStopsRunningVirtualDeviceWithFixedADBArguments() async {
+        let processRunner = EmulatorProcessRunner(result: successfulResult())
+        let service = AndroidEmulatorService(
+            sdk: sdk,
+            processRunner: processRunner,
+            isExecutable: { _ in true }
+        )
+
+        let result = await service.stop(connectedEmulator(serial: "emulator-5556"))
+
+        XCTAssertEqual(result, .stopped)
+        let invocations = await processRunner.invocations
+        XCTAssertEqual(
+            invocations,
+            [EmulatorProcessInvocation(
+                executablePath: "/SDK/platform-tools/adb",
+                arguments: ["-s", "emulator-5556", "emu", "kill"]
+            )]
         )
     }
 
@@ -122,6 +211,32 @@ final class AndroidEmulatorServiceTests: XCTestCase {
             wasCancelled: false
         )
     }
+
+    private func connectedEmulator(serial: String) -> AndroidDevice {
+        AndroidDevice(
+            serial: serial,
+            displayName: "sdk gphone64 arm64",
+            connectionState: .connected,
+            kind: .emulator,
+            model: nil,
+            product: nil,
+            deviceCodeName: nil,
+            transportID: nil
+        )
+    }
+
+    private var physicalDevice: AndroidDevice {
+        AndroidDevice(
+            serial: "physical-device",
+            displayName: "Pixel 10 Pro",
+            connectionState: .connected,
+            kind: .physical,
+            model: nil,
+            product: nil,
+            deviceCodeName: nil,
+            transportID: nil
+        )
+    }
 }
 
 private struct EmulatorProcessInvocation: Equatable {
@@ -130,11 +245,15 @@ private struct EmulatorProcessInvocation: Equatable {
 }
 
 private actor EmulatorProcessRunner: ProcessRunning {
-    private let result: ProcessResult
+    private var results: [ProcessResult]
     private var recordedInvocations: [EmulatorProcessInvocation] = []
 
     init(result: ProcessResult) {
-        self.result = result
+        results = [result]
+    }
+
+    init(results: [ProcessResult]) {
+        self.results = results
     }
 
     var invocations: [EmulatorProcessInvocation] {
@@ -145,7 +264,7 @@ private actor EmulatorProcessRunner: ProcessRunning {
         recordedInvocations.append(
             EmulatorProcessInvocation(executablePath: executablePath, arguments: arguments)
         )
-        return result
+        return results.removeFirst()
     }
 }
 

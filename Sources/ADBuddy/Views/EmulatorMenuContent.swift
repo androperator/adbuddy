@@ -14,7 +14,7 @@ struct EmulatorMenuContent: View {
                 ForEach(emulatorStore.virtualDevices) { virtualDevice in
                     Button(virtualDevice.name) {
                         AppLogger.emulator.info("Android Emulator selected from launcher menu")
-                        emulatorStore.launch(virtualDevice)
+                        emulatorStore.start(virtualDevice)
                     }
                 }
             }

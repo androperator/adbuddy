@@ -10,6 +10,28 @@ enum AndroidEmulatorLaunchResult: Equatable, Sendable {
     case failure(AndroidEmulatorFailure)
 }
 
+enum AndroidEmulatorStopResult: Equatable, Sendable {
+    case stopped
+    case failure(AndroidEmulatorFailure)
+}
+
+enum AndroidEmulatorStartMode: Equatable, Sendable {
+    case quickBoot
+    case coldBoot
+    case wipeData
+
+    var displayName: String {
+        switch self {
+        case .quickBoot:
+            "Start"
+        case .coldBoot:
+            "Cold Boot"
+        case .wipeData:
+            "Wipe Data and Start"
+        }
+    }
+}
+
 enum AndroidEmulatorFailure: Equatable, Sendable {
     case sdkUnavailable(AndroidSDKFailure)
     case emulatorNotFound
@@ -43,6 +65,7 @@ enum AndroidEmulatorFailure: Equatable, Sendable {
 
 struct AndroidEmulatorService: Sendable {
     private let emulatorPath: String
+    private let adbPath: String
     private let processRunner: any ProcessRunning
     private let applicationLauncher: any ApplicationProcessLaunching
     private let isExecutable: @Sendable (String) -> Bool
@@ -59,6 +82,7 @@ struct AndroidEmulatorService: Sendable {
             .appendingPathComponent("emulator", isDirectory: true)
             .appendingPathComponent("emulator")
             .path
+        adbPath = sdk.adbPath
         self.processRunner = processRunner
         self.applicationLauncher = applicationLauncher
         self.isExecutable = isExecutable
@@ -88,7 +112,10 @@ struct AndroidEmulatorService: Sendable {
         return .success(virtualDevices)
     }
 
-    func launch(_ virtualDevice: AndroidVirtualDevice) -> AndroidEmulatorLaunchResult {
+    func start(
+        _ virtualDevice: AndroidVirtualDevice,
+        mode: AndroidEmulatorStartMode = .quickBoot
+    ) -> AndroidEmulatorLaunchResult {
         guard isExecutable(emulatorPath) else {
             AppLogger.emulator.error("Android Emulator executable is unavailable")
             return .failure(.emulatorNotFound)
@@ -97,14 +124,78 @@ struct AndroidEmulatorService: Sendable {
         do {
             try applicationLauncher.launch(
                 executablePath: emulatorPath,
-                arguments: ["-avd", virtualDevice.name]
+                arguments: startArguments(for: virtualDevice, mode: mode)
             )
-            AppLogger.emulator.info("Requested standalone Android Emulator launch")
+            AppLogger.emulator.info("Requested standalone Android Emulator start")
             return .launched
         } catch {
             let message = error.localizedDescription
             AppLogger.emulator.error("Could not start Android Emulator: \(message, privacy: .public)")
             return .failure(.launchFailed(message))
+        }
+    }
+
+    func runningVirtualDevices(in devices: [AndroidDevice]) async -> [String: AndroidDevice] {
+        var runningVirtualDevices: [String: AndroidDevice] = [:]
+
+        for device in devices where device.kind == .emulator && device.isUsable {
+            let result = await processRunner.run(
+                executablePath: adbPath,
+                arguments: ["-s", device.serial, "emu", "avd", "name"]
+            )
+
+            guard result.succeeded else {
+                let message = failureMessage(from: result)
+                AppLogger.emulator.error(
+                    "Could not identify running Android Emulator \(device.serial, privacy: .public): \(message, privacy: .public)"
+                )
+                continue
+            }
+
+            guard let virtualDeviceName = AndroidEmulatorConsoleParser.virtualDeviceName(
+                from: String(decoding: result.standardOutput, as: UTF8.self)
+            ) else {
+                AppLogger.emulator.error(
+                    "Android Emulator \(device.serial, privacy: .public) did not report an AVD name"
+                )
+                continue
+            }
+
+            runningVirtualDevices[virtualDeviceName] = device
+        }
+
+        return runningVirtualDevices
+    }
+
+    func stop(_ device: AndroidDevice) async -> AndroidEmulatorStopResult {
+        let result = await processRunner.run(
+            executablePath: adbPath,
+            arguments: ["-s", device.serial, "emu", "kill"]
+        )
+
+        guard result.succeeded else {
+            let message = failureMessage(from: result)
+            AppLogger.emulator.error(
+                "Could not stop Android Emulator \(device.serial, privacy: .public): \(message, privacy: .public)"
+            )
+            return .failure(.commandFailed(message))
+        }
+
+        AppLogger.emulator.info("Requested Android Emulator stop")
+        return .stopped
+    }
+
+    private func startArguments(
+        for virtualDevice: AndroidVirtualDevice,
+        mode: AndroidEmulatorStartMode
+    ) -> [String] {
+        switch mode {
+        case .quickBoot:
+            ["-avd", virtualDevice.name]
+        case .coldBoot:
+            ["-avd", virtualDevice.name, "-no-snapshot-load"]
+        case .wipeData:
+            ["-avd", virtualDevice.name, "-wipe-data"]
         }
     }
 
@@ -128,6 +219,19 @@ struct AndroidEmulatorService: Sendable {
         }
 
         return "Android Emulator did not return a result."
+    }
+}
+
+enum AndroidEmulatorConsoleParser {
+    static func virtualDeviceName(from output: String) -> String? {
+        for rawLine in output.split(whereSeparator: \.isNewline) {
+            let line = String(rawLine).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !line.isEmpty, line != "OK", !line.hasPrefix("KO:") else {
+                continue
+            }
+            return line
+        }
+        return nil
     }
 }
 
