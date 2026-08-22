@@ -12,7 +12,11 @@ enum LogcatServiceFailure: Equatable, Sendable {
     case terminated(exitStatus: Int32, standardError: String)
 }
 
-struct LogcatService: Sendable {
+protocol LogcatStreaming: Sendable {
+    func stream(for deviceSerial: String) -> AsyncStream<LogcatServiceEvent>
+}
+
+struct LogcatService: LogcatStreaming, Sendable {
     static let initialHistoryLimit = 5_000
 
     private let adbPath: String
