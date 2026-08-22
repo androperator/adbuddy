@@ -11,33 +11,38 @@ struct SettingsSheet: View {
         @Bindable var preferences = preferences
 
         VStack(spacing: 0) {
-            Form {
-                LabeledContent("Save location") {
-                    HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Save location")
+                        .font(.headline)
+
+                    HStack(spacing: 12) {
                         Text(preferences.screenshotDirectory.path)
                             .font(.body.monospaced())
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .layoutPriority(1)
 
                         Button("Choose…") {
                             isChoosingOutputDirectory = true
                         }
+                        .fixedSize()
                     }
-                }
 
-                Text("Screenshots and recordings are saved to this folder.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    Text("Screenshots and recordings are saved to this folder.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
 
                 Toggle(
                     "Automatically copy screenshots to the clipboard",
                     isOn: $preferences.automaticallyCopyScreenshots
                 )
             }
-            .formStyle(.grouped)
-            .padding(.horizontal)
-            .padding(.top)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(24)
 
             Divider()
 
@@ -49,9 +54,11 @@ struct SettingsSheet: View {
                 }
                 .keyboardShortcut(.defaultAction)
             }
-            .padding()
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
         }
-        .frame(width: 480, height: 230)
+        .frame(width: 560)
+        .fixedSize(horizontal: false, vertical: true)
         .fileImporter(
             isPresented: $isChoosingOutputDirectory,
             allowedContentTypes: [.folder],
