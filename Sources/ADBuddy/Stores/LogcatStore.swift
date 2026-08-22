@@ -5,6 +5,7 @@ enum LogcatStreamState: Equatable, Sendable {
     case connecting
     case streaming
     case paused
+    case disconnected
     case waitingForApplication(String)
     case failed(String)
     case stopped
@@ -19,10 +20,16 @@ final class LogcatStore {
     private let makeService: @Sendable (String) -> any LogcatStreaming
     private let makeApplicationService: @Sendable (String) -> any LogcatApplicationQuerying
     private let applicationRefreshInterval: Duration
+    private let reconnectDelay: @Sendable (Int) -> Duration
     private var streamTask: Task<Void, Never>?
     private var applicationRefreshTask: Task<Void, Never>?
+    private var reconnectTask: Task<Void, Never>?
     private var adbPath: String?
     private var streamGeneration = 0
+    private var reconnectGeneration = 0
+    private var failedReconnectAttempts = 0
+    private var isDeviceUsable = false
+    private var isStopped = false
     private var activeStreamScope: LogcatStreamScope = .allApplications
     private var activeApplicationScope: LogcatApplicationScope = .allApplications
     private var latestRunningProcesses: [AndroidRunningProcess] = []
@@ -50,7 +57,16 @@ final class LogcatStore {
     }
 
     var displayedStreamState: LogcatStreamState {
-        isPaused ? .paused : streamState
+        guard isPaused else {
+            return streamState
+        }
+
+        switch streamState {
+        case .disconnected, .failed:
+            return streamState
+        default:
+            return .paused
+        }
     }
 
     init(
@@ -61,12 +77,16 @@ final class LogcatStore {
         makeApplicationService: @escaping @Sendable (String) -> any LogcatApplicationQuerying = { adbPath in
             LogcatApplicationService(adbPath: adbPath, processRunner: ProcessRunner())
         },
-        applicationRefreshInterval: Duration = .seconds(1)
+        applicationRefreshInterval: Duration = .seconds(1),
+        reconnectDelay: @escaping @Sendable (Int) -> Duration = { failedAttempts in
+            LogcatReconnectPolicy.delay(for: failedAttempts)
+        }
     ) {
         self.deviceSerial = deviceSerial
         self.makeService = makeService
         self.makeApplicationService = makeApplicationService
         self.applicationRefreshInterval = applicationRefreshInterval
+        self.reconnectDelay = reconnectDelay
     }
 
     func start(adbPath: String?) {
@@ -74,25 +94,43 @@ final class LogcatStore {
             streamState = .connecting
             return
         }
-        guard self.adbPath != adbPath || applicationRefreshTask == nil else {
+
+        updateDeviceAvailability(.usable(adbPath: adbPath))
+    }
+
+    func updateDeviceAvailability(_ availability: LogcatDeviceAvailability) {
+        guard !isStopped else {
             return
         }
 
+        guard case .usable(let adbPath) = availability else {
+            handleDeviceUnavailable()
+            return
+        }
+
+        let needsConnection = !isDeviceUsable || self.adbPath != adbPath || applicationRefreshTask == nil
+        isDeviceUsable = true
         self.adbPath = adbPath
+        guard needsConnection else {
+            return
+        }
+
+        cancelReconnectWork()
         beginApplicationMonitoring()
 
         if applicationID == nil {
-            applyApplicationScope(.allApplications)
+            applyApplicationScope(.allApplications, clearingEntries: false)
         } else {
             streamState = .waitingForApplication(applicationID!)
         }
     }
 
     func stop() {
-        streamGeneration += 1
-        streamTask?.cancel()
+        isStopped = true
+        isDeviceUsable = false
+        cancelReconnectWork()
+        cancelStream()
         applicationRefreshTask?.cancel()
-        streamTask = nil
         applicationRefreshTask = nil
         streamState = .stopped
     }
@@ -108,13 +146,18 @@ final class LogcatStore {
         packageUserID = nil
         prefersUserIDFiltering = true
         activeApplicationScope = newApplicationID == nil ? .allApplications : .waitingForProcess
+        guard isDeviceUsable, !isStopped else {
+            streamState = .disconnected
+            return
+        }
+
         beginApplicationMonitoring()
 
         if let newApplicationID {
             cancelStreamAndClearEntries()
             streamState = .waitingForApplication(newApplicationID)
         } else {
-            applyApplicationScope(.allApplications)
+            applyApplicationScope(.allApplications, clearingEntries: true)
         }
     }
 
@@ -144,7 +187,7 @@ final class LogcatStore {
     }
 
     private func beginApplicationMonitoring() {
-        guard let adbPath else {
+        guard isDeviceUsable, !isStopped, let adbPath else {
             return
         }
 
@@ -225,6 +268,18 @@ final class LogcatStore {
     }
 
     private func applyApplicationScope(_ scope: LogcatApplicationScope) {
+        applyApplicationScope(scope, clearingEntries: activeStreamScope != scope.streamScope)
+    }
+
+    private func applyApplicationScope(
+        _ scope: LogcatApplicationScope,
+        clearingEntries: Bool
+    ) {
+        guard isDeviceUsable, !isStopped else {
+            streamState = .disconnected
+            return
+        }
+
         let previousStreamScope = activeStreamScope
         activeApplicationScope = scope
 
@@ -237,7 +292,10 @@ final class LogcatStore {
         }
 
         if streamTask == nil || previousStreamScope != scope.streamScope {
-            restartStream(using: scope.streamScope)
+            guard reconnectTask == nil else {
+                return
+            }
+            restartStream(using: scope.streamScope, clearingEntries: clearingEntries)
         } else if scope.isWaitingForProcess, let applicationID {
             streamState = .waitingForApplication(applicationID)
         } else if case .waitingForApplication = streamState {
@@ -245,13 +303,16 @@ final class LogcatStore {
         }
     }
 
-    private func restartStream(using scope: LogcatStreamScope) {
-        guard let adbPath else {
-            streamState = .connecting
+    private func restartStream(using scope: LogcatStreamScope, clearingEntries: Bool) {
+        guard isDeviceUsable, !isStopped, let adbPath else {
+            streamState = .disconnected
             return
         }
 
-        cancelStreamAndClearEntries()
+        cancelStream()
+        if clearingEntries {
+            clearEntries()
+        }
         activeStreamScope = scope
         streamGeneration += 1
         let generation = streamGeneration
@@ -279,9 +340,17 @@ final class LogcatStore {
     }
 
     private func cancelStreamAndClearEntries() {
+        cancelStream()
+        clearEntries()
+    }
+
+    private func cancelStream() {
         streamGeneration += 1
         streamTask?.cancel()
         streamTask = nil
+    }
+
+    private func clearEntries() {
         entries.removeAll(keepingCapacity: false)
         pausedEntries = isPaused ? [] : nil
     }
@@ -294,6 +363,7 @@ final class LogcatStore {
         switch event {
         case .entries(let newEntries):
             append(newEntries)
+            failedReconnectAttempts = 0
             if !activeApplicationScope.isWaitingForProcess {
                 streamState = .streaming
             }
@@ -312,11 +382,70 @@ final class LogcatStore {
                 )
                 applyApplicationScope(scope)
             } else {
-                streamState = .failed(message(for: failure))
+                handleUnexpectedStreamEnd(message: message(for: failure))
             }
-        case .stopped, .cancelled:
-            streamState = .stopped
+        case .stopped:
+            handleUnexpectedStreamEnd(message: "Logcat stopped unexpectedly.")
+        case .cancelled:
+            handleUnexpectedStreamEnd(message: "Logcat was cancelled unexpectedly.")
         }
+    }
+
+    private func handleDeviceUnavailable() {
+        guard isDeviceUsable || streamState != .disconnected else {
+            return
+        }
+
+        isDeviceUsable = false
+        cancelReconnectWork()
+        cancelStream()
+        applicationRefreshTask?.cancel()
+        applicationRefreshTask = nil
+        streamState = .disconnected
+        AppLogger.logcat.info("Logcat device became unavailable")
+    }
+
+    private func handleUnexpectedStreamEnd(message: String) {
+        streamTask = nil
+        streamState = .failed(message)
+        guard isDeviceUsable, !isStopped else {
+            return
+        }
+
+        failedReconnectAttempts += 1
+        scheduleReconnect(after: reconnectDelay(failedReconnectAttempts))
+    }
+
+    private func scheduleReconnect(after delay: Duration) {
+        guard reconnectTask == nil else {
+            return
+        }
+
+        reconnectGeneration += 1
+        let generation = reconnectGeneration
+        AppLogger.logcat.info("Scheduling Logcat reconnect attempt \(self.failedReconnectAttempts, privacy: .public)")
+        reconnectTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                return
+            }
+
+            guard let self,
+                  self.reconnectGeneration == generation,
+                  self.isDeviceUsable,
+                  !self.isStopped else {
+                return
+            }
+            self.reconnectTask = nil
+            self.restartStream(using: self.activeStreamScope, clearingEntries: false)
+        }
+    }
+
+    private func cancelReconnectWork() {
+        reconnectGeneration += 1
+        reconnectTask?.cancel()
+        reconnectTask = nil
     }
 
     private func shouldFallBackToProcessIDFiltering(for failure: LogcatServiceFailure) -> Bool {

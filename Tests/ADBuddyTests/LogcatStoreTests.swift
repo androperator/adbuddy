@@ -62,6 +62,70 @@ final class LogcatStoreTests: XCTestCase {
 
         XCTAssertEqual(store.entries, [entry(id: 1)])
         XCTAssertEqual(service.streamCount, 1)
+        store.stop()
+    }
+
+    func testDisconnectRetainsEntriesAndReconnectsTheSameWindow() async throws {
+        let service = ControllableLogcatService()
+        let store = makeStore(service: service)
+
+        store.updateDeviceAvailability(.usable(adbPath: "/SDK/platform-tools/adb"))
+        try await waitForStreamCount(service, expectedCount: 1)
+        service.yield(.entries([entry(id: 1)]))
+        try await waitForEntryCount(store, expectedCount: 1)
+
+        store.updateDeviceAvailability(.unavailable)
+        XCTAssertEqual(store.streamState, .disconnected)
+        XCTAssertEqual(store.entries, [entry(id: 1)])
+        try await waitForCancellation(of: service)
+
+        store.updateDeviceAvailability(.usable(adbPath: "/SDK/platform-tools/adb"))
+        try await waitForStreamCount(service, expectedCount: 2)
+        XCTAssertEqual(store.entries, [entry(id: 1)])
+        store.stop()
+    }
+
+    func testUnexpectedFailuresReconnectAfterTheConfiguredDelay() async throws {
+        let service = ControllableLogcatService()
+        let store = makeStore(
+            service: service,
+            reconnectDelay: { _ in .milliseconds(20) }
+        )
+
+        store.updateDeviceAvailability(.usable(adbPath: "/SDK/platform-tools/adb"))
+        try await waitForStreamCount(service, expectedCount: 1)
+        service.yield(.failed(.terminated(exitStatus: 1, standardError: "device offline")))
+        try await waitForState(store, matching: .failed("Logcat exited with status 1: device offline"))
+
+        try await waitForStreamCount(service, expectedCount: 2)
+        store.stop()
+    }
+
+    func testStopPreventsAPendingReconnectAfterFailure() async throws {
+        let service = ControllableLogcatService()
+        let store = makeStore(
+            service: service,
+            reconnectDelay: { _ in .milliseconds(40) }
+        )
+
+        store.updateDeviceAvailability(.usable(adbPath: "/SDK/platform-tools/adb"))
+        try await waitForStreamCount(service, expectedCount: 1)
+        service.yield(.failed(.terminated(exitStatus: 1, standardError: "device offline")))
+        try await waitForState(store, matching: .failed("Logcat exited with status 1: device offline"))
+
+        store.stop()
+        try await Task.sleep(for: .milliseconds(80))
+
+        XCTAssertEqual(service.streamCount, 1)
+        XCTAssertEqual(store.streamState, .stopped)
+    }
+
+    func testReconnectPolicyUsesBoundedExponentialDelays() {
+        XCTAssertEqual(LogcatReconnectPolicy.delay(for: 1), .seconds(1))
+        XCTAssertEqual(LogcatReconnectPolicy.delay(for: 2), .seconds(2))
+        XCTAssertEqual(LogcatReconnectPolicy.delay(for: 3), .seconds(4))
+        XCTAssertEqual(LogcatReconnectPolicy.delay(for: 4), .seconds(8))
+        XCTAssertEqual(LogcatReconnectPolicy.delay(for: 20), .seconds(8))
     }
 
     func testCapsRetainedEntriesAtFiftyThousand() async throws {
@@ -259,13 +323,15 @@ final class LogcatStoreTests: XCTestCase {
 
     private func makeStore(
         service: ControllableLogcatService,
-        applicationService: any LogcatApplicationQuerying = EmptyLogcatApplicationService()
+        applicationService: any LogcatApplicationQuerying = EmptyLogcatApplicationService(),
+        reconnectDelay: @escaping @Sendable (Int) -> Duration = { _ in .seconds(1) }
     ) -> LogcatStore {
         LogcatStore(
             deviceSerial: "device-serial",
             makeService: { _ in service },
             makeApplicationService: { _ in applicationService },
-            applicationRefreshInterval: .milliseconds(10)
+            applicationRefreshInterval: .milliseconds(10),
+            reconnectDelay: reconnectDelay
         )
     }
 

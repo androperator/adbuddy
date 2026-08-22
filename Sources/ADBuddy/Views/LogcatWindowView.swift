@@ -16,6 +16,15 @@ struct LogcatWindowView: View {
         deviceStore.devices.first(where: { $0.serial == windowID.serial })?.displayName ?? windowID.serial
     }
 
+    private var deviceAvailability: LogcatDeviceAvailability {
+        guard let device = deviceStore.devices.first(where: { $0.serial == windowID.serial }),
+              device.isUsable,
+              let adbPath = deviceStore.resolvedSDK?.adbPath else {
+            return .unavailable
+        }
+        return .usable(adbPath: adbPath)
+    }
+
     var body: some View {
         @Bindable var logcatStore = logcatStore
 
@@ -53,8 +62,8 @@ struct LogcatWindowView: View {
             alignment: .topLeading
         )
         .navigationTitle("Logcat - \(deviceName)")
-        .task(id: deviceStore.resolvedSDK?.adbPath) {
-            logcatStore.start(adbPath: deviceStore.resolvedSDK?.adbPath)
+        .task(id: deviceAvailability) {
+            logcatStore.updateDeviceAvailability(deviceAvailability)
         }
         .onDisappear {
             logcatStore.stop()
@@ -136,6 +145,8 @@ private struct LogcatStateBanner: View {
             "dot.radiowaves.left.and.right"
         case .paused:
             "pause.circle"
+        case .disconnected:
+            "iphone.slash"
         case .waitingForApplication:
             "hourglass"
         case .failed:
@@ -153,6 +164,8 @@ private struct LogcatStateBanner: View {
             .green
         case .paused:
             .secondary
+        case .disconnected:
+            .orange
         case .waitingForApplication:
             .secondary
         case .failed:
@@ -170,6 +183,8 @@ private struct LogcatStateBanner: View {
             "Streaming Logcat"
         case .paused:
             "Logcat paused"
+        case .disconnected:
+            "Device disconnected. Waiting to reconnect."
         case .waitingForApplication(let applicationID):
             "Waiting for \(applicationID) to start"
         case .failed(let message):
