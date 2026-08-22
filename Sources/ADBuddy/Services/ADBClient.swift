@@ -29,7 +29,7 @@ struct ADBClient: Sendable {
 
         let output = String(decoding: result.standardOutput, as: UTF8.self)
         let devices = ADBDeviceParser.parse(output)
-        AppLogger.devices.info("ADB device refresh returned \(devices.count, privacy: .public) devices")
+        AppLogger.devices.debug("ADB device refresh returned \(devices.count, privacy: .public) devices")
         return .success(devices)
     }
 

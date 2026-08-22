@@ -80,9 +80,10 @@ AppPreferences -> recording options -> ScreenRecordingService
 DeviceStore -> ScreenRecordingService -> ADB screenrecord, pull, cleanup
 ```
 
-`DeviceStore` owns refresh timing, selected device state, and presentation-ready
-errors. It does not parse process output itself. `ADBClient` translates ADB
-commands and parsed output into typed domain values. `ProcessRunner` owns
+`DeviceStore` owns automatic one-second refresh timing, selected device state,
+and presentation-ready errors. It does not parse process output itself.
+`ADBClient` translates ADB commands and parsed output into typed domain values.
+`ProcessRunner` owns
 subprocess lifecycle and exposes captured stdout, stderr, exit status, and
 cancellation.
 
@@ -110,10 +111,9 @@ output. It should contain:
 - optional transport metadata useful for troubleshooting.
 
 The parser must retain non-usable entries so the UI can explain why an action is
-not available. A lightweight periodic refresh is sufficient for Phase 0.
+not available. The app refreshes automatically once per second.
 Polling must be visually silent when the discovered device state is unchanged,
-so open menu hierarchies and the main-window refresh control remain stable.
-Only an explicit user refresh should present transient refresh activity.
+so open menu hierarchies and the main-window device presentation remain stable.
 
 ## Screenshots
 

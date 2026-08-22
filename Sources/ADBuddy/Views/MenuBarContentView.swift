@@ -19,12 +19,6 @@ struct MenuBarContentView: View {
 
         Divider()
 
-        Button("Refresh Devices") {
-            AppLogger.menuBar.info("Refresh devices selected")
-            deviceStore.refresh()
-        }
-        .disabled(deviceStore.isRefreshing)
-
         Button("Open ADBuddy") {
             AppLogger.menuBar.info("Open main window selected")
             openWindow(id: "main")

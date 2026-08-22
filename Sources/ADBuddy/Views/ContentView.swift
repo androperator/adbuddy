@@ -52,15 +52,6 @@ struct ContentView: View {
                 .help("Settings")
             }
 
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    AppLogger.devices.info("Refresh button selected")
-                    deviceStore.refresh()
-                } label: {
-                    Label("Refresh Devices", systemImage: "arrow.clockwise")
-                }
-                .disabled(deviceStore.isRefreshing)
-            }
         }
     }
 
@@ -78,10 +69,6 @@ struct ContentView: View {
                 Label(deviceStore.status.title, systemImage: deviceStore.status.symbolName)
             } description: {
                 Text(deviceStore.status.detail)
-            } actions: {
-                Button("Refresh Devices") {
-                    deviceStore.refresh()
-                }
             }
             .frame(minWidth: 440, minHeight: 220)
         case .devicesAvailable:

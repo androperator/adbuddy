@@ -4,6 +4,8 @@ import Observation
 @MainActor
 @Observable
 final class DeviceStore {
+    static let automaticRefreshInterval: Duration = .seconds(1)
+
     private let preferences: AppPreferences
     private let sdkLocator: AndroidSDKLocator
     private let processRunner: any ProcessRunning
@@ -18,7 +20,6 @@ final class DeviceStore {
     private(set) var devices: [AndroidDevice] = []
     private(set) var status: DeviceDiscoveryStatus = .loading
     private(set) var resolvedSDK: AndroidSDK?
-    private(set) var isRefreshing = false
     private(set) var screenshotFeedback: ScreenshotFeedback?
     var screenRecordingOptionsDevice: AndroidDevice?
     private(set) var screenRecordingActivity: ScreenRecordingActivity?
@@ -48,7 +49,7 @@ final class DeviceStore {
 
         pollingTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(3))
+                try? await Task.sleep(for: Self.automaticRefreshInterval)
                 guard !Task.isCancelled else {
                     return
                 }
@@ -62,15 +63,6 @@ final class DeviceStore {
         pollingTask = nil
     }
 
-    func refresh() {
-        guard !isRefreshing else {
-            return
-        }
-
-        isRefreshing = true
-        refreshDevices()
-    }
-
     func refreshFromPolling() {
         refreshDevices()
     }
@@ -81,7 +73,7 @@ final class DeviceStore {
         }
 
         isLoadingDevices = true
-        AppLogger.devices.info("Refreshing Android devices")
+        AppLogger.devices.debug("Refreshing Android devices")
 
         Task { [weak self] in
             guard let self else {
@@ -96,9 +88,6 @@ final class DeviceStore {
             apply(outcome)
             isLoadingDevices = false
 
-            if isRefreshing {
-                isRefreshing = false
-            }
         }
     }
 
@@ -113,7 +102,7 @@ final class DeviceStore {
         }
 
         guard let resolvedSDK else {
-            showScreenshotFeedback(.failure("ADB is not available. Refresh device discovery and try again."))
+            showScreenshotFeedback(.failure("ADB is not currently available. Device discovery will retry automatically."))
             return
         }
 
@@ -202,7 +191,7 @@ final class DeviceStore {
             return
         }
         guard let resolvedSDK else {
-            showScreenRecordingFeedback(.failure("ADB is not available. Refresh device discovery and try again."))
+            showScreenRecordingFeedback(.failure("ADB is not currently available. Device discovery will retry automatically."))
             return
         }
         guard activeScreenRecording == nil else {

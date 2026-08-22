@@ -5,25 +5,17 @@ import XCTest
 
 @MainActor
 final class DeviceStoreTests: XCTestCase {
-    func testPollingRefreshDoesNotEnterUserVisibleRefreshState() async {
+    func testUsesOneSecondAutomaticRefreshInterval() {
+        XCTAssertEqual(DeviceStore.automaticRefreshInterval, .seconds(1))
+    }
+
+    func testPollingRefreshUpdatesDeviceState() async {
         let store = makeDeviceStore()
 
         store.refreshFromPolling()
 
-        XCTAssertFalse(store.isRefreshing)
         await waitForDeviceRefresh()
         XCTAssertNotEqual(store.status, .loading)
-        XCTAssertFalse(store.isRefreshing)
-    }
-
-    func testUserRefreshShowsActivityUntilDeviceRefreshCompletes() async {
-        let store = makeDeviceStore()
-
-        store.refresh()
-
-        XCTAssertTrue(store.isRefreshing)
-        await waitForDeviceRefresh()
-        XCTAssertFalse(store.isRefreshing)
     }
 
     func testUnchangedPollingRefreshDoesNotInvalidateDevicePresentation() async {
@@ -36,7 +28,6 @@ final class DeviceStoreTests: XCTestCase {
         withObservationTracking {
             _ = store.devices
             _ = store.status
-            _ = store.isRefreshing
         } onChange: {
             changeExpectation.fulfill()
         }

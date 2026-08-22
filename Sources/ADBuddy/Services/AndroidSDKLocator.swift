@@ -76,7 +76,7 @@ struct AndroidSDKLocator: Sendable {
                 .path
 
             if isExecutable(adbPath) {
-                AppLogger.androidSDK.info("Resolved ADB from \(candidate.source.logName, privacy: .public)")
+                AppLogger.androidSDK.debug("Resolved ADB from \(candidate.source.logName, privacy: .public)")
                 return .found(
                     AndroidSDK(
                         rootPath: candidate.rootPath,

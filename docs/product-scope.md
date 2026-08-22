@@ -19,7 +19,7 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Provide both a `MenuBarExtra` and a conventional app window.
 - Allow the menu bar utility to open and activate the main window.
 - Locate a usable Android SDK and ADB executable.
-- Refresh connected devices with a lightweight polling strategy.
+- Refresh connected devices automatically once per second.
 - Represent device serial, display name, connection state, and physical or
   emulator kind as typed data.
 - Show clear UI states for a missing SDK, missing ADB, no devices,
