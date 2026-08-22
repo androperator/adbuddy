@@ -30,7 +30,7 @@ final class MediaNotificationServiceTests: XCTestCase {
         XCTAssertEqual(category.actions.map(\.title), ["Reveal in Finder"])
     }
 
-    func testAttachesSavedScreenshotToItsNotification() throws {
+    func testUsesDisposableCopyForScreenshotNotificationAttachment() throws {
         let screenshotURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("adbuddy-notification-")
             .appendingPathComponent(UUID().uuidString)
@@ -55,7 +55,16 @@ final class MediaNotificationServiceTests: XCTestCase {
         )
 
         XCTAssertEqual(request.content.attachments.count, 1)
-        XCTAssertEqual(request.content.attachments.first?.url, screenshotURL)
+        guard let attachmentURL = request.content.attachments.first?.url else {
+            return XCTFail("Expected a notification attachment")
+        }
+        defer {
+            try? FileManager.default.removeItem(at: attachmentURL)
+        }
+
+        XCTAssertNotEqual(attachmentURL, screenshotURL)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: screenshotURL.path))
+        XCTAssertEqual(try Data(contentsOf: attachmentURL), screenshotData)
     }
 
     func testBuildsRecordingNotificationWithRevealAction() {

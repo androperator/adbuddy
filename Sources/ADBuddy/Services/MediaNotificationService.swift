@@ -109,13 +109,19 @@ final class MediaNotificationService: NSObject, SavedMediaNotifying, @unchecked 
         for fileURL: URL,
         kind: SavedMediaNotificationKind
     ) -> UNNotificationAttachment? {
+        let attachmentURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("adbuddy-notification-\(UUID().uuidString)")
+            .appendingPathExtension(fileURL.pathExtension)
+
         do {
+            try FileManager.default.copyItem(at: fileURL, to: attachmentURL)
             return try UNNotificationAttachment(
                 identifier: "saved-media-preview",
-                url: fileURL,
+                url: attachmentURL,
                 options: notificationAttachmentOptions(for: kind)
             )
         } catch {
+            try? FileManager.default.removeItem(at: attachmentURL)
             AppLogger.notifications.error("Could not attach saved media preview: \(error.localizedDescription, privacy: .public)")
             return nil
         }
@@ -168,6 +174,7 @@ extension MediaNotificationService: UNUserNotificationCenterDelegate {
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        AppLogger.notifications.info("Presenting saved media notification")
         completionHandler([.banner, .list, .sound])
     }
 }
