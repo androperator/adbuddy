@@ -42,7 +42,9 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Deliver a native system notification for a successful capture, including a
   **Reveal in Finder** action.
 - Copy successful PNG captures to the clipboard by default. This behavior is a
-  persisted preference that the future Settings UI will expose.
+  persisted preference exposed by the app's Settings sheet.
+- Let users choose the shared media destination from the Settings sheet. The
+  selected folder is used for both screenshots and recordings.
 
 ### Phase 2 - Screen recording
 
@@ -81,7 +83,6 @@ respective preceding slices are complete:
 
 - installed AVD listing and emulator launch or stop controls;
 - Logcat streaming, filters, search, pause, and export;
-- configurable screenshot directory UI;
 - in-app automatic updates.
 
 The source structure should accommodate later phases without prebuilding their

@@ -14,7 +14,7 @@ struct InitialWindowSizer: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        context.coordinator.disableTabbing(for: nsView)
+        context.coordinator.configureWindow(for: nsView)
 
         guard !hasAppliedCompactLayout, let targetContentSize else {
             return
@@ -29,22 +29,36 @@ struct InitialWindowSizer: NSViewRepresentable {
 
     @MainActor
     final class Coordinator {
-        private var hasScheduledTabbingUpdate = false
+        private var hasScheduledWindowConfiguration = false
         private var hasScheduledApplication = false
 
-        func disableTabbing(for view: NSView) {
-            guard !hasScheduledTabbingUpdate else {
+        func configureWindow(for view: NSView) {
+            guard !hasScheduledWindowConfiguration else {
                 return
             }
-            hasScheduledTabbingUpdate = true
+            hasScheduledWindowConfiguration = true
 
             DispatchQueue.main.async { [weak view] in
                 guard let window = view?.window else {
-                    self.hasScheduledTabbingUpdate = false
+                    self.hasScheduledWindowConfiguration = false
                     return
                 }
 
                 window.tabbingMode = .disallowed
+                window.contentMinSize = CGSize(width: DeviceListLayout.windowWidth, height: 0)
+
+                guard let contentView = window.contentView else {
+                    return
+                }
+
+                let correctedContentSize = DeviceListLayout.contentSizeRespectingMinimumWidth(
+                    contentView.bounds.size
+                )
+                guard correctedContentSize != contentView.bounds.size else {
+                    return
+                }
+
+                window.setContentSize(correctedContentSize)
             }
         }
 

@@ -9,6 +9,17 @@ final class DeviceListLayoutTests: XCTestCase {
         XCTAssertEqual(DeviceListLayout.deviceListHeight(for: 10), 248)
     }
 
+    func testClampsWindowContentToTheDeviceListWidth() {
+        XCTAssertEqual(
+            DeviceListLayout.contentSizeRespectingMinimumWidth(CGSize(width: 240, height: 132)),
+            CGSize(width: 520, height: 132)
+        )
+        XCTAssertEqual(
+            DeviceListLayout.contentSizeRespectingMinimumWidth(CGSize(width: 720, height: 132)),
+            CGSize(width: 720, height: 132)
+        )
+    }
+
     func testUsesCompactDeviceHeightAndLargerUnavailableState() {
         XCTAssertEqual(
             DeviceListLayout.initialWindowContentSize(for: .devicesAvailable, deviceCount: 2),

@@ -20,14 +20,16 @@ WindowGroup(id: "main")
 MenuBarExtra
   Fast per-device screenshot and recording commands, plus app navigation
 
-Settings
-  Reserved for persisted preferences as Settings UI is introduced
+Settings sheet (owned by the main window)
+  Shared media destination and automatic screenshot clipboard-copy preference
 ```
 
 The app should retain normal application behavior with a visible main window
 and a Dock presence, rather than behaving as a menu-only accessory app.
 It opts out of automatic window tabbing because the main window is a focused
 utility surface, not a document workspace.
+Its content width is constrained so device controls and toolbar actions remain
+usable when users resize the utility window.
 
 ## Initial source layout
 
@@ -139,6 +141,11 @@ the preferences store rather than accessing `UserDefaults` itself.
 Because the app is non-sandboxed, store a regular absolute path. If future
 distribution requires sandboxing, replace this storage with a security-scoped
 bookmark through a deliberate migration.
+
+The main window presents a compact SwiftUI Settings sheet rather than opening
+a persistent Settings window. The sheet receives the existing `AppPreferences`
+instance, and uses a native folder importer to update the shared media
+destination.
 
 ## Screen recording
 

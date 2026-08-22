@@ -7,6 +7,7 @@ struct ADBuddyApp: App {
     @AppStorage("hasAppliedCompactWindowLayout") private var hasAppliedCompactWindowLayout = false
     @State private var deviceStore: DeviceStore
     @State private var preferences: AppPreferences
+    @State private var isShowingSettings = false
 
     init() {
         let preferences = AppPreferences()
@@ -22,7 +23,7 @@ struct ADBuddyApp: App {
         )
 
         WindowGroup("ADBuddy", id: "main") {
-            ContentView()
+            ContentView(isShowingSettings: $isShowingSettings)
                 .environment(deviceStore)
                 .environment(preferences)
                 .overlay(alignment: .topLeading) {
@@ -38,6 +39,15 @@ struct ADBuddyApp: App {
                 }
         }
         .defaultSize(width: DeviceListLayout.windowWidth, height: 200)
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") {
+                    AppLogger.settings.info("Settings requested from the application menu")
+                    isShowingSettings = true
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+        }
 
         MenuBarExtra(
             "ADBuddy",

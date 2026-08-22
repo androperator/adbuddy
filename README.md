@@ -13,6 +13,8 @@ currently provides:
 - Android SDK and ADB discovery;
 - connected-device discovery with clear connection states;
 - a macOS menu bar utility and a compact main-window device list;
+- a compact Settings sheet for the shared screenshot and recording folder, plus
+  automatic screenshot clipboard copying;
 - direct PNG screenshot capture from a selected connected device;
 - screen recording with configurable bit rate, native-resolution percentage,
   and Show taps;

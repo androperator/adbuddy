@@ -11,4 +11,5 @@ enum AppLogger {
     static let recording = Logger(subsystem: subsystem, category: "Recording")
     static let notifications = Logger(subsystem: subsystem, category: "Notifications")
     static let menuBar = Logger(subsystem: subsystem, category: "MenuBar")
+    static let settings = Logger(subsystem: subsystem, category: "Settings")
 }

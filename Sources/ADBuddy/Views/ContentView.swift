@@ -2,6 +2,8 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(DeviceStore.self) private var deviceStore
+    @Environment(AppPreferences.self) private var preferences
+    @Binding var isShowingSettings: Bool
 
     var body: some View {
         @Bindable var deviceStore = deviceStore
@@ -35,8 +37,21 @@ struct ContentView: View {
                 }
             )
         }
+        .sheet(isPresented: $isShowingSettings) {
+            SettingsSheet(preferences: preferences)
+        }
         .navigationTitle("ADBuddy")
         .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    AppLogger.settings.info("Settings requested from the toolbar")
+                    isShowingSettings = true
+                } label: {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .help("Settings")
+            }
+
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     AppLogger.devices.info("Refresh button selected")
