@@ -53,7 +53,9 @@ struct ADBuddyApp: App {
             "ADBuddy",
             systemImage: deviceStore.hasActiveScreenRecording ? "stop.fill" : "camera"
         ) {
-            MenuBarContentView()
+            MenuBarContentView(showSettings: {
+                isShowingSettings = true
+            })
                 .environment(deviceStore)
                 .environment(preferences)
         }

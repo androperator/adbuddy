@@ -18,7 +18,7 @@ WindowGroup(id: "main")
   Compact device list and actions, or an explanatory unavailable state
 
 MenuBarExtra
-  Fast per-device screenshot and recording commands, plus app navigation
+  Fast per-device screenshot and recording commands, app navigation, and Settings
 
 Settings sheet (owned by the main window)
   Shared media destination and automatic screenshot clipboard-copy preference
