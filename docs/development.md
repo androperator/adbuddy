@@ -64,7 +64,8 @@ Manual verification should cover, where locally available:
 7. a failed ADB invocation presenting an actionable error.
 8. a screen recording with each selected option reaching the same media folder
    as screenshots, followed by a successful Stop Recording action;
-9. Show taps returning to its original Android setting after recording.
+9. a successful recording notification offering **Reveal in Finder**;
+10. Show taps returning to its original Android setting after recording.
 
 ## Change discipline
 

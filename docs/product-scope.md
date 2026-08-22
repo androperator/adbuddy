@@ -59,6 +59,8 @@ The first implementation is a complete vertical slice, not a visual mockup.
   MP4, and remove its temporary device-side file.
 - Save MP4s into the same configured destination as screenshots. Do not create
   a separate recording directory or a destination picker in this phase.
+- Deliver a native success notification for each saved MP4, including a
+  **Reveal in Finder** action.
 - When Show taps is enabled, preserve the existing Android setting and restore
   it when the recording finishes.
 

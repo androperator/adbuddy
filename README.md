@@ -16,7 +16,8 @@ currently provides:
 - direct PNG screenshot capture from a selected connected device;
 - screen recording with configurable bit rate, native-resolution percentage,
   and Show taps;
-- native capture notifications with a **Reveal in Finder** action;
+- native screenshot and recording notifications with a **Reveal in Finder**
+  action;
 - automatic PNG clipboard copy, enabled by default.
 
 See [`docs/product-scope.md`](docs/product-scope.md) for the defined Phase 0

@@ -8,7 +8,7 @@ final class DeviceStore {
     private let sdkLocator: AndroidSDKLocator
     private let processRunner: any ProcessRunning
     private let screenshotClipboard: any ScreenshotClipboardCopying
-    private let screenshotNotifier: any ScreenshotNotifying
+    private let mediaNotifier: any SavedMediaNotifying
     private var pollingTask: Task<Void, Never>?
     private var capturingDeviceSerials = Set<String>()
     private var activeScreenRecording: ScreenRecordingSession?
@@ -27,13 +27,13 @@ final class DeviceStore {
         sdkLocator: AndroidSDKLocator = AndroidSDKLocator(),
         processRunner: any ProcessRunning = ProcessRunner(),
         screenshotClipboard: any ScreenshotClipboardCopying = ScreenshotClipboardService(),
-        screenshotNotifier: any ScreenshotNotifying = ScreenshotNotificationService()
+        mediaNotifier: any SavedMediaNotifying = MediaNotificationService()
     ) {
         self.preferences = preferences
         self.sdkLocator = sdkLocator
         self.processRunner = processRunner
         self.screenshotClipboard = screenshotClipboard
-        self.screenshotNotifier = screenshotNotifier
+        self.mediaNotifier = mediaNotifier
     }
 
     func start() {
@@ -127,11 +127,11 @@ final class DeviceStore {
                 AppLogger.screenshot.info("Screenshot capture succeeded")
                 showScreenshotFeedback(.success(fileURL, copiedToClipboard: copiedToClipboard))
 
-                let screenshotNotifier = screenshotNotifier
+                let mediaNotifier = mediaNotifier
                 Task {
-                    await screenshotNotifier.notifyAboutSavedScreenshot(
+                    await mediaNotifier.notifyAboutSavedMedia(
                         at: fileURL,
-                        copiedToClipboard: copiedToClipboard
+                        kind: .screenshot(copiedToClipboard: copiedToClipboard)
                     )
                 }
             case .failure(let error):
@@ -228,6 +228,20 @@ final class DeviceStore {
 
     func canStartScreenRecording(for device: AndroidDevice) -> Bool {
         device.isUsable && activeScreenRecording == nil
+    }
+
+    var hasActiveScreenRecording: Bool {
+        if case .recording = screenRecordingActivity {
+            return true
+        }
+        return false
+    }
+
+    var activeScreenRecordingDevice: AndroidDevice? {
+        guard case .recording(let session) = screenRecordingActivity else {
+            return nil
+        }
+        return session.device
     }
 
     func canStopScreenRecording(for device: AndroidDevice) -> Bool {
@@ -355,6 +369,11 @@ final class DeviceStore {
         case .success(let fileURL, let warning):
             AppLogger.recording.info("Screen recording saved")
             showScreenRecordingFeedback(.success(fileURL, warning: warning))
+
+            let mediaNotifier = mediaNotifier
+            Task {
+                await mediaNotifier.notifyAboutSavedMedia(at: fileURL, kind: .recording)
+            }
         case .failure(let error):
             AppLogger.recording.error("Screen recording failed: \(error.message, privacy: .public)")
             showScreenRecordingFeedback(.failure(error.message))

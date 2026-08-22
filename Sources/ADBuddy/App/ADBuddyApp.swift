@@ -25,7 +25,10 @@ struct ADBuddyApp: App {
         }
         .defaultSize(width: 640, height: 420)
 
-        MenuBarExtra("ADBuddy", systemImage: "camera") {
+        MenuBarExtra(
+            "ADBuddy",
+            systemImage: deviceStore.hasActiveScreenRecording ? "stop.fill" : "camera"
+        ) {
             MenuBarContentView()
                 .environment(deviceStore)
                 .environment(preferences)

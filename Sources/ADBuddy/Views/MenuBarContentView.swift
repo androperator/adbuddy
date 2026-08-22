@@ -6,6 +6,15 @@ struct MenuBarContentView: View {
     @Environment(DeviceStore.self) private var deviceStore
 
     var body: some View {
+        if let recordingDevice = deviceStore.activeScreenRecordingDevice {
+            Button("Stop Recording") {
+                AppLogger.menuBar.info("Stop recording selected from menu bar")
+                deviceStore.stopScreenRecording(for: recordingDevice)
+            }
+
+            Divider()
+        }
+
         deviceItems
 
         Divider()
@@ -49,7 +58,6 @@ struct MenuBarContentView: View {
 
                         if deviceStore.canStopScreenRecording(for: device) {
                             Button("Stop Recording") {
-                                AppLogger.menuBar.info("Stop recording selected from menu bar")
                                 deviceStore.stopScreenRecording(for: device)
                             }
                         } else if !deviceStore.isPreparingScreenRecording(for: device),

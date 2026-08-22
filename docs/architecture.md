@@ -71,7 +71,7 @@ SwiftUI scene
 AndroidSDKLocator -> resolved adb path -> ADBClient
 AppPreferences -> screenshot destination -> ScreenshotService
 AppPreferences -> clipboard preference -> ScreenshotClipboardService
-DeviceStore -> ScreenshotNotificationService -> macOS notification center
+DeviceStore -> MediaNotificationService -> macOS notification center
 AppPreferences -> recording options -> ScreenRecordingService
 DeviceStore -> ScreenRecordingService -> ADB screenrecord, pull, cleanup
 ```
@@ -117,11 +117,11 @@ and returns either a saved file URL or a structured failure.
 Screenshot filenames must be sanitized, timestamped, and collision-resistant.
 The service must not silently replace an existing file.
 
-After a successful save, `DeviceStore` can copy the PNG bytes to the macOS
-pasteboard through `ScreenshotClipboardService`. It also asks
-`ScreenshotNotificationService` to post a native notification. The service
-registers a **Reveal in Finder** notification action and routes that action to
-`NSWorkspace` for the saved file URL.
+After a successful screenshot save, `DeviceStore` can copy PNG bytes to the
+macOS pasteboard through `ScreenshotClipboardService`. For saved screenshots
+and recordings, it asks `MediaNotificationService` to post a native
+notification. The service registers a **Reveal in Finder** notification action
+and routes that action to `NSWorkspace` for the saved file URL.
 
 ## Preferences
 
