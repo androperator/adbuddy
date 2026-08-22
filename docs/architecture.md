@@ -125,7 +125,9 @@ After a successful screenshot save, `DeviceStore` can copy PNG bytes to the
 macOS pasteboard through `ScreenshotClipboardService`. For saved screenshots
 and recordings, it asks `MediaNotificationService` to post a native
 notification. The service registers a **Reveal in Finder** notification action
-and routes that action to `NSWorkspace` for the saved file URL.
+and routes that action to `NSWorkspace` for the saved file URL. It attaches the
+saved PNG to screenshot notifications and asks macOS to use time zero as the
+thumbnail for attached MP4 recordings.
 
 ## Preferences
 

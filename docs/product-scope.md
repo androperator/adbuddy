@@ -40,7 +40,7 @@ The first implementation is a complete vertical slice, not a visual mockup.
   for example `Pixel-9-Pro_2026-08-22_121530_123.png`.
 - Report a concise native success state and a useful failure if capture fails.
 - Deliver a native system notification for a successful capture, including a
-  **Reveal in Finder** action.
+  preview of the saved PNG and a **Reveal in Finder** action.
 - Copy successful PNG captures to the clipboard by default. This behavior is a
   persisted preference exposed by the app's Settings sheet.
 - Let users choose the shared media destination from the Settings sheet. The
@@ -62,7 +62,7 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Save MP4s into the same configured destination as screenshots. Do not create
   a separate recording directory or a destination picker in this phase.
 - Deliver a native success notification for each saved MP4, including a
-  **Reveal in Finder** action.
+  first-frame preview and a **Reveal in Finder** action.
 - When Show taps is enabled, preserve the existing Android setting and restore
   it when the recording finishes.
 

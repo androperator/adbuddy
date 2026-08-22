@@ -1,4 +1,5 @@
 import Foundation
+@preconcurrency import UserNotifications
 import XCTest
 @testable import ADBuddy
 
@@ -29,6 +30,34 @@ final class MediaNotificationServiceTests: XCTestCase {
         XCTAssertEqual(category.actions.map(\.title), ["Reveal in Finder"])
     }
 
+    func testAttachesSavedScreenshotToItsNotification() throws {
+        let screenshotURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("adbuddy-notification-")
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("png")
+        try FileManager.default.createDirectory(
+            at: screenshotURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: screenshotURL.deletingLastPathComponent())
+        }
+        guard let screenshotData = Data(
+            base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Jv7wAAAAASUVORK5CYII="
+        ) else {
+            return XCTFail("Could not create a PNG test fixture")
+        }
+        try screenshotData.write(to: screenshotURL)
+
+        let request = MediaNotificationService.makeNotificationRequest(
+            for: screenshotURL,
+            kind: .screenshot(copiedToClipboard: true)
+        )
+
+        XCTAssertEqual(request.content.attachments.count, 1)
+        XCTAssertEqual(request.content.attachments.first?.url, screenshotURL)
+    }
+
     func testBuildsRecordingNotificationWithRevealAction() {
         let recordingURL = URL(fileURLWithPath: "/tmp/Pixel-10-Pro_2026-08-22_134419_174.mp4")
         let request = MediaNotificationService.makeNotificationRequest(
@@ -44,6 +73,17 @@ final class MediaNotificationServiceTests: XCTestCase {
         XCTAssertEqual(
             request.content.userInfo[MediaNotificationIdentifier.savedMediaPath] as? String,
             recordingURL.path
+        )
+    }
+
+    func testUsesTheFirstVideoFrameForRecordingNotificationThumbnail() {
+        let options = MediaNotificationService.notificationAttachmentOptions(for: .recording)
+
+        XCTAssertEqual(options?[UNNotificationAttachmentOptionsThumbnailTimeKey] as? Int, 0)
+        XCTAssertNil(
+            MediaNotificationService.notificationAttachmentOptions(
+                for: .screenshot(copiedToClipboard: false)
+            )
         )
     }
 

@@ -87,8 +87,38 @@ final class MediaNotificationService: NSObject, SavedMediaNotifying, @unchecked 
         content.sound = .default
         content.categoryIdentifier = MediaNotificationIdentifier.category
         content.userInfo = [MediaNotificationIdentifier.savedMediaPath: fileURL.path]
+        if let attachment = makeMediaAttachment(for: fileURL, kind: kind) {
+            content.attachments = [attachment]
+        }
 
         return UNNotificationRequest(identifier: identifier, content: content, trigger: nil)
+    }
+
+    static func notificationAttachmentOptions(
+        for kind: SavedMediaNotificationKind
+    ) -> [AnyHashable: Any]? {
+        switch kind {
+        case .screenshot:
+            nil
+        case .recording:
+            [UNNotificationAttachmentOptionsThumbnailTimeKey: 0]
+        }
+    }
+
+    private static func makeMediaAttachment(
+        for fileURL: URL,
+        kind: SavedMediaNotificationKind
+    ) -> UNNotificationAttachment? {
+        do {
+            return try UNNotificationAttachment(
+                identifier: "saved-media-preview",
+                url: fileURL,
+                options: notificationAttachmentOptions(for: kind)
+            )
+        } catch {
+            AppLogger.notifications.error("Could not attach saved media preview: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
     }
 
     private func isAuthorizedToPostNotifications() async -> Bool {
