@@ -3,6 +3,14 @@ import XCTest
 @testable import ADBuddyCore
 
 final class ADBuddySharedPreferencesTests: XCTestCase {
+    func testUsesStandardDefaultsWhenRunningInsideADBuddy() {
+        let userDefaults = ADBuddySharedPreferences.userDefaults(
+            bundleIdentifier: ADBuddySharedPreferences.suiteName
+        )
+
+        XCTAssertTrue(userDefaults === UserDefaults.standard)
+    }
+
     func testMediaDestinationUsesSavedSharedPath() {
         let userDefaults = makeUserDefaults()
         userDefaults.set("/tmp/adbuddy-media", forKey: ADBuddySharedPreferences.screenshotDirectoryPathKey)

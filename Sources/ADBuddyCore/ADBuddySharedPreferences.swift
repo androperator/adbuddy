@@ -7,7 +7,17 @@ public enum ADBuddySharedPreferences {
     public static let screenRecordingResolutionPercentageKey = "screenRecordingResolutionPercentage"
     public static let screenRecordingShowsTapsKey = "screenRecordingShowsTaps"
 
-    public static func userDefaults() -> UserDefaults {
+    public static func userDefaults(
+        bundleIdentifier: String? = Bundle.main.bundleIdentifier
+    ) -> UserDefaults {
+        // ADBuddy itself owns this preferences domain, so it must use the
+        // application's standard defaults rather than opening its own bundle
+        // identifier as a suite. The bundled MCP executable can still open
+        // that domain when it runs without ADBuddy's bundle identity.
+        if bundleIdentifier == suiteName {
+            return .standard
+        }
+
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {
             fatalError("Could not open ADBuddy shared preferences.")
         }

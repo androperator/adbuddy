@@ -204,9 +204,10 @@ a persistent Settings window. The sheet receives the existing `AppPreferences`
 instance, and uses a native folder importer to update the shared media
 destination.
 
-The app and MCP helper use the fixed `com.clawperator.adbuddy` UserDefaults
-suite for the shared media folder and recording defaults. This lets a local
-stdio server receive the same settings even though it is a separate executable.
+The app writes shared media and recording settings through its standard
+`com.clawperator.adbuddy` application defaults domain. The bundled MCP helper
+reads that same domain when it runs headlessly, so it receives the current
+settings without the GUI using its own bundle identifier as a defaults suite.
 
 ## Screen recording
 
