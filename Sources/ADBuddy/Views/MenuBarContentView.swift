@@ -4,7 +4,6 @@ import SwiftUI
 struct MenuBarContentView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(DeviceStore.self) private var deviceStore
-    @Environment(AppPreferences.self) private var preferences
 
     var body: some View {
         deviceItems
@@ -44,10 +43,7 @@ struct MenuBarContentView: View {
                     if device.isUsable {
                         Button("Take Screenshot") {
                             AppLogger.menuBar.info("Screenshot selected from menu bar")
-                            deviceStore.takeScreenshot(
-                                of: device,
-                                destination: preferences.screenshotDirectory
-                            )
+                            deviceStore.takeScreenshot(of: device)
                         }
                         .disabled(deviceStore.isCapturingScreenshot(for: device))
                     } else {

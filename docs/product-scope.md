@@ -39,6 +39,10 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Default the directory to `~/Screenshots` and use a safe timestamped filename,
   for example `Pixel-9-Pro_2026-08-22_121530_123.png`.
 - Report a concise native success state and a useful failure if capture fails.
+- Deliver a native system notification for a successful capture, including a
+  **Reveal in Finder** action.
+- Copy successful PNG captures to the clipboard by default. This behavior is a
+  persisted preference that the future Settings UI will expose.
 
 ## Initial acceptance flow
 
@@ -59,7 +63,6 @@ screenshot slice is complete:
 - installed AVD listing and emulator launch or stop controls;
 - Logcat streaming, filters, search, pause, and export;
 - configurable screenshot directory UI;
-- copy-to-clipboard and Reveal in Finder enhancements;
 - in-app automatic updates.
 
 The source structure should accommodate later phases without prebuilding their

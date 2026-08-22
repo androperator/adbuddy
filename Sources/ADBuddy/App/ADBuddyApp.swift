@@ -4,10 +4,13 @@ import SwiftUI
 @main
 struct ADBuddyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var deviceStore = DeviceStore()
-    @State private var preferences = AppPreferences()
+    @State private var deviceStore: DeviceStore
+    @State private var preferences: AppPreferences
 
     init() {
+        let preferences = AppPreferences()
+        _preferences = State(initialValue: preferences)
+        _deviceStore = State(initialValue: DeviceStore(preferences: preferences))
         AppLogger.lifecycle.info("ADBuddy launch requested")
     }
 

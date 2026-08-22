@@ -4,8 +4,11 @@ import Observation
 @MainActor
 @Observable
 final class DeviceStore {
+    private let preferences: AppPreferences
     private let sdkLocator: AndroidSDKLocator
     private let processRunner: any ProcessRunning
+    private let screenshotClipboard: any ScreenshotClipboardCopying
+    private let screenshotNotifier: any ScreenshotNotifying
     private var pollingTask: Task<Void, Never>?
     private var capturingDeviceSerials = Set<String>()
 
@@ -16,11 +19,17 @@ final class DeviceStore {
     private(set) var screenshotFeedback: ScreenshotFeedback?
 
     init(
+        preferences: AppPreferences = AppPreferences(),
         sdkLocator: AndroidSDKLocator = AndroidSDKLocator(),
-        processRunner: any ProcessRunning = ProcessRunner()
+        processRunner: any ProcessRunning = ProcessRunner(),
+        screenshotClipboard: any ScreenshotClipboardCopying = ScreenshotClipboardService(),
+        screenshotNotifier: any ScreenshotNotifying = ScreenshotNotificationService()
     ) {
+        self.preferences = preferences
         self.sdkLocator = sdkLocator
         self.processRunner = processRunner
+        self.screenshotClipboard = screenshotClipboard
+        self.screenshotNotifier = screenshotNotifier
     }
 
     func start() {
@@ -73,7 +82,7 @@ final class DeviceStore {
         capturingDeviceSerials.contains(device.serial)
     }
 
-    func takeScreenshot(of device: AndroidDevice, destination: URL) {
+    func takeScreenshot(of device: AndroidDevice) {
         guard device.isUsable else {
             showScreenshotFeedback(.failure("\(device.displayName) is not available for screenshots."))
             return
@@ -95,9 +104,13 @@ final class DeviceStore {
             adbPath: resolvedSDK.adbPath,
             processRunner: processRunner
         )
+        let destination = preferences.screenshotDirectory
 
         Task { [weak self] in
-            let result = await screenshotService.capture(device: device, destination: destination)
+            let result = await screenshotService.capture(
+                device: device,
+                destination: destination
+            )
             guard let self, !Task.isCancelled else {
                 return
             }
@@ -106,8 +119,17 @@ final class DeviceStore {
 
             switch result {
             case .success(let fileURL):
+                let copiedToClipboard = copyScreenshotToClipboardIfNeeded(at: fileURL)
                 AppLogger.screenshot.info("Screenshot capture succeeded")
-                showScreenshotFeedback(.success(fileURL))
+                showScreenshotFeedback(.success(fileURL, copiedToClipboard: copiedToClipboard))
+
+                let screenshotNotifier = screenshotNotifier
+                Task {
+                    await screenshotNotifier.notifyAboutSavedScreenshot(
+                        at: fileURL,
+                        copiedToClipboard: copiedToClipboard
+                    )
+                }
             case .failure(let error):
                 AppLogger.screenshot.error("Screenshot capture failed: \(error.message, privacy: .public)")
                 showScreenshotFeedback(.failure(error.message))
@@ -162,6 +184,21 @@ final class DeviceStore {
         Task { [weak self, feedback] in
             try? await Task.sleep(for: timeout)
             self?.clearScreenshotFeedback(ifMatching: feedback)
+        }
+    }
+
+    private func copyScreenshotToClipboardIfNeeded(at fileURL: URL) -> Bool {
+        guard preferences.automaticallyCopyScreenshots else {
+            return false
+        }
+
+        switch screenshotClipboard.copyScreenshot(at: fileURL) {
+        case .copied:
+            AppLogger.screenshot.info("Copied screenshot to clipboard")
+            return true
+        case .failed(let message):
+            AppLogger.screenshot.error("Could not copy screenshot to clipboard: \(message, privacy: .public)")
+            return false
         }
     }
 }

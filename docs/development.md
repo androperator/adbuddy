@@ -15,7 +15,10 @@ script/build_and_run.sh
 ```
 
 `script/build_and_run.sh` stops a prior local app instance, builds the project,
-packages the `.app`, launches it, and reports the app location or failure.
+packages and ad-hoc signs the `.app`, launches it, and reports the app location
+or failure. The local signature binds the bundle identity for services such as
+macOS user notifications; it is not a substitute for the Developer ID signing
+required for release.
 
 ## Local prerequisites
 
@@ -56,7 +59,9 @@ Manual verification should cover, where locally available:
 2. no-device and non-usable-device UI states;
 3. a physical device or emulator becoming visible after a refresh;
 4. direct screenshot capture creating a valid PNG;
-5. a failed ADB invocation presenting an actionable error.
+5. a successful screenshot notification offering **Reveal in Finder**;
+6. automatic clipboard copy when that preference is enabled;
+7. a failed ADB invocation presenting an actionable error.
 
 ## Change discipline
 

@@ -70,6 +70,8 @@ SwiftUI scene
 
 AndroidSDKLocator -> resolved adb path -> ADBClient
 AppPreferences -> screenshot destination -> ScreenshotService
+AppPreferences -> clipboard preference -> ScreenshotClipboardService
+DeviceStore -> ScreenshotNotificationService -> macOS notification center
 ```
 
 `DeviceStore` owns refresh timing, selected device state, and presentation-ready
@@ -113,12 +115,20 @@ and returns either a saved file URL or a structured failure.
 Screenshot filenames must be sanitized, timestamped, and collision-resistant.
 The service must not silently replace an existing file.
 
+After a successful save, `DeviceStore` can copy the PNG bytes to the macOS
+pasteboard through `ScreenshotClipboardService`. It also asks
+`ScreenshotNotificationService` to post a native notification. The service
+registers a **Reveal in Finder** notification action and routes that action to
+`NSWorkspace` for the saved file URL.
+
 ## Preferences
 
 `AppPreferences` is an application-owned wrapper around `UserDefaults`.
-Initially it persists only a screenshot destination path. Its default is the
-current user's `~/Screenshots` directory. The service layer receives a URL from
-the preferences store rather than accessing `UserDefaults` itself.
+It persists a screenshot destination path and whether successful captures are
+automatically copied to the clipboard. The directory defaults to the current
+user's `~/Screenshots` directory and automatic copying defaults to enabled.
+The service layer receives values from the preferences store rather than
+accessing `UserDefaults` itself.
 
 Because the app is non-sandboxed, store a regular absolute path. If future
 distribution requires sandboxing, replace this storage with a security-scoped

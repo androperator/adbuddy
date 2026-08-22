@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(DeviceStore.self) private var deviceStore
-    @Environment(AppPreferences.self) private var preferences
 
     var body: some View {
         VStack(spacing: 0) {
@@ -83,10 +82,7 @@ struct ContentView: View {
                     device: device,
                     isCapturing: deviceStore.isCapturingScreenshot(for: device),
                     takeScreenshot: {
-                        deviceStore.takeScreenshot(
-                            of: device,
-                            destination: preferences.screenshotDirectory
-                        )
+                        deviceStore.takeScreenshot(of: device)
                     }
                 )
             }

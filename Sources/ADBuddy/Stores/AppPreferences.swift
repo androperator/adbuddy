@@ -6,6 +6,7 @@ import Observation
 final class AppPreferences {
     private enum Key {
         static let screenshotDirectoryPath = "screenshotDirectoryPath"
+        static let automaticallyCopyScreenshots = "automaticallyCopyScreenshots"
     }
 
     private let userDefaults: UserDefaults
@@ -14,6 +15,12 @@ final class AppPreferences {
     var screenshotDirectory: URL {
         didSet {
             userDefaults.set(screenshotDirectory.path, forKey: Key.screenshotDirectoryPath)
+        }
+    }
+
+    var automaticallyCopyScreenshots: Bool {
+        didSet {
+            userDefaults.set(automaticallyCopyScreenshots, forKey: Key.automaticallyCopyScreenshots)
         }
     }
 
@@ -30,6 +37,8 @@ final class AppPreferences {
         } else {
             screenshotDirectory = defaultScreenshotDirectory
         }
+
+        automaticallyCopyScreenshots = userDefaults.object(forKey: Key.automaticallyCopyScreenshots) as? Bool ?? true
     }
 
     func resetScreenshotDirectory() {

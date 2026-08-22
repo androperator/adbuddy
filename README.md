@@ -13,7 +13,9 @@ currently provides:
 - Android SDK and ADB discovery;
 - connected-device discovery with clear connection states;
 - a macOS menu bar utility and a conventional main window;
-- direct PNG screenshot capture from a selected connected device.
+- direct PNG screenshot capture from a selected connected device;
+- native capture notifications with a **Reveal in Finder** action;
+- automatic PNG clipboard copy, enabled by default.
 
 See [`docs/product-scope.md`](docs/product-scope.md) for the defined Phase 0
 and Phase 1 acceptance criteria.
@@ -33,8 +35,9 @@ GUI app inherits a useful shell `PATH`.
 
 Screenshots default to `~/Screenshots`, which is
 `/Users/chrislacy/Screenshots` on the initial development machine. The
-destination will be saved as a user preference and made configurable through
-Settings in a later UI pass.
+destination and automatic clipboard-copy preference are saved in `UserDefaults`.
+Automatic copying defaults to enabled. Both controls will be exposed together
+through Settings in a later UI pass.
 
 ## Planned installation
 
