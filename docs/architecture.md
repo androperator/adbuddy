@@ -44,28 +44,14 @@ remains isolated from the shared device-discovery store.
 ## Initial source layout
 
 ```text
-App/
-  ADBuddyApp.swift
-  AppDelegate.swift
-Views/
-  ContentView.swift
-  DeviceListView.swift
-  MenuBarView.swift
-Models/
-  AndroidDevice.swift
-  DeviceConnectionState.swift
-  ProcessResult.swift
-Stores/
-  DeviceStore.swift
-  AppPreferences.swift
-Services/
-  AndroidSDKLocator.swift
-  ProcessRunner.swift
-  ADBClient.swift
-  ScreenshotService.swift
-Support/
-  ScreenshotFilename.swift
-  AppLogger.swift
+Sources/
+  ADBuddyCore/
+    typed Android models, SDK discovery, process execution, emulator,
+    screenshot, recording, filenames, logging, and shared preferences
+  ADBuddy/
+    App/, Stores/, Views/, and GUI-only services
+  ADBuddyMCP/
+    standalone stdio JSON-RPC transport and MCP recording ownership
 Tests/
   ADBuddyTests/
 ```
@@ -93,7 +79,15 @@ DeviceStore emulator entries -> EmulatorStore -> AndroidEmulatorService
 EmulatorStore -> AndroidEmulatorService -> Emulator executable -> standalone Emulator window
 EmulatorStore -> AndroidEmulatorService -> adb emulator-console commands
 LogcatStore -> LogcatService -> StreamingProcessRunner -> adb logcat
+ADBuddyMCP stdio transport -> ADBuddyCore -> Android SDK services -> adb and Emulator executable
 ```
+
+`ADBuddyCore` contains the typed SDK discovery, ADB device, emulator, screenshot,
+recording, process, filename, logging, and shared-preferences behavior used by
+both the SwiftUI app and the standalone `adbuddy-mcp` executable. The MCP
+transport is deliberately headless and owns only JSON-RPC request handling plus
+the lifetime of MCP-started recordings. It never reaches into SwiftUI stores or
+constructs shell command strings.
 
 `DeviceStore` owns automatic one-second refresh timing, selected device state,
 and presentation-ready errors. It does not parse process output itself.
@@ -202,6 +196,10 @@ The main window presents a compact SwiftUI Settings sheet rather than opening
 a persistent Settings window. The sheet receives the existing `AppPreferences`
 instance, and uses a native folder importer to update the shared media
 destination.
+
+The app and MCP helper use the fixed `com.clawperator.adbuddy` UserDefaults
+suite for the shared media folder and recording defaults. This lets a local
+stdio server receive the same settings even though it is a separate executable.
 
 ## Screen recording
 

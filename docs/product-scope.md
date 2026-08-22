@@ -83,6 +83,17 @@ The first implementation is a complete vertical slice, not a visual mockup.
   macOS window and Dock presence.
 - Stop a running AVD through `adb -s <serial> emu kill`.
 
+### Local MCP access
+
+- Provide a local stdio MCP server for agents that need the completed device,
+  emulator, screenshot, and recording actions without automating the macOS UI.
+- Expose discovery before actions, and require an explicit ADB serial for every
+  device-targeting action.
+- Reuse the app's configured shared media folder and recording defaults.
+- Keep the first server local-only. Do not add HTTP, SSE, or a network listener.
+- Allow Quick Boot and Cold Boot AVD launch plus stopping by serial. Do not
+  expose destructive wipe-data startup through MCP.
+
 ## Initial acceptance flow
 
 1. Launch ADBuddy.

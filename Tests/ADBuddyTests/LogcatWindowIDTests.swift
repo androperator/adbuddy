@@ -1,5 +1,6 @@
 import XCTest
 @testable import ADBuddy
+@testable import ADBuddyCore
 
 final class LogcatWindowIDTests: XCTestCase {
     func testSerialIsTheWindowIdentity() throws {

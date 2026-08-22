@@ -1,21 +1,31 @@
 import Foundation
 
-struct ScreenRecordingOptions: Equatable, Sendable {
-    static let `default` = ScreenRecordingOptions(
+public struct ScreenRecordingOptions: Equatable, Sendable {
+    public static let `default` = ScreenRecordingOptions(
         bitRateMegabitsPerSecond: 8,
         resolution: .native,
         showsTaps: false
     )
 
-    let bitRateMegabitsPerSecond: Int
-    let resolution: ScreenRecordingResolution
-    let showsTaps: Bool
+    public let bitRateMegabitsPerSecond: Int
+    public let resolution: ScreenRecordingResolution
+    public let showsTaps: Bool
 
-    var bitRateBitsPerSecond: Int {
+    public init(
+        bitRateMegabitsPerSecond: Int,
+        resolution: ScreenRecordingResolution,
+        showsTaps: Bool
+    ) {
+        self.bitRateMegabitsPerSecond = bitRateMegabitsPerSecond
+        self.resolution = resolution
+        self.showsTaps = showsTaps
+    }
+
+    public var bitRateBitsPerSecond: Int {
         bitRateMegabitsPerSecond * 1_000_000
     }
 
-    var validationMessage: String? {
+    public var validationMessage: String? {
         guard (1...200).contains(bitRateMegabitsPerSecond) else {
             return "Use a bit rate between 1 and 200 Mbps."
         }
@@ -23,21 +33,21 @@ struct ScreenRecordingOptions: Equatable, Sendable {
     }
 }
 
-enum ScreenRecordingResolution: Int, CaseIterable, Equatable, Identifiable, Sendable {
+public enum ScreenRecordingResolution: Int, CaseIterable, Equatable, Identifiable, Sendable {
     case native = 100
     case seventyFivePercent = 75
     case fiftyPercent = 50
     case twentyFivePercent = 25
 
-    var id: Int {
+    public var id: Int {
         rawValue
     }
 
-    var displayName: String {
+    public var displayName: String {
         "\(rawValue)"
     }
 
-    func outputSize(for nativeSize: AndroidDisplaySize) -> AndroidDisplaySize? {
+    public func outputSize(for nativeSize: AndroidDisplaySize) -> AndroidDisplaySize? {
         guard self != .native else {
             return nil
         }
@@ -45,11 +55,11 @@ enum ScreenRecordingResolution: Int, CaseIterable, Equatable, Identifiable, Send
     }
 }
 
-struct AndroidDisplaySize: Equatable, Sendable {
-    let width: Int
-    let height: Int
+public struct AndroidDisplaySize: Equatable, Sendable {
+    public let width: Int
+    public let height: Int
 
-    init?(width: Int, height: Int) {
+    public init?(width: Int, height: Int) {
         guard width > 1, height > 1 else {
             return nil
         }
@@ -57,11 +67,11 @@ struct AndroidDisplaySize: Equatable, Sendable {
         self.height = height
     }
 
-    var adbArgument: String {
+    public var adbArgument: String {
         "\(width)x\(height)"
     }
 
-    func scaled(to percentage: Int) -> AndroidDisplaySize {
+    public func scaled(to percentage: Int) -> AndroidDisplaySize {
         let factor = Double(percentage) / 100
         return AndroidDisplaySize(
             width: roundedToEvenDimension(Double(width) * factor),
@@ -75,8 +85,8 @@ struct AndroidDisplaySize: Equatable, Sendable {
     }
 }
 
-enum AndroidDisplaySizeParser {
-    static func parse(_ output: String) -> AndroidDisplaySize? {
+public enum AndroidDisplaySizeParser {
+    public static func parse(_ output: String) -> AndroidDisplaySize? {
         for line in output.split(whereSeparator: \.isNewline) {
             let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
             guard trimmedLine.hasPrefix("Physical size:") else {
@@ -98,35 +108,35 @@ enum AndroidDisplaySizeParser {
     }
 }
 
-struct ScreenRecordingSession: Equatable, Sendable {
-    let device: AndroidDevice
-    let remoteFilePath: String
+public struct ScreenRecordingSession: Equatable, Sendable {
+    public let device: AndroidDevice
+    public let remoteFilePath: String
 
-    init(device: AndroidDevice, remoteFilePath: String? = nil) {
+    public init(device: AndroidDevice, remoteFilePath: String? = nil) {
         self.device = device
         self.remoteFilePath = remoteFilePath
             ?? "/data/local/tmp/adbuddy-recording-\(UUID().uuidString).mp4"
     }
 }
 
-enum ScreenRecordingActivity: Equatable {
+public enum ScreenRecordingActivity: Equatable {
     case preparing(ScreenRecordingSession)
     case recording(ScreenRecordingSession)
     case stopping(ScreenRecordingSession)
 }
 
-enum ScreenRecordingFeedback: Equatable {
+public enum ScreenRecordingFeedback: Equatable {
     case success(URL, warning: String?)
     case failure(String)
 
-    var isSuccess: Bool {
+    public var isSuccess: Bool {
         if case .success = self {
             return true
         }
         return false
     }
 
-    var title: String {
+    public var title: String {
         switch self {
         case .success(_, let warning):
             warning == nil ? "Recording Saved" : "Recording Saved with Warning"
@@ -135,7 +145,7 @@ enum ScreenRecordingFeedback: Equatable {
         }
     }
 
-    var detail: String {
+    public var detail: String {
         switch self {
         case .success(let fileURL, let warning):
             warning ?? fileURL.lastPathComponent

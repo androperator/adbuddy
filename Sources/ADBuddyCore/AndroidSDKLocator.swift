@@ -1,22 +1,28 @@
 import Foundation
 
-struct AndroidSDK: Equatable, Sendable {
-    let rootPath: String
-    let adbPath: String
-    let source: AndroidSDKSource
+public struct AndroidSDK: Equatable, Sendable {
+    public let rootPath: String
+    public let adbPath: String
+    public let source: AndroidSDKSource
+
+    public init(rootPath: String, adbPath: String, source: AndroidSDKSource) {
+        self.rootPath = rootPath
+        self.adbPath = adbPath
+        self.source = source
+    }
 }
 
-enum AndroidSDKSource: Equatable, Sendable {
+public enum AndroidSDKSource: Equatable, Sendable {
     case androidHome
     case androidSDKRoot
     case standardLocation
 }
 
-enum AndroidSDKFailure: Equatable, Sendable {
+public enum AndroidSDKFailure: Equatable, Sendable {
     case sdkNotFound
     case adbNotFound
 
-    var title: String {
+    public var title: String {
         switch self {
         case .sdkNotFound:
             "Android SDK Not Found"
@@ -25,7 +31,7 @@ enum AndroidSDKFailure: Equatable, Sendable {
         }
     }
 
-    var detail: String {
+    public var detail: String {
         switch self {
         case .sdkNotFound:
             "Set ANDROID_HOME or ANDROID_SDK_ROOT, or install the Android SDK in ~/Library/Android/sdk."
@@ -35,18 +41,18 @@ enum AndroidSDKFailure: Equatable, Sendable {
     }
 }
 
-enum AndroidSDKResolution: Equatable, Sendable {
+public enum AndroidSDKResolution: Equatable, Sendable {
     case found(AndroidSDK)
     case unavailable(AndroidSDKFailure)
 }
 
-struct AndroidSDKLocator: Sendable {
+public struct AndroidSDKLocator: Sendable {
     private let environment: [String: String]
     private let homeDirectoryPath: String
     private let pathExists: @Sendable (String) -> Bool
     private let isExecutable: @Sendable (String) -> Bool
 
-    init(
+    public init(
         environment: [String: String] = ProcessInfo.processInfo.environment,
         homeDirectoryPath: String = FileManager.default.homeDirectoryForCurrentUser.path,
         pathExists: @escaping @Sendable (String) -> Bool = { path in
@@ -62,7 +68,7 @@ struct AndroidSDKLocator: Sendable {
         self.isExecutable = isExecutable
     }
 
-    func resolve() -> AndroidSDKResolution {
+    public func resolve() -> AndroidSDKResolution {
         var foundSDKDirectory = false
 
         for candidate in candidates {

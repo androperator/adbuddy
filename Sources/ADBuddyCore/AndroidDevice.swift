@@ -1,34 +1,54 @@
 import Foundation
 import SwiftUI
 
-struct AndroidDevice: Equatable, Identifiable, Sendable {
-    let serial: String
-    let displayName: String
-    let connectionState: DeviceConnectionState
-    let kind: AndroidDeviceKind
-    let model: String?
-    let product: String?
-    let deviceCodeName: String?
-    let transportID: String?
+public struct AndroidDevice: Equatable, Identifiable, Sendable {
+    public let serial: String
+    public let displayName: String
+    public let connectionState: DeviceConnectionState
+    public let kind: AndroidDeviceKind
+    public let model: String?
+    public let product: String?
+    public let deviceCodeName: String?
+    public let transportID: String?
 
-    var id: String {
+    public init(
+        serial: String,
+        displayName: String,
+        connectionState: DeviceConnectionState,
+        kind: AndroidDeviceKind,
+        model: String?,
+        product: String?,
+        deviceCodeName: String?,
+        transportID: String?
+    ) {
+        self.serial = serial
+        self.displayName = displayName
+        self.connectionState = connectionState
+        self.kind = kind
+        self.model = model
+        self.product = product
+        self.deviceCodeName = deviceCodeName
+        self.transportID = transportID
+    }
+
+    public var id: String {
         serial
     }
 
-    var isUsable: Bool {
+    public var isUsable: Bool {
         connectionState.isUsable
     }
 
-    var menuTitle: String {
+    public var menuTitle: String {
         displayName.count <= 30 ? displayName : String(displayName.prefix(27)) + "..."
     }
 }
 
-enum AndroidDeviceKind: Equatable, Sendable {
+public enum AndroidDeviceKind: Equatable, Sendable {
     case physical
     case emulator
 
-    var symbolName: String {
+    public var symbolName: String {
         switch self {
         case .physical:
             "cable.connector"
@@ -38,7 +58,7 @@ enum AndroidDeviceKind: Equatable, Sendable {
     }
 }
 
-enum DeviceConnectionState: Equatable, Sendable {
+public enum DeviceConnectionState: Equatable, Sendable {
     case connected
     case unauthorized
     case offline
@@ -47,7 +67,7 @@ enum DeviceConnectionState: Equatable, Sendable {
     case sideload
     case unknown(String)
 
-    init(adbValue: String) {
+    public init(adbValue: String) {
         switch adbValue.lowercased() {
         case "device":
             self = .connected
@@ -66,14 +86,14 @@ enum DeviceConnectionState: Equatable, Sendable {
         }
     }
 
-    var isUsable: Bool {
+    public var isUsable: Bool {
         if case .connected = self {
             return true
         }
         return false
     }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .connected:
             "Connected"
@@ -92,7 +112,7 @@ enum DeviceConnectionState: Equatable, Sendable {
         }
     }
 
-    var tint: Color {
+    public var tint: Color {
         switch self {
         case .connected:
             .green

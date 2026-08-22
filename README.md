@@ -25,6 +25,8 @@ currently provides:
   application and minimum-level filtering, pause, copy, follow, and optional
   PID/TID columns;
 - global Logcat severity colors in Settings.
+- a local stdio MCP server for listing devices and emulators, controlling AVDs,
+  and saving screenshots or screen recordings for an agent.
 
 See [`docs/product-scope.md`](docs/product-scope.md) for the defined Phase 0
 and Phase 1 acceptance criteria.
@@ -60,6 +62,14 @@ column controls. PID and TID are hidden by default. Select rows and press
 
 Logcat keeps at most 50,000 entries per window. Disconnecting a device retains
 its visible logs; reconnecting the same serial resumes that window automatically.
+
+## MCP
+
+The repository also builds `adbuddy-mcp`, a local stdio Model Context Protocol
+server. It exposes device and emulator discovery, non-destructive emulator
+start and stop, plus screenshot and screen-recording tools. MCP media uses the
+same folder and recording defaults selected in ADBuddy Settings. See
+[`docs/mcp.md`](docs/mcp.md) for configuration and the tool contract.
 
 ## Planned installation
 
@@ -111,3 +121,4 @@ source layout.
   and Homebrew cask strategy.
 - [`docs/logcat.md`](docs/logcat.md) - Logcat behavior, architecture, and
   verification contract.
+- [`docs/mcp.md`](docs/mcp.md) - local MCP server setup and tool contract.

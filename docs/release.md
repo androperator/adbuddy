@@ -20,7 +20,9 @@ macOS 14 or newer on Apple silicon and Intel Macs.
 ## Release artifact
 
 The release build should create a universal `ADBuddy.app` containing `arm64`
-and `x86_64` slices. Package it in a versioned archive such as:
+and `x86_64` slices. It must include the `adbuddy-mcp` stdio helper in
+`Contents/MacOS` alongside the GUI executable. Package it in a versioned archive
+such as:
 
 ```text
 ADBuddy-macos-universal-0.1.0.zip

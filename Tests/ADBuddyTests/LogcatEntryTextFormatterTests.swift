@@ -1,6 +1,7 @@
 import Foundation
 import XCTest
 @testable import ADBuddy
+@testable import ADBuddyCore
 
 final class LogcatEntryTextFormatterTests: XCTestCase {
     func testFormatsSelectedEntriesAsReadableText() {

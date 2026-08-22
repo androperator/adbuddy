@@ -2,6 +2,7 @@ import Foundation
 @preconcurrency import UserNotifications
 import XCTest
 @testable import ADBuddy
+@testable import ADBuddyCore
 
 final class MediaNotificationServiceTests: XCTestCase {
     func testBuildsScreenshotNotificationWithRevealActionAndClipboardDetail() {

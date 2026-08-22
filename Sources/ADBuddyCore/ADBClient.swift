@@ -1,24 +1,24 @@
 import Foundation
 
-enum ADBDeviceListResult: Equatable, Sendable {
+public enum ADBDeviceListResult: Equatable, Sendable {
     case success([AndroidDevice])
     case failure(ADBError)
 }
 
-enum ADBError: Equatable, Sendable {
+public enum ADBError: Equatable, Sendable {
     case commandFailed(String)
 }
 
-struct ADBClient: Sendable {
+public struct ADBClient: Sendable {
     private let adbPath: String
     private let processRunner: any ProcessRunning
 
-    init(adbPath: String, processRunner: any ProcessRunning) {
+    public init(adbPath: String, processRunner: any ProcessRunning) {
         self.adbPath = adbPath
         self.processRunner = processRunner
     }
 
-    func listDevices() async -> ADBDeviceListResult {
+    public func listDevices() async -> ADBDeviceListResult {
         let result = await processRunner.run(executablePath: adbPath, arguments: ["devices", "-l"])
 
         guard result.succeeded else {

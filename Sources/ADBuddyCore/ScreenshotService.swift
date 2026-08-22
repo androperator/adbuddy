@@ -1,17 +1,17 @@
 import Foundation
 
-enum ScreenshotCaptureResult: Equatable, Sendable {
+public enum ScreenshotCaptureResult: Equatable, Sendable {
     case success(URL)
     case failure(ScreenshotCaptureError)
 }
 
-enum ScreenshotCaptureError: Equatable, Sendable {
+public enum ScreenshotCaptureError: Equatable, Sendable {
     case deviceUnavailable
     case adbFailed(String)
     case invalidPNG
     case unableToSave(String)
 
-    var message: String {
+    public var message: String {
         switch self {
         case .deviceUnavailable:
             "The selected device is not connected and authorized."
@@ -25,35 +25,37 @@ enum ScreenshotCaptureError: Equatable, Sendable {
     }
 }
 
-protocol ScreenshotFileManaging: Sendable {
+public protocol ScreenshotFileManaging: Sendable {
     func ensureDirectoryExists(at directoryURL: URL) throws
     func fileExists(at fileURL: URL) -> Bool
     func write(_ data: Data, to fileURL: URL) throws
 }
 
-struct LocalScreenshotFileManager: ScreenshotFileManaging {
-    func ensureDirectoryExists(at directoryURL: URL) throws {
+public struct LocalScreenshotFileManager: ScreenshotFileManaging {
+    public init() {}
+
+    public func ensureDirectoryExists(at directoryURL: URL) throws {
         try FileManager.default.createDirectory(
             at: directoryURL,
             withIntermediateDirectories: true
         )
     }
 
-    func fileExists(at fileURL: URL) -> Bool {
+    public func fileExists(at fileURL: URL) -> Bool {
         FileManager.default.fileExists(atPath: fileURL.path)
     }
 
-    func write(_ data: Data, to fileURL: URL) throws {
+    public func write(_ data: Data, to fileURL: URL) throws {
         try data.write(to: fileURL, options: .withoutOverwriting)
     }
 }
 
-struct ScreenshotService: Sendable {
+public struct ScreenshotService: Sendable {
     private let adbPath: String
     private let processRunner: any ProcessRunning
     private let fileManager: any ScreenshotFileManaging
 
-    init(
+    public init(
         adbPath: String,
         processRunner: any ProcessRunning,
         fileManager: any ScreenshotFileManaging = LocalScreenshotFileManager()
@@ -63,7 +65,7 @@ struct ScreenshotService: Sendable {
         self.fileManager = fileManager
     }
 
-    func capture(
+    public func capture(
         device: AndroidDevice,
         destination: URL,
         date: Date = Date()

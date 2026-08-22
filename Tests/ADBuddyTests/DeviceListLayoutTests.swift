@@ -1,6 +1,7 @@
 import CoreGraphics
 import XCTest
 @testable import ADBuddy
+@testable import ADBuddyCore
 
 final class DeviceListLayoutTests: XCTestCase {
     func testBoundsDeviceListToFourVisibleRows() {

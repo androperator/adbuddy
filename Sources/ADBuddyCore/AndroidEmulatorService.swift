@@ -1,26 +1,26 @@
 import Foundation
 
-enum AndroidEmulatorVirtualDeviceListResult: Equatable, Sendable {
+public enum AndroidEmulatorVirtualDeviceListResult: Equatable, Sendable {
     case success([AndroidVirtualDevice])
     case failure(AndroidEmulatorFailure)
 }
 
-enum AndroidEmulatorLaunchResult: Equatable, Sendable {
+public enum AndroidEmulatorLaunchResult: Equatable, Sendable {
     case launched
     case failure(AndroidEmulatorFailure)
 }
 
-enum AndroidEmulatorStopResult: Equatable, Sendable {
+public enum AndroidEmulatorStopResult: Equatable, Sendable {
     case stopped
     case failure(AndroidEmulatorFailure)
 }
 
-enum AndroidEmulatorStartMode: Equatable, Sendable {
+public enum AndroidEmulatorStartMode: Equatable, Sendable {
     case quickBoot
     case coldBoot
     case wipeData
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .quickBoot:
             "Start"
@@ -32,13 +32,13 @@ enum AndroidEmulatorStartMode: Equatable, Sendable {
     }
 }
 
-enum AndroidEmulatorFailure: Equatable, Sendable {
+public enum AndroidEmulatorFailure: Equatable, Sendable {
     case sdkUnavailable(AndroidSDKFailure)
     case emulatorNotFound
     case commandFailed(String)
     case launchFailed(String)
 
-    var title: String {
+    public var title: String {
         switch self {
         case .sdkUnavailable(let failure):
             failure.title
@@ -51,7 +51,7 @@ enum AndroidEmulatorFailure: Equatable, Sendable {
         }
     }
 
-    var detail: String {
+    public var detail: String {
         switch self {
         case .sdkUnavailable(let failure):
             failure.detail
@@ -63,14 +63,14 @@ enum AndroidEmulatorFailure: Equatable, Sendable {
     }
 }
 
-struct AndroidEmulatorService: Sendable {
+public struct AndroidEmulatorService: Sendable {
     private let emulatorPath: String
     private let adbPath: String
     private let processRunner: any ProcessRunning
     private let applicationLauncher: any ApplicationProcessLaunching
     private let isExecutable: @Sendable (String) -> Bool
 
-    init(
+    public init(
         sdk: AndroidSDK,
         processRunner: any ProcessRunning,
         applicationLauncher: any ApplicationProcessLaunching = ApplicationProcessLauncher(),
@@ -88,7 +88,7 @@ struct AndroidEmulatorService: Sendable {
         self.isExecutable = isExecutable
     }
 
-    func listVirtualDevices() async -> AndroidEmulatorVirtualDeviceListResult {
+    public func listVirtualDevices() async -> AndroidEmulatorVirtualDeviceListResult {
         guard isExecutable(emulatorPath) else {
             AppLogger.emulator.error("Android Emulator executable is unavailable")
             return .failure(.emulatorNotFound)
@@ -112,7 +112,7 @@ struct AndroidEmulatorService: Sendable {
         return .success(virtualDevices)
     }
 
-    func start(
+    public func start(
         _ virtualDevice: AndroidVirtualDevice,
         mode: AndroidEmulatorStartMode = .quickBoot
     ) -> AndroidEmulatorLaunchResult {
@@ -135,7 +135,7 @@ struct AndroidEmulatorService: Sendable {
         }
     }
 
-    func runningVirtualDevices(in devices: [AndroidDevice]) async -> [String: AndroidDevice] {
+    public func runningVirtualDevices(in devices: [AndroidDevice]) async -> [String: AndroidDevice] {
         var runningVirtualDevices: [String: AndroidDevice] = [:]
 
         for device in devices where device.kind == .emulator && device.isUsable {
@@ -167,7 +167,7 @@ struct AndroidEmulatorService: Sendable {
         return runningVirtualDevices
     }
 
-    func stop(_ device: AndroidDevice) async -> AndroidEmulatorStopResult {
+    public func stop(_ device: AndroidDevice) async -> AndroidEmulatorStopResult {
         let result = await processRunner.run(
             executablePath: adbPath,
             arguments: ["-s", device.serial, "emu", "kill"]

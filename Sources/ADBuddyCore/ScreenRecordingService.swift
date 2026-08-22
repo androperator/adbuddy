@@ -1,16 +1,16 @@
 import Foundation
 
-enum ScreenRecordingResult: Equatable, Sendable {
+public enum ScreenRecordingResult: Equatable, Sendable {
     case success(URL, warning: String?)
     case failure(ScreenRecordingError)
 }
 
-enum ScreenRecordingStopResult: Equatable, Sendable {
+public enum ScreenRecordingStopResult: Equatable, Sendable {
     case stopped
     case failure(String)
 }
 
-enum ScreenRecordingError: Equatable, Sendable {
+public enum ScreenRecordingError: Equatable, Sendable {
     case deviceUnavailable
     case invalidOptions(String)
     case unableToDetermineDisplaySize
@@ -18,7 +18,7 @@ enum ScreenRecordingError: Equatable, Sendable {
     case adbFailed(String)
     case unableToSave(String)
 
-    var message: String {
+    public var message: String {
         switch self {
         case .deviceUnavailable:
             "The selected device is not connected and authorized."
@@ -34,40 +34,42 @@ enum ScreenRecordingError: Equatable, Sendable {
     }
 }
 
-protocol ScreenRecordingFileManaging: Sendable {
+public protocol ScreenRecordingFileManaging: Sendable {
     func ensureDirectoryExists(at directoryURL: URL) throws
     func fileExists(at fileURL: URL) -> Bool
     func moveItem(at sourceURL: URL, to destinationURL: URL) throws
     func removeItemIfPresent(at fileURL: URL)
 }
 
-struct LocalScreenRecordingFileManager: ScreenRecordingFileManaging {
-    func ensureDirectoryExists(at directoryURL: URL) throws {
+public struct LocalScreenRecordingFileManager: ScreenRecordingFileManaging {
+    public init() {}
+
+    public func ensureDirectoryExists(at directoryURL: URL) throws {
         try FileManager.default.createDirectory(
             at: directoryURL,
             withIntermediateDirectories: true
         )
     }
 
-    func fileExists(at fileURL: URL) -> Bool {
+    public func fileExists(at fileURL: URL) -> Bool {
         FileManager.default.fileExists(atPath: fileURL.path)
     }
 
-    func moveItem(at sourceURL: URL, to destinationURL: URL) throws {
+    public func moveItem(at sourceURL: URL, to destinationURL: URL) throws {
         try FileManager.default.moveItem(at: sourceURL, to: destinationURL)
     }
 
-    func removeItemIfPresent(at fileURL: URL) {
+    public func removeItemIfPresent(at fileURL: URL) {
         try? FileManager.default.removeItem(at: fileURL)
     }
 }
 
-struct ScreenRecordingService: Sendable {
+public struct ScreenRecordingService: Sendable {
     private let adbPath: String
     private let processRunner: any ProcessRunning
     private let fileManager: any ScreenRecordingFileManaging
 
-    init(
+    public init(
         adbPath: String,
         processRunner: any ProcessRunning,
         fileManager: any ScreenRecordingFileManaging = LocalScreenRecordingFileManager()
@@ -77,7 +79,7 @@ struct ScreenRecordingService: Sendable {
         self.fileManager = fileManager
     }
 
-    func record(
+    public func record(
         session: ScreenRecordingSession,
         options: ScreenRecordingOptions,
         destination: URL,
@@ -192,7 +194,7 @@ struct ScreenRecordingService: Sendable {
         return .success(destinationURLs.finalURL, warning: restoreWarning)
     }
 
-    func stop(session: ScreenRecordingSession) async -> ScreenRecordingStopResult {
+    public func stop(session: ScreenRecordingSession) async -> ScreenRecordingStopResult {
         let result = await processRunner.run(
             executablePath: adbPath,
             arguments: [

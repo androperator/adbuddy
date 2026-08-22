@@ -1,27 +1,45 @@
 @preconcurrency import Foundation
 import Dispatch
 
-struct ProcessResult: Equatable, Sendable {
-    let standardOutput: Data
-    let standardError: Data
-    let exitStatus: Int32?
-    let durationMilliseconds: Int
-    let failureDescription: String?
-    let wasCancelled: Bool
+public struct ProcessResult: Equatable, Sendable {
+    public let standardOutput: Data
+    public let standardError: Data
+    public let exitStatus: Int32?
+    public let durationMilliseconds: Int
+    public let failureDescription: String?
+    public let wasCancelled: Bool
 
-    var succeeded: Bool {
+    public init(
+        standardOutput: Data,
+        standardError: Data,
+        exitStatus: Int32?,
+        durationMilliseconds: Int,
+        failureDescription: String?,
+        wasCancelled: Bool
+    ) {
+        self.standardOutput = standardOutput
+        self.standardError = standardError
+        self.exitStatus = exitStatus
+        self.durationMilliseconds = durationMilliseconds
+        self.failureDescription = failureDescription
+        self.wasCancelled = wasCancelled
+    }
+
+    public var succeeded: Bool {
         !wasCancelled && failureDescription == nil && exitStatus == 0
     }
 }
 
-protocol ProcessRunning: Sendable {
+public protocol ProcessRunning: Sendable {
     func run(executablePath: String, arguments: [String]) async -> ProcessResult
 }
 
-final class ProcessRunner: ProcessRunning, @unchecked Sendable {
+public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
     private let activeProcesses = ActiveProcessRegistry()
 
-    func run(executablePath: String, arguments: [String]) async -> ProcessResult {
+    public init() {}
+
+    public func run(executablePath: String, arguments: [String]) async -> ProcessResult {
         let executionID = UUID()
         let cancellationFlag = CancellationFlag()
         let request = ProcessRequest(executablePath: executablePath, arguments: arguments)

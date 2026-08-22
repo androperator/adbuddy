@@ -1,5 +1,6 @@
 import XCTest
 @testable import ADBuddy
+@testable import ADBuddyCore
 
 final class ADBDeviceParserTests: XCTestCase {
     func testParsesConnectedEmulatorAndUnavailableDevices() {

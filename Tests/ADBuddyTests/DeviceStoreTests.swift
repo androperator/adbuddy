@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import XCTest
 @testable import ADBuddy
+@testable import ADBuddyCore
 
 @MainActor
 final class DeviceStoreTests: XCTestCase {

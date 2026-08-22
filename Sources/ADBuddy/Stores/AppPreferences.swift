@@ -5,11 +5,11 @@ import Observation
 @Observable
 final class AppPreferences {
     private enum Key {
-        static let screenshotDirectoryPath = "screenshotDirectoryPath"
+        static let screenshotDirectoryPath = ADBuddySharedPreferences.screenshotDirectoryPathKey
         static let automaticallyCopyScreenshots = "automaticallyCopyScreenshots"
-        static let screenRecordingBitRateMegabitsPerSecond = "screenRecordingBitRateMegabitsPerSecond"
-        static let screenRecordingResolutionPercentage = "screenRecordingResolutionPercentage"
-        static let screenRecordingShowsTaps = "screenRecordingShowsTaps"
+        static let screenRecordingBitRateMegabitsPerSecond = ADBuddySharedPreferences.screenRecordingBitRateMegabitsPerSecondKey
+        static let screenRecordingResolutionPercentage = ADBuddySharedPreferences.screenRecordingResolutionPercentageKey
+        static let screenRecordingShowsTaps = ADBuddySharedPreferences.screenRecordingShowsTapsKey
         static let logcatColors = "logcatColors"
     }
 
@@ -56,7 +56,7 @@ final class AppPreferences {
     }
 
     init(
-        userDefaults: UserDefaults = .standard,
+        userDefaults: UserDefaults = ADBuddySharedPreferences.userDefaults(),
         defaultScreenshotDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Screenshots", isDirectory: true)
     ) {

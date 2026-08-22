@@ -12,6 +12,7 @@ APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_BINARY="$APP_MACOS/$APP_NAME"
+MCP_BINARY="$APP_MACOS/adbuddy-mcp"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 
 cd "$ROOT_DIR"
@@ -19,12 +20,16 @@ cd "$ROOT_DIR"
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
 swift build
-BUILD_BINARY="$(swift build --show-bin-path)/$APP_NAME"
+BUILD_DIRECTORY="$(swift build --show-bin-path)"
+BUILD_BINARY="$BUILD_DIRECTORY/$APP_NAME"
+BUILD_MCP_BINARY="$BUILD_DIRECTORY/adbuddy-mcp"
 
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_MACOS"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
+cp "$BUILD_MCP_BINARY" "$MCP_BINARY"
+chmod +x "$MCP_BINARY"
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
