@@ -62,21 +62,30 @@ final class ProcessRunner: ProcessRunning, @unchecked Sendable {
         }
 
         let process = Process()
-        let standardOutputPipe = Pipe()
-        let standardErrorPipe = Pipe()
-        let standardOutput = DataCollector()
-        let standardError = DataCollector()
         let startDate = Date()
+        let temporaryDirectory = FileManager.default.temporaryDirectory
+        let standardOutputURL = temporaryDirectory.appendingPathComponent("adbuddy-output-\(UUID().uuidString)")
+        let standardErrorURL = temporaryDirectory.appendingPathComponent("adbuddy-error-\(UUID().uuidString)")
+        var standardOutputHandle: FileHandle?
+        var standardErrorHandle: FileHandle?
 
-        process.executableURL = URL(fileURLWithPath: request.executablePath)
-        process.arguments = request.arguments
-        process.standardOutput = standardOutputPipe
-        process.standardError = standardErrorPipe
-
-        collect(from: standardOutputPipe, into: standardOutput)
-        collect(from: standardErrorPipe, into: standardError)
+        defer {
+            try? standardOutputHandle?.close()
+            try? standardErrorHandle?.close()
+            try? FileManager.default.removeItem(at: standardOutputURL)
+            try? FileManager.default.removeItem(at: standardErrorURL)
+        }
 
         do {
+            try Data().write(to: standardOutputURL, options: .withoutOverwriting)
+            try Data().write(to: standardErrorURL, options: .withoutOverwriting)
+            standardOutputHandle = try FileHandle(forWritingTo: standardOutputURL)
+            standardErrorHandle = try FileHandle(forWritingTo: standardErrorURL)
+
+            process.executableURL = URL(fileURLWithPath: request.executablePath)
+            process.arguments = request.arguments
+            process.standardOutput = standardOutputHandle
+            process.standardError = standardErrorHandle
             try process.run()
             activeProcesses.insert(process, id: executionID)
 
@@ -86,11 +95,13 @@ final class ProcessRunner: ProcessRunning, @unchecked Sendable {
 
             process.waitUntilExit()
             activeProcesses.remove(id: executionID)
+            try standardOutputHandle?.synchronize()
+            try standardErrorHandle?.synchronize()
 
             let durationMilliseconds = Int(Date().timeIntervalSince(startDate) * 1_000)
             return ProcessResult(
-                standardOutput: finishReading(from: standardOutputPipe, collector: standardOutput),
-                standardError: finishReading(from: standardErrorPipe, collector: standardError),
+                standardOutput: try Data(contentsOf: standardOutputURL),
+                standardError: try Data(contentsOf: standardErrorURL),
                 exitStatus: process.terminationStatus,
                 durationMilliseconds: durationMilliseconds,
                 failureDescription: nil,
@@ -98,12 +109,10 @@ final class ProcessRunner: ProcessRunning, @unchecked Sendable {
             )
         } catch {
             activeProcesses.remove(id: executionID)
-            discard(pipe: standardOutputPipe)
-            discard(pipe: standardErrorPipe)
 
             return ProcessResult(
-                standardOutput: Data(),
-                standardError: Data(),
+                standardOutput: (try? Data(contentsOf: standardOutputURL)) ?? Data(),
+                standardError: (try? Data(contentsOf: standardErrorURL)) ?? Data(),
                 exitStatus: nil,
                 durationMilliseconds: Int(Date().timeIntervalSince(startDate) * 1_000),
                 failureDescription: error.localizedDescription,
@@ -112,53 +121,11 @@ final class ProcessRunner: ProcessRunning, @unchecked Sendable {
         }
     }
 
-    private static func collect(from pipe: Pipe, into collector: DataCollector) {
-        pipe.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            if data.isEmpty {
-                handle.readabilityHandler = nil
-            } else {
-                collector.append(data)
-            }
-        }
-    }
-
-    private static func finishReading(from pipe: Pipe, collector: DataCollector) -> Data {
-        let readHandle = pipe.fileHandleForReading
-        readHandle.readabilityHandler = nil
-        try? pipe.fileHandleForWriting.close()
-        collector.append(readHandle.readDataToEndOfFile())
-        try? readHandle.close()
-        return collector.data
-    }
-
-    private static func discard(pipe: Pipe) {
-        pipe.fileHandleForReading.readabilityHandler = nil
-        try? pipe.fileHandleForWriting.close()
-        try? pipe.fileHandleForReading.close()
-    }
 }
 
 private struct ProcessRequest: Sendable {
     let executablePath: String
     let arguments: [String]
-}
-
-private final class DataCollector: @unchecked Sendable {
-    private let lock = NSLock()
-    private var storage = Data()
-
-    func append(_ data: Data) {
-        lock.lock()
-        storage.append(data)
-        lock.unlock()
-    }
-
-    var data: Data {
-        lock.lock()
-        defer { lock.unlock() }
-        return storage
-    }
 }
 
 private final class CancellationFlag: @unchecked Sendable {

@@ -5,6 +5,7 @@ import SwiftUI
 struct ADBuddyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var deviceStore = DeviceStore()
+    @State private var preferences = AppPreferences()
 
     init() {
         AppLogger.lifecycle.info("ADBuddy launch requested")
@@ -14,6 +15,7 @@ struct ADBuddyApp: App {
         WindowGroup("ADBuddy", id: "main") {
             ContentView()
                 .environment(deviceStore)
+                .environment(preferences)
                 .task {
                     deviceStore.start()
                 }
@@ -23,6 +25,7 @@ struct ADBuddyApp: App {
         MenuBarExtra("ADBuddy", systemImage: "camera") {
             MenuBarContentView()
                 .environment(deviceStore)
+                .environment(preferences)
         }
         .menuBarExtraStyle(.menu)
     }

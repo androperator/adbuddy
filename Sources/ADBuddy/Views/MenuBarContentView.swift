@@ -4,6 +4,7 @@ import SwiftUI
 struct MenuBarContentView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(DeviceStore.self) private var deviceStore
+    @Environment(AppPreferences.self) private var preferences
 
     var body: some View {
         deviceItems
@@ -40,7 +41,19 @@ struct MenuBarContentView: View {
         case .devicesAvailable:
             ForEach(deviceStore.devices) { device in
                 Menu(device.menuTitle) {
-                    Text(device.connectionState.displayName)
+                    if device.isUsable {
+                        Button("Take Screenshot") {
+                            AppLogger.menuBar.info("Screenshot selected from menu bar")
+                            deviceStore.takeScreenshot(
+                                of: device,
+                                destination: preferences.screenshotDirectory
+                            )
+                        }
+                        .disabled(deviceStore.isCapturingScreenshot(for: device))
+                    } else {
+                        Text(device.connectionState.displayName)
+                    }
+
                     Text(device.serial)
                 }
             }

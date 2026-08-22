@@ -7,11 +7,13 @@ final class DeviceStore {
     private let sdkLocator: AndroidSDKLocator
     private let processRunner: any ProcessRunning
     private var pollingTask: Task<Void, Never>?
+    private var capturingDeviceSerials = Set<String>()
 
     private(set) var devices: [AndroidDevice] = []
     private(set) var status: DeviceDiscoveryStatus = .loading
     private(set) var resolvedSDK: AndroidSDK?
     private(set) var isRefreshing = false
+    private(set) var screenshotFeedback: ScreenshotFeedback?
 
     init(
         sdkLocator: AndroidSDKLocator = AndroidSDKLocator(),
@@ -67,6 +69,59 @@ final class DeviceStore {
         }
     }
 
+    func isCapturingScreenshot(for device: AndroidDevice) -> Bool {
+        capturingDeviceSerials.contains(device.serial)
+    }
+
+    func takeScreenshot(of device: AndroidDevice, destination: URL) {
+        guard device.isUsable else {
+            showScreenshotFeedback(.failure("\(device.displayName) is not available for screenshots."))
+            return
+        }
+
+        guard let resolvedSDK else {
+            showScreenshotFeedback(.failure("ADB is not available. Refresh device discovery and try again."))
+            return
+        }
+
+        guard capturingDeviceSerials.insert(device.serial).inserted else {
+            return
+        }
+
+        screenshotFeedback = nil
+        AppLogger.screenshot.info("Starting screenshot capture")
+
+        let screenshotService = ScreenshotService(
+            adbPath: resolvedSDK.adbPath,
+            processRunner: processRunner
+        )
+
+        Task { [weak self] in
+            let result = await screenshotService.capture(device: device, destination: destination)
+            guard let self, !Task.isCancelled else {
+                return
+            }
+
+            capturingDeviceSerials.remove(device.serial)
+
+            switch result {
+            case .success(let fileURL):
+                AppLogger.screenshot.info("Screenshot capture succeeded")
+                showScreenshotFeedback(.success(fileURL))
+            case .failure(let error):
+                AppLogger.screenshot.error("Screenshot capture failed: \(error.message, privacy: .public)")
+                showScreenshotFeedback(.failure(error.message))
+            }
+        }
+    }
+
+    func clearScreenshotFeedback(ifMatching feedback: ScreenshotFeedback) {
+        guard screenshotFeedback == feedback else {
+            return
+        }
+        screenshotFeedback = nil
+    }
+
     private func loadDevices() async -> DeviceLoadOutcome {
         switch sdkLocator.resolve() {
         case .unavailable(let failure):
@@ -97,6 +152,16 @@ final class DeviceStore {
             case .commandFailed(let message):
                 status = .adbFailure(message)
             }
+        }
+    }
+
+    private func showScreenshotFeedback(_ feedback: ScreenshotFeedback) {
+        screenshotFeedback = feedback
+        let timeout: Duration = feedback.isSuccess ? .seconds(4) : .seconds(8)
+
+        Task { [weak self, feedback] in
+            try? await Task.sleep(for: timeout)
+            self?.clearScreenshotFeedback(ifMatching: feedback)
         }
     }
 }

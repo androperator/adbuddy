@@ -12,10 +12,8 @@ currently provides:
 
 - Android SDK and ADB discovery;
 - connected-device discovery with clear connection states;
-- a macOS menu bar utility and a conventional main window.
-
-Direct PNG screenshot capture from a selected device is the remaining active
-Phase 1 feature.
+- a macOS menu bar utility and a conventional main window;
+- direct PNG screenshot capture from a selected connected device.
 
 See [`docs/product-scope.md`](docs/product-scope.md) for the defined Phase 0
 and Phase 1 acceptance criteria.
