@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct ADBuddyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var deviceStore = DeviceStore()
 
     init() {
         AppLogger.lifecycle.info("ADBuddy launch requested")
@@ -12,11 +13,16 @@ struct ADBuddyApp: App {
     var body: some Scene {
         WindowGroup("ADBuddy", id: "main") {
             ContentView()
+                .environment(deviceStore)
+                .task {
+                    deviceStore.start()
+                }
         }
         .defaultSize(width: 640, height: 420)
 
         MenuBarExtra("ADBuddy", systemImage: "camera") {
             MenuBarContentView()
+                .environment(deviceStore)
         }
         .menuBarExtraStyle(.menu)
     }

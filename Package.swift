@@ -18,5 +18,10 @@ let package = Package(
             name: "ADBuddy",
             path: "Sources/ADBuddy"
         ),
+        .testTarget(
+            name: "ADBuddyTests",
+            dependencies: ["ADBuddy"],
+            path: "Tests/ADBuddyTests"
+        ),
     ]
 )
