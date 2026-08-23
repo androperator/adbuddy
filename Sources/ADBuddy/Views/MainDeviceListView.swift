@@ -297,7 +297,7 @@ private struct VirtualDeviceRow: View {
                         .labelStyle(.iconOnly)
                 }
                 .frame(width: DeviceListLayout.lifecycleControlWidth)
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
                 .help("Start Emulator (Quick Boot)")
             }
         case .starting:
