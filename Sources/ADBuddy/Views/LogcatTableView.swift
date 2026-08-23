@@ -10,6 +10,7 @@ struct LogcatTableView: NSViewRepresentable {
     let applicationIDRevision: UInt64
     let applicationIDForProcessID: (Int) -> String?
     let followsLatest: Bool
+    let showsOnlyCrashesAndExceptions: Bool
     let showsProcessID: Bool
     let showsThreadID: Bool
     let showsApplicationID: Bool
@@ -57,6 +58,7 @@ struct LogcatTableView: NSViewRepresentable {
             applicationIDRevision: applicationIDRevision,
             applicationIDForProcessID: applicationIDForProcessID,
             followsLatest: followsLatest,
+            showsOnlyCrashesAndExceptions: showsOnlyCrashesAndExceptions,
             colorScheme: colorScheme,
             priorityColors: priorityColors,
             showsProcessID: showsProcessID,
@@ -89,6 +91,7 @@ struct LogcatTableView: NSViewRepresentable {
         private var boundsObserver: NSObjectProtocol?
         private var isPerformingProgrammaticScroll = false
         private var wasFollowingLatest = false
+        private var showsOnlyCrashesAndExceptions: Bool?
         private var colorScheme: ColorScheme?
         private var priorityColors = LogcatPriority.defaultColors
         private var previouslySelectedRows = IndexSet()
@@ -139,6 +142,7 @@ struct LogcatTableView: NSViewRepresentable {
             applicationIDRevision: UInt64,
             applicationIDForProcessID: @escaping (Int) -> String?,
             followsLatest: Bool,
+            showsOnlyCrashesAndExceptions: Bool,
             colorScheme: ColorScheme,
             priorityColors: [LogcatPriority: LogcatColorComponents],
             showsProcessID: Bool,
@@ -154,6 +158,8 @@ struct LogcatTableView: NSViewRepresentable {
             let colorSchemeChanged = self.colorScheme != colorScheme
             let colorsChanged = self.priorityColors != priorityColors
             let shouldReload = entriesChanged || applicationIDsChanged || colorSchemeChanged || colorsChanged
+            let isExpandingCrashFilter = self.showsOnlyCrashesAndExceptions == true &&
+                !showsOnlyCrashesAndExceptions
             let shouldReloadImmediately = shouldReload && selectionReloadScheduler.shouldReloadImmediately(
                 isTrackingRowSelection: tableView.isTrackingRowSelection
             )
@@ -169,6 +175,7 @@ struct LogcatTableView: NSViewRepresentable {
             self.entryAt = entryAt
             self.applicationIDRevision = applicationIDRevision
             self.applicationIDForProcessID = applicationIDForProcessID
+            self.showsOnlyCrashesAndExceptions = showsOnlyCrashesAndExceptions
             self.colorScheme = colorScheme
             self.priorityColors = priorityColors
             updateColumnVisibility(
@@ -177,11 +184,22 @@ struct LogcatTableView: NSViewRepresentable {
                 showsThreadID: showsThreadID,
                 showsApplicationID: showsApplicationID
             )
+            let selectionAnchor = isExpandingCrashFilter ? selectedEntries.first : nil
             if shouldReloadImmediately {
                 reloadData(in: tableView, preserving: selectedEntries)
             }
 
-            if followsLatest && !tableView.isTrackingRowSelection && (entriesChanged || !wasFollowingLatest) {
+            let didScrollToSelectionAnchor = scrollToSelectionAnchor(
+                selectionAnchor,
+                in: tableView
+            )
+            if didScrollToSelectionAnchor && followsLatest {
+                onUserScrollAwayFromLatest()
+            }
+            if followsLatest &&
+                !didScrollToSelectionAnchor &&
+                !tableView.isTrackingRowSelection &&
+                (entriesChanged || !wasFollowingLatest) {
                 scrollToLatest(in: tableView)
             }
             wasFollowingLatest = followsLatest
@@ -351,6 +369,35 @@ struct LogcatTableView: NSViewRepresentable {
             DispatchQueue.main.async { [weak self] in
                 self?.isPerformingProgrammaticScroll = false
             }
+        }
+
+        private func scrollToSelectionAnchor(
+            _ selection: LogcatTableSelection?,
+            in tableView: NSTableView
+        ) -> Bool {
+            guard let selection,
+                  let row = LogcatTableSelectionRestorer.rows(
+                    for: [selection],
+                    entryCount: entryCount,
+                    entryAt: entryAt
+                  ).first,
+                  let scrollView else {
+                return false
+            }
+
+            let contentView = scrollView.contentView
+            let visibleHeight = contentView.bounds.height
+            let rowMidpoint = tableView.rect(ofRow: row).midY
+            let maximumOriginY = max(0, tableView.bounds.height - visibleHeight)
+            let originY = min(max(0, rowMidpoint - visibleHeight / 2), maximumOriginY)
+
+            isPerformingProgrammaticScroll = true
+            contentView.scroll(to: NSPoint(x: contentView.bounds.origin.x, y: originY))
+            scrollView.reflectScrolledClipView(contentView)
+            DispatchQueue.main.async { [weak self] in
+                self?.isPerformingProgrammaticScroll = false
+            }
+            return true
         }
 
         private func handleScrollPositionChange() {

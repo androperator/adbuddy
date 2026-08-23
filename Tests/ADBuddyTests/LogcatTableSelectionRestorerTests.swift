@@ -39,6 +39,25 @@ final class LogcatTableSelectionRestorerTests: XCTestCase {
         )
     }
 
+    func testRestoresFirstSelectionAfterTheCrashFilterExpands() throws {
+        let crashEntries = [entry(id: 2), entry(id: 3)]
+        let selections = LogcatTableSelectionRestorer.selections(
+            at: IndexSet([0, 1]),
+            entryAt: { crashEntries[safe: $0] }
+        )
+        let allEntries = [entry(id: 1), entry(id: 2), entry(id: 3), entry(id: 4)]
+        let firstSelection = try XCTUnwrap(selections.first)
+
+        XCTAssertEqual(
+            LogcatTableSelectionRestorer.rows(
+                for: [firstSelection],
+                entryCount: allEntries.count,
+                entryAt: { allEntries[safe: $0] }
+            ),
+            IndexSet([1])
+        )
+    }
+
     func testDoesNotRestoreEntriesNoLongerVisible() {
         let entries = [entry(id: 1), entry(id: 2)]
         let selections = LogcatTableSelectionRestorer.selections(

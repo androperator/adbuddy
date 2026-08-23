@@ -539,7 +539,10 @@ toggle. It narrows retained entries without restarting ADB Logcat, retaining
 only entries that identify an exception, crash, fatal condition, ANR, or
 stack-trace frame. Routine Error and Assert messages are excluded. It combines
 with the application, minimum-level, and text-search filters. The toggle is
-window-scoped and is not persisted between launches.
+window-scoped and is not persisted between launches. When the filter is turned
+off with a selected entry, the first selected entry remains selected and is
+centered with its surrounding logs visible. This also stops following live
+output.
 
 ## Color theme
 

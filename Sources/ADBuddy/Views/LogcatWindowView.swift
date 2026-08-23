@@ -49,6 +49,7 @@ struct LogcatWindowView: View {
                 applicationIDRevision: logcatStore.applicationIDRevision,
                 applicationIDForProcessID: logcatStore.applicationID(for:),
                 followsLatest: logcatStore.isFollowing,
+                showsOnlyCrashesAndExceptions: logcatStore.showsOnlyCrashesAndExceptions,
                 showsProcessID: showsProcessID,
                 showsThreadID: showsThreadID,
                 showsApplicationID: showsApplicationID,
