@@ -87,6 +87,7 @@ struct LogcatTableView: NSViewRepresentable {
         private var isPerformingProgrammaticScroll = false
         private var wasFollowingLatest = false
         private var priorityColors = LogcatPriority.defaultColors
+        private var previouslySelectedRows = IndexSet()
 
         init(onUserScrollAwayFromLatest: @escaping () -> Void) {
             self.onUserScrollAwayFromLatest = onUserScrollAwayFromLatest
@@ -205,7 +206,11 @@ struct LogcatTableView: NSViewRepresentable {
             if identifier.rawValue == "level" {
                 let badge = (tableView.makeView(withIdentifier: identifier, owner: nil) as? LogcatLevelBadgeView)
                     ?? LogcatLevelBadgeView(identifier: identifier)
-                badge.configure(priority: entry.priority, color: color(for: entry.priority))
+                badge.configure(
+                    priority: entry.priority,
+                    color: color(for: entry.priority),
+                    isSelected: tableView.isRowSelected(row)
+                )
                 return badge
             }
 
@@ -213,6 +218,7 @@ struct LogcatTableView: NSViewRepresentable {
                 ?? makeTextField(identifier: identifier)
             let definition = LogcatTableColumn.allCases.first { $0.identifier == identifier.rawValue }
             textField.setAccessibilityLabel(definition?.accessibilityLabel ?? "Logcat entry")
+            textField.textColor = tableView.isRowSelected(row) ? .selectedTextColor : .labelColor
 
             switch identifier.rawValue {
             case "time":
@@ -233,11 +239,31 @@ struct LogcatTableView: NSViewRepresentable {
             default:
                 textField.stringValue = entry.message
                 textField.alignment = .left
-                textField.textColor = messageColor(for: entry.priority)
+                if !tableView.isRowSelected(row) {
+                    textField.textColor = messageColor(for: entry.priority)
+                }
             }
             textField.setAccessibilityValue(textField.stringValue)
 
             return textField
+        }
+
+        func tableViewSelectionDidChange(_ notification: Notification) {
+            guard let tableView else {
+                return
+            }
+
+            let rowsToRefresh = previouslySelectedRows.union(tableView.selectedRowIndexes)
+            previouslySelectedRows = tableView.selectedRowIndexes
+            let validRows = IndexSet(rowsToRefresh.filter { $0 < entryCount })
+            guard !validRows.isEmpty else {
+                return
+            }
+
+            tableView.reloadData(
+                forRowIndexes: validRows,
+                columnIndexes: IndexSet(integersIn: 0..<tableView.tableColumns.count)
+            )
         }
 
         private func makeTextField(identifier: NSUserInterfaceItemIdentifier) -> NSTextField {
@@ -328,9 +354,9 @@ private final class LogcatLevelBadgeView: NSView {
         label.frame = bounds.insetBy(dx: 3, dy: 1)
     }
 
-    func configure(priority: LogcatPriority, color: NSColor) {
+    func configure(priority: LogcatPriority, color: NSColor, isSelected: Bool) {
         label.stringValue = priority.rawValue
-        label.textColor = color
+        label.textColor = isSelected ? .selectedTextColor : color
         layer?.backgroundColor = color.withAlphaComponent(0.16).cgColor
         setAccessibilityLabel("Log level")
         setAccessibilityValue(priority.displayName)
