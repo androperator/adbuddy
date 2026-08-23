@@ -516,19 +516,24 @@ private enum AndroidSDKSkinFrameRenderer {
             return nil
         }
 
-        ImageCanvas.drawUsingTopLeftCoordinates(in: context, height: canvasHeight) {
-            for image in backdropImages {
-                ImageCanvas.draw(image, in: context, scale: scaleX)
-            }
+        for image in backdropImages {
+            ImageCanvas.draw(image, in: context, scale: scaleX, canvasHeight: canvasHeight)
+        }
 
-            context.draw(screenshot, in: layout.displayRect.applying(CGAffineTransform(scaleX: scaleX, y: scaleY)))
+        context.draw(
+            screenshot,
+            in: ImageCanvas.topLeftRect(
+                layout.displayRect,
+                scale: scaleX,
+                canvasHeight: canvasHeight
+            )
+        )
 
-            for image in overlayImages {
-                ImageCanvas.draw(image, in: context, scale: scaleX)
-            }
-            for image in frameOverlayImages {
-                ImageCanvas.draw(image, in: context, scale: scaleX)
-            }
+        for image in overlayImages {
+            ImageCanvas.draw(image, in: context, scale: scaleX, canvasHeight: canvasHeight)
+        }
+        for image in frameOverlayImages {
+            ImageCanvas.draw(image, in: context, scale: scaleX, canvasHeight: canvasHeight)
         }
 
         return context.makeImage()
@@ -549,27 +554,30 @@ private enum GenericScreenshotFrameRenderer {
         let outerCornerRadius = CGFloat(max(bezel * 2, 28))
         let screenCornerRadius = max(0, outerCornerRadius - CGFloat(bezel))
 
-        ImageCanvas.drawUsingTopLeftCoordinates(in: context, height: canvasHeight) {
-            context.setFillColor(CGColor(gray: 0.03, alpha: 1))
-            context.addPath(CGPath(
-                roundedRect: outerRect,
-                cornerWidth: outerCornerRadius,
-                cornerHeight: outerCornerRadius,
-                transform: nil
-            ))
-            context.fillPath()
+        context.setFillColor(CGColor(gray: 0.03, alpha: 1))
+        context.addPath(CGPath(
+            roundedRect: outerRect,
+            cornerWidth: outerCornerRadius,
+            cornerHeight: outerCornerRadius,
+            transform: nil
+        ))
+        context.fillPath()
 
-            context.saveGState()
-            context.addPath(CGPath(
-                roundedRect: screenRect,
-                cornerWidth: screenCornerRadius,
-                cornerHeight: screenCornerRadius,
-                transform: nil
-            ))
-            context.clip()
-            context.draw(screenshot, in: screenRect)
-            context.restoreGState()
-        }
+        let screenDrawingRect = ImageCanvas.topLeftRect(
+            screenRect,
+            scale: 1,
+            canvasHeight: canvasHeight
+        )
+        context.saveGState()
+        context.addPath(CGPath(
+            roundedRect: screenDrawingRect,
+            cornerWidth: screenCornerRadius,
+            cornerHeight: screenCornerRadius,
+            transform: nil
+        ))
+        context.clip()
+        context.draw(screenshot, in: screenDrawingRect)
+        context.restoreGState()
 
         return context.makeImage()
     }
@@ -622,16 +630,6 @@ private enum ImageCanvas {
         )
     }
 
-    static func drawUsingTopLeftCoordinates(
-        in context: CGContext,
-        height: Int,
-        draw: () -> Void
-    ) {
-        context.translateBy(x: 0, y: CGFloat(height))
-        context.scaleBy(x: 1, y: -1)
-        draw()
-    }
-
     static func image(for positionedAsset: PositionedSkinAsset) -> (image: CGImage, origin: CGPoint)? {
         guard let image = PNGImageCodec.image(from: positionedAsset.url) else {
             return nil
@@ -642,13 +640,36 @@ private enum ImageCanvas {
     static func draw(
         _ positionedImage: (image: CGImage, origin: CGPoint),
         in context: CGContext,
-        scale: CGFloat
+        scale: CGFloat,
+        canvasHeight: Int
     ) {
-        context.draw(positionedImage.image, in: CGRect(
-            x: positionedImage.origin.x * scale,
-            y: positionedImage.origin.y * scale,
-            width: CGFloat(positionedImage.image.width) * scale,
-            height: CGFloat(positionedImage.image.height) * scale
-        ))
+        context.draw(
+            positionedImage.image,
+            in: topLeftRect(
+                CGRect(
+                    x: positionedImage.origin.x,
+                    y: positionedImage.origin.y,
+                    width: CGFloat(positionedImage.image.width),
+                    height: CGFloat(positionedImage.image.height)
+                ),
+                scale: scale,
+                canvasHeight: canvasHeight
+            )
+        )
+    }
+
+    static func topLeftRect(
+        _ rect: CGRect,
+        scale: CGFloat,
+        canvasHeight: Int
+    ) -> CGRect {
+        // Android skin layouts use a top-left origin; keep the CGImage data itself unflipped.
+        let scaledHeight = rect.height * scale
+        return CGRect(
+            x: rect.origin.x * scale,
+            y: CGFloat(canvasHeight) - (rect.origin.y * scale) - scaledHeight,
+            width: rect.width * scale,
+            height: scaledHeight
+        )
     }
 }

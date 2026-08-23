@@ -146,6 +146,7 @@ final class ScreenshotServiceTests: XCTestCase {
 
     func testUsesGenericFrameWhenTheCaptureIsNotFromAMatchedEmulatorSkin() async throws {
         let fixture = try ScreenshotFrameFixture.make()
+        let screenshotData = try ScreenshotFrameFixture.verticallySplitPNGData(width: 100, height: 200)
         defer {
             try? FileManager.default.removeItem(at: fixture.temporaryDirectory)
         }
@@ -154,7 +155,7 @@ final class ScreenshotServiceTests: XCTestCase {
         let result = await ScreenshotService(
             adbPath: "/SDK/platform-tools/adb",
             processRunner: StubScreenshotProcessRunner(
-                result: successfulProcessResult(standardOutput: fixture.screenshotData)
+                result: successfulProcessResult(standardOutput: screenshotData)
             ),
             fileManager: fileManager
         ).capture(
@@ -168,7 +169,13 @@ final class ScreenshotServiceTests: XCTestCase {
             return XCTFail("Expected a generically framed screenshot")
         }
 
-        XCTAssertEqual(try XCTUnwrap(imageSize(in: framedData)), CGSize(width: 44, height: 48))
+        XCTAssertEqual(try XCTUnwrap(imageSize(in: framedData)), CGSize(width: 140, height: 240))
+
+        let originalPixels = try XCTUnwrap(pixelImage(in: screenshotData))
+        let framedPixels = try XCTUnwrap(pixelImage(in: framedData))
+        XCTAssertNotEqual(originalPixels.pixel(atX: 50, y: 40), originalPixels.pixel(atX: 50, y: 160))
+        XCTAssertEqual(framedPixels.pixel(atX: 70, y: 60), originalPixels.pixel(atX: 50, y: 40))
+        XCTAssertEqual(framedPixels.pixel(atX: 70, y: 180), originalPixels.pixel(atX: 50, y: 160))
     }
 
     private var connectedDevice: AndroidDevice {
@@ -227,6 +234,32 @@ final class ScreenshotServiceTests: XCTestCase {
         }
         return CGSize(width: image.width, height: image.height)
     }
+
+    private func pixelImage(in data: Data) -> PixelImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            return nil
+        }
+
+        var pixels = [UInt8](repeating: 0, count: image.width * image.height * 4)
+        let didDraw = pixels.withUnsafeMutableBytes { bytes in
+            guard let context = CGContext(
+                data: bytes.baseAddress,
+                width: image.width,
+                height: image.height,
+                bitsPerComponent: 8,
+                bytesPerRow: image.width * 4,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue
+                    | CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else {
+                return false
+            }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+            return true
+        }
+        return didDraw ? PixelImage(width: image.width, pixels: pixels) : nil
+    }
 }
 
 private struct StubScreenshotProcessRunner: ProcessRunning {
@@ -263,6 +296,16 @@ private final class RecordingScreenshotFileManager: ScreenshotFileManaging, @unc
 
     func write(_ data: Data, to fileURL: URL) throws {
         writtenFiles[fileURL] = data
+    }
+}
+
+private struct PixelImage {
+    let width: Int
+    let pixels: [UInt8]
+
+    func pixel(atX x: Int, y: Int) -> [UInt8] {
+        let index = (y * width + x) * 4
+        return Array(pixels[index..<(index + 4)])
     }
 }
 
@@ -330,7 +373,7 @@ private struct ScreenshotFrameFixture {
             temporaryDirectory: temporaryDirectory,
             sdkRootURL: sdkRootURL,
             avdDirectoryURL: avdDirectoryURL,
-            screenshotData: try pngData(width: 4, height: 8, red: 1, green: 0, blue: 0)
+            screenshotData: try verticallySplitPNGData(width: 4, height: 8)
         )
     }
 
@@ -358,6 +401,33 @@ private struct ScreenshotFrameFixture {
             throw ScreenshotFrameFixtureError.unableToCreateImage
         }
 
+        return try encodedPNGData(from: filledImage)
+    }
+
+    static func verticallySplitPNGData(width: Int, height: Int) throws -> Data {
+        guard let context = CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw ScreenshotFrameFixtureError.unableToCreateImage
+        }
+        context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+        context.fill(CGRect(x: 0, y: height / 2, width: width, height: height / 2))
+        context.setFillColor(CGColor(red: 0, green: 0, blue: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height / 2))
+        guard let image = context.makeImage() else {
+            throw ScreenshotFrameFixtureError.unableToCreateImage
+        }
+
+        return try encodedPNGData(from: image)
+    }
+
+    private static func encodedPNGData(from image: CGImage) throws -> Data {
         let data = NSMutableData()
         guard let destination = CGImageDestinationCreateWithData(
             data,
@@ -367,7 +437,7 @@ private struct ScreenshotFrameFixture {
         ) else {
             throw ScreenshotFrameFixtureError.unableToEncodeImage
         }
-        CGImageDestinationAddImage(destination, filledImage, nil)
+        CGImageDestinationAddImage(destination, image, nil)
         guard CGImageDestinationFinalize(destination) else {
             throw ScreenshotFrameFixtureError.unableToEncodeImage
         }
