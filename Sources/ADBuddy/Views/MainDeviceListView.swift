@@ -31,7 +31,7 @@ struct MainDeviceListView: View {
                                 }
                                 emulatorStore.stop(virtualDevice)
                             },
-                            openEmulatorWindow: {
+                            showEmulatorWindow: {
                                 guard let virtualDevice = runningVirtualDevice(for: device) else {
                                     return
                                 }
@@ -141,7 +141,7 @@ private struct ConnectedDeviceRow: View {
     let emulatorWindowPresentation: EmulatorWindowPresentation?
     let deviceStore: DeviceStore
     let stopEmulator: () -> Void
-    let openEmulatorWindow: () -> Void
+    let showEmulatorWindow: () -> Void
     let openLogcat: (AndroidDevice) -> Void
 
     var body: some View {
@@ -150,17 +150,16 @@ private struct ConnectedDeviceRow: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 18)
 
-            DeviceIdentityView(
-                name: virtualDevice?.name ?? device.displayName,
-                detail: deviceDetail
-            )
+            VStack(alignment: .leading, spacing: 3) {
+                Text(virtualDevice?.name ?? device.displayName)
+                    .fontWeight(.medium)
+                deviceDetail
+            }
 
             Spacer()
 
             if device.isUsable {
                 if virtualDevice != nil {
-                    emulatorWindowControl
-
                     Button(action: stopEmulator) {
                         Label("Stop Emulator", systemImage: "stop.fill")
                             .labelStyle(.iconOnly)
@@ -197,39 +196,29 @@ private struct ConnectedDeviceRow: View {
         .padding(.vertical, 2)
     }
 
-    private var deviceDetail: String {
-        guard let emulatorWindowPresentation else {
-            return device.serial
-        }
-        return "\(device.serial) · \(emulatorWindowPresentation.detail)"
-    }
-
     @ViewBuilder
-    private var emulatorWindowControl: some View {
-        switch emulatorWindowPresentation {
-        case .standalone:
-            Button(action: openEmulatorWindow) {
-                Label("Open Emulator Window", systemImage: "macwindow")
-                    .labelStyle(.iconOnly)
+    private var deviceDetail: some View {
+        HStack(spacing: 4) {
+            Text(device.serial)
+                .foregroundStyle(.secondary)
+
+            if let emulatorWindowPresentation {
+                Text("·")
+                    .foregroundStyle(.secondary)
+
+                switch emulatorWindowPresentation {
+                case .standalone:
+                    Button("Show", action: showEmulatorWindow)
+                        .buttonStyle(.link)
+                        .accessibilityLabel("Show Emulator Window")
+                        .help("Show Emulator Window")
+                case .embeddedInAndroidStudio, .headless, .unknown:
+                    Text(emulatorWindowPresentation.detail)
+                        .foregroundStyle(.secondary)
+                }
             }
-            .buttonStyle(.bordered)
-            .help("Open Emulator Window")
-        case .embeddedInAndroidStudio:
-            Image(systemName: "rectangle.inset.filled")
-                .foregroundStyle(.secondary)
-                .accessibilityLabel("Android Studio emulator window")
-                .help("This emulator is displayed in Android Studio and has no standalone macOS window.")
-        case .headless:
-            Image(systemName: "rectangle.slash")
-                .foregroundStyle(.orange)
-                .accessibilityLabel("Headless emulator")
-                .help("This emulator is running headlessly and has no macOS window to open.")
-        case .unknown, .none:
-            Image(systemName: "questionmark.app")
-                .foregroundStyle(.secondary)
-                .accessibilityLabel("Emulator window status unavailable")
-                .help("ADBuddy could not determine whether this emulator has a standalone macOS window.")
         }
+        .font(.caption)
     }
 }
 
