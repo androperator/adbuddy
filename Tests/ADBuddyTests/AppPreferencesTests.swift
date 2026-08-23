@@ -89,6 +89,31 @@ final class AppPreferencesTests: XCTestCase {
         XCTAssertTrue(reloadedPreferences.screenRecordingShowsTaps)
     }
 
+    func testDeepLinkLauncherIsDisabledByDefaultAndPersistsChanges() {
+        let suiteName = "AppPreferencesTests.\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Could not create isolated user defaults")
+        }
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let preferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: URL(fileURLWithPath: "/tmp/default-screenshots", isDirectory: true)
+        )
+
+        XCTAssertFalse(preferences.isDeepLinkLauncherEnabled)
+
+        preferences.isDeepLinkLauncherEnabled = true
+
+        let reloadedPreferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: URL(fileURLWithPath: "/tmp/default-screenshots", isDirectory: true)
+        )
+        XCTAssertTrue(reloadedPreferences.isDeepLinkLauncherEnabled)
+    }
+
     func testLogcatColorsUseDefaultsPersistChangesAndReset() {
         let suiteName = "AppPreferencesTests.\(UUID().uuidString)"
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {

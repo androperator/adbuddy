@@ -136,14 +136,16 @@ struct ContentView: View {
         }
         .navigationTitle("ADBuddy")
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    deviceStore.presentDeepLinkLauncher()
-                } label: {
-                    Label("Open Link", systemImage: "link")
+            if preferences.isDeepLinkLauncherEnabled {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        deviceStore.presentDeepLinkLauncher()
+                    } label: {
+                        Label("Open Link", systemImage: "link")
+                    }
+                    .disabled(!deviceStore.devices.contains(where: \.isUsable))
+                    .help("Open Link on Android Device")
                 }
-                .disabled(!deviceStore.devices.contains(where: \.isUsable))
-                .help("Open Link on Android Device")
             }
 
             ToolbarItem(placement: .primaryAction) {
