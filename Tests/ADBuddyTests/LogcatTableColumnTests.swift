@@ -27,6 +27,17 @@ final class LogcatTableColumnTests: XCTestCase {
         XCTAssertEqual(LogcatTableColumn.visibleColumns(), [.time, .level, .tag, .message])
     }
 
+    func testColumnConfigurationIncludesTagAndAllowsItToBeHidden() {
+        XCTAssertEqual(
+            LogcatTableColumn.configurableColumns,
+            [.processID, .threadID, .applicationID, .tag]
+        )
+        XCTAssertEqual(
+            LogcatTableColumn.visibleColumns(showsTag: false),
+            [.time, .level, .message]
+        )
+    }
+
     func testOptionalColumnsCanBeShownIndependently() {
         XCTAssertEqual(
             LogcatTableColumn.visibleColumns(showsProcessID: true),

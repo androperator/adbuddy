@@ -119,10 +119,18 @@ enum LogcatTableColumn: CaseIterable, Hashable {
         }
     }
 
+    static let configurableColumns: [LogcatTableColumn] = [
+        .processID,
+        .threadID,
+        .applicationID,
+        .tag,
+    ]
+
     static func visibleColumns(
         showsProcessID: Bool = false,
         showsThreadID: Bool = false,
-        showsApplicationID: Bool = false
+        showsApplicationID: Bool = false,
+        showsTag: Bool = true
     ) -> [LogcatTableColumn] {
         allCases.filter { column in
             switch column {
@@ -132,7 +140,9 @@ enum LogcatTableColumn: CaseIterable, Hashable {
                 showsThreadID
             case .applicationID:
                 showsApplicationID
-            case .time, .level, .tag, .message:
+            case .tag:
+                showsTag
+            case .time, .level, .message:
                 true
             }
         }

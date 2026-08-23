@@ -9,6 +9,7 @@ struct LogcatWindowView: View {
     @State private var showsProcessID = false
     @State private var showsThreadID = false
     @State private var showsApplicationID = false
+    @State private var showsTag = true
     @State private var wrapsMessages = false
     @State private var isSearchPresented = false
 
@@ -28,6 +29,21 @@ struct LogcatWindowView: View {
             return .unavailable
         }
         return .usable(adbPath: adbPath)
+    }
+
+    private func toggleColumnVisibility(_ column: LogcatTableColumn) {
+        switch column {
+        case .processID:
+            showsProcessID.toggle()
+        case .threadID:
+            showsThreadID.toggle()
+        case .applicationID:
+            showsApplicationID.toggle()
+        case .tag:
+            showsTag.toggle()
+        case .time, .level, .message:
+            return
+        }
     }
 
     var body: some View {
@@ -54,9 +70,11 @@ struct LogcatWindowView: View {
                 showsProcessID: showsProcessID,
                 showsThreadID: showsThreadID,
                 showsApplicationID: showsApplicationID,
+                showsTag: showsTag,
                 wrapsMessages: wrapsMessages,
                 priorityColors: preferences.logcatColors,
-                onUserScrollAwayFromLatest: logcatStore.userScrolledAwayFromLatest
+                onUserScrollAwayFromLatest: logcatStore.userScrolledAwayFromLatest,
+                onToggleColumnVisibility: toggleColumnVisibility
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -111,16 +129,6 @@ struct LogcatWindowView: View {
                     logcatStore.showsOnlyCrashesAndExceptions ? "On" : "Off"
                 )
                 .help("Show Crashes and Exceptions")
-
-                Menu {
-                    Toggle("Process ID", isOn: $showsProcessID)
-                    Toggle("Thread ID", isOn: $showsThreadID)
-                    Toggle("Application ID", isOn: $showsApplicationID)
-                } label: {
-                    Label("Columns", systemImage: "rectangle.3.group")
-                }
-                .accessibilityLabel("Logcat Columns")
-                .help("Show Logcat Columns")
 
                 Toggle("Wrap", isOn: $wrapsMessages)
                     .toggleStyle(.button)

@@ -14,17 +14,27 @@ struct LogcatTableView: NSViewRepresentable {
     let showsProcessID: Bool
     let showsThreadID: Bool
     let showsApplicationID: Bool
+    let showsTag: Bool
     let wrapsMessages: Bool
     let priorityColors: [LogcatPriority: LogcatColorComponents]
     let onUserScrollAwayFromLatest: () -> Void
+    let onToggleColumnVisibility: (LogcatTableColumn) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onUserScrollAwayFromLatest: onUserScrollAwayFromLatest)
+        Coordinator(
+            onUserScrollAwayFromLatest: onUserScrollAwayFromLatest,
+            onToggleColumnVisibility: onToggleColumnVisibility
+        )
     }
 
     func makeNSView(context: Context) -> LogcatTableContainer {
         let tableView = CopyableLogcatTableView()
-        let visibleColumns = Set(LogcatTableColumn.visibleColumns())
+        let visibleColumns = Set(LogcatTableColumn.visibleColumns(
+            showsProcessID: showsProcessID,
+            showsThreadID: showsThreadID,
+            showsApplicationID: showsApplicationID,
+            showsTag: showsTag
+        ))
         for definition in LogcatTableColumn.allCases {
             tableView.addTableColumn(column(definition, isHidden: !visibleColumns.contains(definition)))
         }
@@ -33,6 +43,9 @@ struct LogcatTableView: NSViewRepresentable {
         let coordinator = context.coordinator
         headerView.columnDividerDoubleClicked = { [weak coordinator] columnIndex in
             coordinator?.resizeColumnToFitContent(at: columnIndex)
+        }
+        headerView.columnConfigurationMenu = { [weak coordinator] in
+            coordinator?.makeColumnConfigurationMenu()
         }
         tableView.headerView = headerView
 
@@ -60,6 +73,7 @@ struct LogcatTableView: NSViewRepresentable {
 
     func updateNSView(_ container: LogcatTableContainer, context: Context) {
         context.coordinator.onUserScrollAwayFromLatest = onUserScrollAwayFromLatest
+        context.coordinator.onToggleColumnVisibility = onToggleColumnVisibility
         context.coordinator.update(
             entryCount: entryCount,
             entryRevision: entryRevision,
@@ -73,6 +87,7 @@ struct LogcatTableView: NSViewRepresentable {
             showsProcessID: showsProcessID,
             showsThreadID: showsThreadID,
             showsApplicationID: showsApplicationID,
+            showsTag: showsTag,
             wrapsMessages: wrapsMessages
         )
     }
@@ -90,6 +105,7 @@ struct LogcatTableView: NSViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         var onUserScrollAwayFromLatest: () -> Void
+        var onToggleColumnVisibility: (LogcatTableColumn) -> Void
 
         private var entryCount = 0
         private var entryRevision: UInt64?
@@ -113,8 +129,12 @@ struct LogcatTableView: NSViewRepresentable {
         private var suppressesScrollEventOnNextReload = false
         private let textFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
 
-        init(onUserScrollAwayFromLatest: @escaping () -> Void) {
+        init(
+            onUserScrollAwayFromLatest: @escaping () -> Void,
+            onToggleColumnVisibility: @escaping (LogcatTableColumn) -> Void
+        ) {
             self.onUserScrollAwayFromLatest = onUserScrollAwayFromLatest
+            self.onToggleColumnVisibility = onToggleColumnVisibility
         }
 
         deinit {
@@ -176,6 +196,7 @@ struct LogcatTableView: NSViewRepresentable {
             showsProcessID: Bool,
             showsThreadID: Bool,
             showsApplicationID: Bool,
+            showsTag: Bool,
             wrapsMessages: Bool
         ) {
             guard let tableView else {
@@ -221,7 +242,8 @@ struct LogcatTableView: NSViewRepresentable {
                 in: tableView,
                 showsProcessID: showsProcessID,
                 showsThreadID: showsThreadID,
-                showsApplicationID: showsApplicationID
+                showsApplicationID: showsApplicationID,
+                showsTag: showsTag
             )
             let selectionAnchor = isExpandingCrashFilter ? selectedEntries.first : nil
             if shouldReloadImmediately {
@@ -313,6 +335,22 @@ struct LogcatTableView: NSViewRepresentable {
                 minimumWidth: column.minWidth,
                 horizontalInsets: 8
             )
+        }
+
+        fileprivate func makeColumnConfigurationMenu() -> NSMenu {
+            let menu = NSMenu()
+            for column in LogcatTableColumn.configurableColumns {
+                let item = NSMenuItem(
+                    title: column.accessibilityLabel,
+                    action: #selector(toggleColumnVisibility(_:)),
+                    keyEquivalent: ""
+                )
+                item.target = self
+                item.representedObject = column.identifier
+                item.state = isColumnVisible(column) ? .on : .off
+                menu.addItem(item)
+            }
+            return menu
         }
 
         func numberOfRows(in tableView: NSTableView) -> Int {
@@ -463,20 +501,36 @@ struct LogcatTableView: NSViewRepresentable {
             in tableView: NSTableView,
             showsProcessID: Bool,
             showsThreadID: Bool,
-            showsApplicationID: Bool
+            showsApplicationID: Bool,
+            showsTag: Bool
         ) {
-            let processIDColumn = tableView.tableColumn(
-                withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.processID.identifier)
-            )
-            let threadIDColumn = tableView.tableColumn(
-                withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.threadID.identifier)
-            )
-            let applicationIDColumn = tableView.tableColumn(
-                withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.applicationID.identifier)
-            )
-            processIDColumn?.isHidden = !showsProcessID
-            threadIDColumn?.isHidden = !showsThreadID
-            applicationIDColumn?.isHidden = !showsApplicationID
+            let visibleColumns = Set(LogcatTableColumn.visibleColumns(
+                showsProcessID: showsProcessID,
+                showsThreadID: showsThreadID,
+                showsApplicationID: showsApplicationID,
+                showsTag: showsTag
+            ))
+            for column in LogcatTableColumn.configurableColumns {
+                tableView.tableColumn(
+                    withIdentifier: NSUserInterfaceItemIdentifier(column.identifier)
+                )?.isHidden = !visibleColumns.contains(column)
+            }
+        }
+
+        @objc private func toggleColumnVisibility(_ sender: NSMenuItem) {
+            guard let identifier = sender.representedObject as? String,
+                  let column = LogcatTableColumn.allCases.first(
+                    where: { $0.identifier == identifier }
+                  ) else {
+                return
+            }
+            onToggleColumnVisibility(column)
+        }
+
+        private func isColumnVisible(_ column: LogcatTableColumn) -> Bool {
+            tableView?.tableColumn(
+                withIdentifier: NSUserInterfaceItemIdentifier(column.identifier)
+            )?.isHidden == false
         }
 
         private func handleColumnResize() {
@@ -574,8 +628,13 @@ struct LogcatTableView: NSViewRepresentable {
     }
 }
 
-private final class LogcatTableHeaderView: NSTableHeaderView {
+final class LogcatTableHeaderView: NSTableHeaderView {
     var columnDividerDoubleClicked: ((Int) -> Void)?
+    var columnConfigurationMenu: (() -> NSMenu?)?
+
+    override func menu(for event: NSEvent) -> NSMenu? {
+        columnConfigurationMenu?() ?? super.menu(for: event)
+    }
 
     override func mouseDown(with event: NSEvent) {
         let location = convert(event.locationInWindow, from: nil)
