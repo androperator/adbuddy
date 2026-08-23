@@ -11,6 +11,7 @@ struct ADBuddyApp: App {
     @State private var apkInstallationStore: APKInstallationStore
 
     init() {
+        UserDefaults.standard.set(false, forKey: "NSFullScreenMenuItemEverywhere")
         let preferences = AppPreferences()
         _preferences = State(initialValue: preferences)
         _deviceStore = State(initialValue: DeviceStore(preferences: preferences))
@@ -74,6 +75,11 @@ struct ADBuddyApp: App {
                 LogcatWindowView(windowID: windowID)
                     .environment(deviceStore)
                     .environment(preferences)
+                    .overlay(alignment: .topLeading) {
+                        FullScreenWindowDisabler()
+                            .frame(width: 0, height: 0)
+                            .allowsHitTesting(false)
+                    }
             }
         }
         .defaultSize(width: 920, height: 600)
