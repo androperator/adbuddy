@@ -8,6 +8,7 @@ final class AppPreferences {
         static let screenshotDirectoryPath = ADBuddySharedPreferences.screenshotDirectoryPathKey
         static let screenshotAddsFrame = ADBuddySharedPreferences.screenshotAddsFrameKey
         static let screenshotAlsoSavesOriginal = ADBuddySharedPreferences.screenshotAlsoSavesOriginalKey
+        static let screenshotOverlaysDeviceDetails = ADBuddySharedPreferences.screenshotOverlaysDeviceDetailsKey
         static let automaticallyCopyMedia = "automaticallyCopyMedia"
         static let legacyAutomaticallyCopyScreenshots = "automaticallyCopyScreenshots"
         static let revealMediaInFinder = "revealMediaInFinder"
@@ -44,6 +45,12 @@ final class AppPreferences {
     var screenshotAlsoSavesOriginal: Bool {
         didSet {
             userDefaults.set(screenshotAlsoSavesOriginal, forKey: Key.screenshotAlsoSavesOriginal)
+        }
+    }
+
+    var screenshotOverlaysDeviceDetails: Bool {
+        didSet {
+            userDefaults.set(screenshotOverlaysDeviceDetails, forKey: Key.screenshotOverlaysDeviceDetails)
         }
     }
 
@@ -127,6 +134,7 @@ final class AppPreferences {
         }
         screenshotAddsFrame = userDefaults.object(forKey: Key.screenshotAddsFrame) as? Bool ?? false
         screenshotAlsoSavesOriginal = userDefaults.object(forKey: Key.screenshotAlsoSavesOriginal) as? Bool ?? false
+        screenshotOverlaysDeviceDetails = userDefaults.object(forKey: Key.screenshotOverlaysDeviceDetails) as? Bool ?? false
         revealMediaInFinder = userDefaults.object(forKey: Key.revealMediaInFinder) as? Bool ?? false
         showInMenuBar = userDefaults.object(forKey: Key.showInMenuBar) as? Bool ?? true
         screenRecordingBitRateMegabitsPerSecond = userDefaults.object(forKey: Key.screenRecordingBitRateMegabitsPerSecond) as? Int

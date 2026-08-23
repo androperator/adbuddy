@@ -133,7 +133,8 @@ final class DeviceStore {
         let destination = preferences.screenshotDirectory
         let framing = ScreenshotFramingOptions(
             addsFrame: preferences.screenshotAddsFrame,
-            alsoSavesOriginal: preferences.screenshotAlsoSavesOriginal
+            alsoSavesOriginal: preferences.screenshotAlsoSavesOriginal,
+            overlaysDeviceDetails: preferences.screenshotOverlaysDeviceDetails
         )
 
         Task { [weak self] in

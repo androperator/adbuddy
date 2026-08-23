@@ -178,6 +178,83 @@ final class ScreenshotServiceTests: XCTestCase {
         XCTAssertEqual(framedPixels.pixel(atX: 70, y: 180), originalPixels.pixel(atX: 50, y: 160))
     }
 
+    func testOverlaysDeviceDetailsOnAnUnframedScreenshot() async throws {
+        let screenshotData = try ScreenshotFrameFixture.pngData(
+            width: 400,
+            height: 800,
+            red: 0,
+            green: 0,
+            blue: 1
+        )
+        let processRunner = ScriptedScreenshotProcessRunner(results: [
+            successfulProcessResult(standardOutput: screenshotData),
+            successfulProcessResult(standardOutput: "16\n"),
+            successfulProcessResult(standardOutput: "36\n"),
+        ])
+        let fileManager = RecordingScreenshotFileManager()
+
+        let result = await ScreenshotService(
+            adbPath: "/SDK/platform-tools/adb",
+            processRunner: processRunner,
+            fileManager: fileManager
+        ).capture(
+            device: connectedDevice,
+            destination: URL(fileURLWithPath: "/tmp/screenshots", isDirectory: true),
+            framing: ScreenshotFramingOptions(
+                addsFrame: false,
+                alsoSavesOriginal: false,
+                overlaysDeviceDetails: true
+            )
+        )
+
+        guard case .success(let output) = result,
+              let overlayData = fileManager.writtenFiles[output.primaryFileURL] else {
+            return XCTFail("Expected an annotated screenshot")
+        }
+
+        XCTAssertEqual(try XCTUnwrap(imageSize(in: overlayData)), CGSize(width: 400, height: 800))
+        let originalPixels = try XCTUnwrap(pixelImage(in: screenshotData))
+        let overlayPixels = try XCTUnwrap(pixelImage(in: overlayData))
+        let requests = await processRunner.requests()
+        XCTAssertTrue(overlayPixels.differs(from: originalPixels))
+        XCTAssertTrue(overlayPixels.differs(
+            from: originalPixels,
+            in: CGRect(x: 0, y: 0, width: 200, height: 160)
+        ))
+        XCTAssertFalse(overlayPixels.differs(
+            from: originalPixels,
+            in: CGRect(x: 0, y: 640, width: 200, height: 160)
+        ))
+        XCTAssertEqual(requests, [
+            ["-s", "device-serial", "exec-out", "screencap", "-p"],
+            ["-s", "device-serial", "shell", "getprop", "ro.build.version.release"],
+            ["-s", "device-serial", "shell", "getprop", "ro.build.version.sdk"],
+        ])
+    }
+
+    func testDoesNotSaveWhenTheDeviceDetailsOverlayCannotBeResolved() async {
+        let fileManager = RecordingScreenshotFileManager()
+        let result = await ScreenshotService(
+            adbPath: "/SDK/platform-tools/adb",
+            processRunner: ScriptedScreenshotProcessRunner(results: [
+                successfulProcessResult,
+                successfulProcessResult(standardOutput: "\n"),
+            ]),
+            fileManager: fileManager
+        ).capture(
+            device: connectedDevice,
+            destination: URL(fileURLWithPath: "/tmp/screenshots", isDirectory: true),
+            framing: ScreenshotFramingOptions(
+                addsFrame: false,
+                alsoSavesOriginal: false,
+                overlaysDeviceDetails: true
+            )
+        )
+
+        XCTAssertEqual(result, .failure(.unableToAddDeviceDetails))
+        XCTAssertTrue(fileManager.writtenFiles.isEmpty)
+    }
+
     private var connectedDevice: AndroidDevice {
         AndroidDevice(
             serial: "device-serial",
@@ -258,7 +335,7 @@ final class ScreenshotServiceTests: XCTestCase {
             context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
             return true
         }
-        return didDraw ? PixelImage(width: image.width, pixels: pixels) : nil
+        return didDraw ? PixelImage(width: image.width, height: image.height, pixels: pixels) : nil
     }
 }
 
@@ -272,13 +349,19 @@ private struct StubScreenshotProcessRunner: ProcessRunning {
 
 private actor ScriptedScreenshotProcessRunner: ProcessRunning {
     private var results: [ProcessResult]
+    private var recordedRequests: [[String]] = []
 
     init(results: [ProcessResult]) {
         self.results = results
     }
 
     func run(executablePath: String, arguments: [String]) async -> ProcessResult {
-        results.removeFirst()
+        recordedRequests.append(arguments)
+        return results.removeFirst()
+    }
+
+    func requests() -> [[String]] {
+        recordedRequests
     }
 }
 
@@ -301,11 +384,36 @@ private final class RecordingScreenshotFileManager: ScreenshotFileManaging, @unc
 
 private struct PixelImage {
     let width: Int
+    let height: Int
     let pixels: [UInt8]
 
     func pixel(atX x: Int, y: Int) -> [UInt8] {
         let index = (y * width + x) * 4
         return Array(pixels[index..<(index + 4)])
+    }
+
+    func differs(from other: PixelImage) -> Bool {
+        width == other.width && height == other.height && pixels != other.pixels
+    }
+
+    func differs(from other: PixelImage, in rect: CGRect) -> Bool {
+        guard width == other.width,
+              height == other.height,
+              rect.minX >= 0,
+              rect.minY >= 0,
+              rect.maxX <= CGFloat(width),
+              rect.maxY <= CGFloat(height) else {
+            return false
+        }
+
+        for y in Int(rect.minY)..<Int(rect.maxY) {
+            for x in Int(rect.minX)..<Int(rect.maxX) {
+                if pixel(atX: x, y: y) != other.pixel(atX: x, y: y) {
+                    return true
+                }
+            }
+        }
+        return false
     }
 }
 
@@ -377,7 +485,7 @@ private struct ScreenshotFrameFixture {
         )
     }
 
-    private static func pngData(
+    static func pngData(
         width: Int,
         height: Int,
         red: CGFloat,

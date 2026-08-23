@@ -5,6 +5,7 @@ public enum ADBuddySharedPreferences {
     public static let screenshotDirectoryPathKey = "screenshotDirectoryPath"
     public static let screenshotAddsFrameKey = "screenshotAddsFrame"
     public static let screenshotAlsoSavesOriginalKey = "screenshotAlsoSavesOriginal"
+    public static let screenshotOverlaysDeviceDetailsKey = "screenshotOverlaysDeviceDetails"
     public static let screenRecordingBitRateMegabitsPerSecondKey = "screenRecordingBitRateMegabitsPerSecond"
     public static let screenRecordingResolutionPercentageKey = "screenRecordingResolutionPercentage"
     public static let screenRecordingShowsTapsKey = "screenRecordingShowsTaps"
@@ -58,7 +59,8 @@ public enum ADBuddySharedPreferences {
     ) -> ScreenshotFramingOptions {
         ScreenshotFramingOptions(
             addsFrame: userDefaults.object(forKey: screenshotAddsFrameKey) as? Bool ?? false,
-            alsoSavesOriginal: userDefaults.object(forKey: screenshotAlsoSavesOriginalKey) as? Bool ?? false
+            alsoSavesOriginal: userDefaults.object(forKey: screenshotAlsoSavesOriginalKey) as? Bool ?? false,
+            overlaysDeviceDetails: userDefaults.object(forKey: screenshotOverlaysDeviceDetailsKey) as? Bool ?? false
         )
     }
 }

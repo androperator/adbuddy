@@ -147,9 +147,11 @@ final class AppPreferencesTests: XCTestCase {
 
         XCTAssertFalse(preferences.screenshotAddsFrame)
         XCTAssertFalse(preferences.screenshotAlsoSavesOriginal)
+        XCTAssertFalse(preferences.screenshotOverlaysDeviceDetails)
 
         preferences.screenshotAddsFrame = true
         preferences.screenshotAlsoSavesOriginal = true
+        preferences.screenshotOverlaysDeviceDetails = true
 
         let reloadedPreferences = AppPreferences(
             userDefaults: userDefaults,
@@ -157,6 +159,7 @@ final class AppPreferencesTests: XCTestCase {
         )
         XCTAssertTrue(reloadedPreferences.screenshotAddsFrame)
         XCTAssertTrue(reloadedPreferences.screenshotAlsoSavesOriginal)
+        XCTAssertTrue(reloadedPreferences.screenshotOverlaysDeviceDetails)
     }
 
     func testScreenRecordingOptionsUseStableDefaultsAndPersistChanges() {

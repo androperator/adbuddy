@@ -72,6 +72,7 @@ SwiftUI scene
 AndroidSDKLocator -> resolved adb path -> ADBClient
 AppPreferences -> screenshot destination -> ScreenshotService
 AppPreferences -> screenshot framing options -> ScreenshotService -> Android SDK skins
+AppPreferences -> screenshot device-details overlay -> ScreenshotService -> Android device properties
 AppPreferences -> clipboard preference -> MediaClipboardService
 AppPreferences -> Finder reveal preference -> MediaFinderRevealService
 DeviceStore -> MediaNotificationService -> macOS notification center
@@ -198,6 +199,12 @@ ambiguous SDK skin falls back to a generic black device frame. The screenshot
 pixels are not rescaled; only frame assets are scaled to the compatible display
 size.
 
+When the device-details overlay preference is enabled, `ScreenshotService`
+uses fixed ADB `getprop` arguments to read `ro.build.version.release` and
+`ro.build.version.sdk`. It writes the resulting `Android version / API level`
+label into the top-left of the captured screenshot before optionally framing
+it, so the unframed and framed saved variants contain the same device details.
+
 Screenshot filenames must be sanitized, timestamped, and collision-resistant.
 The service must not silently replace an existing file. A framed capture uses
 the `_framed.png` suffix; when the user also saves the original, the service
@@ -221,16 +228,17 @@ macOS consumes writable attachment files.
 
 `AppPreferences` is an application-owned wrapper around `UserDefaults`.
 It persists a screenshot destination path, screenshot framing and
-original-retention preferences, and whether successful screenshots and
-recordings are automatically copied to the clipboard. The same path is the
-shared media destination for screenshots and MP4 recordings. It also persists
-whether media is automatically revealed in Finder, and stores a recording bit
-rate, resolution percentage, and Show taps value for the next recording. The
-directory defaults to the current user's `~/Screenshots` directory, automatic
-copying defaults to enabled, screenshot framing defaults to disabled, and
-automatic Finder reveal defaults to disabled. It also persists whether ADBuddy
-is shown in the menu bar, which defaults to enabled. The service layer receives
-values from the preferences store rather than accessing `UserDefaults` itself.
+original-retention preferences, the optional device-details overlay, and whether
+successful screenshots and recordings are automatically copied to the
+clipboard. The same path is the shared media destination for screenshots and
+MP4 recordings. It also persists whether media is automatically revealed in
+Finder, and stores a recording bit rate, resolution percentage, and Show taps
+value for the next recording. The directory defaults to the current user's
+`~/Screenshots` directory, automatic copying defaults to enabled, screenshot
+framing and the device-details overlay default to disabled, and automatic
+Finder reveal defaults to disabled. It also persists whether ADBuddy is shown
+in the menu bar, which defaults to enabled. The service layer receives values
+from the preferences store rather than accessing `UserDefaults` itself.
 
 The same store persists six serializable sRGB component values for global
 Logcat severity colors. Settings changes update every open Logcat window

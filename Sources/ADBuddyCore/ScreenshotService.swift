@@ -9,6 +9,7 @@ public enum ScreenshotCaptureError: Equatable, Sendable {
     case deviceUnavailable
     case adbFailed(String)
     case invalidPNG
+    case unableToAddDeviceDetails
     case unableToAddFrame
     case unableToSave(String)
 
@@ -20,6 +21,8 @@ public enum ScreenshotCaptureError: Equatable, Sendable {
             message
         case .invalidPNG:
             "ADB did not return valid PNG screenshot data."
+        case .unableToAddDeviceDetails:
+            "Could not add the Android version and API level to the screenshot."
         case .unableToAddFrame:
             "Could not add a frame to the screenshot."
         case .unableToSave(let message):
@@ -94,13 +97,29 @@ public struct ScreenshotService: Sendable {
             return .failure(.invalidPNG)
         }
 
+        let annotatedScreenshotData: Data
+        if framing.overlaysDeviceDetails {
+            guard let deviceDetails = await AndroidDeviceDetailsService(
+                adbPath: adbPath,
+                processRunner: processRunner
+            ).details(for: device), let overlayData = ScreenshotDeviceDetailsOverlayRenderer.overlay(
+                deviceDetails: deviceDetails,
+                on: processResult.standardOutput
+            ) else {
+                return .failure(.unableToAddDeviceDetails)
+            }
+            annotatedScreenshotData = overlayData
+        } else {
+            annotatedScreenshotData = processResult.standardOutput
+        }
+
         let framingData: Data?
         if framing.addsFrame {
             framingData = await ScreenshotFrameRenderer(
                 adbPath: adbPath,
                 sdkRootPath: sdkRootPath,
                 processRunner: processRunner
-            ).framedPNG(from: processResult.standardOutput, for: device)
+            ).framedPNG(from: annotatedScreenshotData, for: device)
 
             guard framingData != nil else {
                 return .failure(.unableToAddFrame)
@@ -120,7 +139,7 @@ public struct ScreenshotService: Sendable {
                         date: date,
                         fileExists: fileManager.fileExists(at:)
                     )
-                    try fileManager.write(processResult.standardOutput, to: fileURLs.original)
+                    try fileManager.write(annotatedScreenshotData, to: fileURLs.original)
                     try fileManager.write(framingData, to: fileURLs.framed)
                     return .success(ScreenshotCaptureOutput(
                         primaryFileURL: fileURLs.framed,
@@ -148,7 +167,7 @@ public struct ScreenshotService: Sendable {
                 date: date,
                 fileExists: fileManager.fileExists(at:)
             )
-            try fileManager.write(processResult.standardOutput, to: fileURL)
+            try fileManager.write(annotatedScreenshotData, to: fileURL)
             return .success(ScreenshotCaptureOutput(
                 primaryFileURL: fileURL,
                 originalFileURL: nil

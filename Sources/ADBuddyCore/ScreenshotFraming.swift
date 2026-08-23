@@ -1,4 +1,5 @@
 import CoreGraphics
+import CoreText
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
@@ -6,15 +7,77 @@ import UniformTypeIdentifiers
 public struct ScreenshotFramingOptions: Equatable, Sendable {
     public static let disabled = ScreenshotFramingOptions(
         addsFrame: false,
-        alsoSavesOriginal: false
+        alsoSavesOriginal: false,
+        overlaysDeviceDetails: false
     )
 
     public let addsFrame: Bool
     public let alsoSavesOriginal: Bool
+    public let overlaysDeviceDetails: Bool
 
-    public init(addsFrame: Bool, alsoSavesOriginal: Bool) {
+    public init(
+        addsFrame: Bool,
+        alsoSavesOriginal: Bool,
+        overlaysDeviceDetails: Bool = false
+    ) {
         self.addsFrame = addsFrame
         self.alsoSavesOriginal = addsFrame && alsoSavesOriginal
+        self.overlaysDeviceDetails = overlaysDeviceDetails
+    }
+}
+
+struct ScreenshotDeviceDetailsOverlayRenderer {
+    static func overlay(
+        deviceDetails: AndroidDeviceDetails,
+        on screenshotData: Data
+    ) -> Data? {
+        guard let screenshot = PNGImageCodec.image(from: screenshotData),
+              let context = ImageCanvas.makeContext(width: screenshot.width, height: screenshot.height) else {
+            return nil
+        }
+
+        context.draw(screenshot, in: CGRect(x: 0, y: 0, width: screenshot.width, height: screenshot.height))
+
+        let shortestSide = CGFloat(min(screenshot.width, screenshot.height))
+        let outerMargin = max(20, shortestSide * 0.025)
+        let labelPadding = max(10, shortestSide * 0.012)
+        let fontSize = max(20, shortestSide * 0.032)
+        let font = CTFontCreateUIFontForLanguage(.system, fontSize, nil)
+            ?? CTFontCreateWithName("HelveticaNeue-Medium" as CFString, fontSize, nil)
+        let text = NSAttributedString(
+            string: deviceDetails.screenshotOverlayText,
+            attributes: [
+                kCTFontAttributeName as NSAttributedString.Key: font,
+                kCTForegroundColorAttributeName as NSAttributedString.Key: CGColor(gray: 1, alpha: 1),
+            ]
+        )
+        let line = CTLineCreateWithAttributedString(text)
+        let textBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        let labelRect = CGRect(
+            x: outerMargin,
+            y: CGFloat(screenshot.height) - outerMargin - textBounds.height - labelPadding * 2,
+            width: textBounds.width + labelPadding * 2,
+            height: textBounds.height + labelPadding * 2
+        )
+
+        context.setFillColor(CGColor(gray: 0, alpha: 0.7))
+        context.addPath(CGPath(
+            roundedRect: labelRect,
+            cornerWidth: labelPadding,
+            cornerHeight: labelPadding,
+            transform: nil
+        ))
+        context.fillPath()
+        context.textPosition = CGPoint(
+            x: labelRect.minX + labelPadding - textBounds.origin.x,
+            y: labelRect.minY + labelPadding - textBounds.origin.y
+        )
+        CTLineDraw(line, context)
+
+        guard let output = context.makeImage() else {
+            return nil
+        }
+        return PNGImageCodec.data(from: output)
     }
 }
 

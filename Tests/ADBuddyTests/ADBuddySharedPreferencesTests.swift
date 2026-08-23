@@ -44,10 +44,15 @@ final class ADBuddySharedPreferencesTests: XCTestCase {
         let userDefaults = makeUserDefaults()
         userDefaults.set(true, forKey: ADBuddySharedPreferences.screenshotAddsFrameKey)
         userDefaults.set(true, forKey: ADBuddySharedPreferences.screenshotAlsoSavesOriginalKey)
+        userDefaults.set(true, forKey: ADBuddySharedPreferences.screenshotOverlaysDeviceDetailsKey)
 
         XCTAssertEqual(
             ADBuddySharedPreferences.screenshotFramingOptions(userDefaults: userDefaults),
-            ScreenshotFramingOptions(addsFrame: true, alsoSavesOriginal: true)
+            ScreenshotFramingOptions(
+                addsFrame: true,
+                alsoSavesOriginal: true,
+                overlaysDeviceDetails: true
+            )
         )
     }
 

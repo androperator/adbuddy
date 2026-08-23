@@ -105,6 +105,17 @@ private struct ScreenshotSettingsView: View {
             } footer: {
                 Text("ADBuddy uses the matching Android SDK emulator frame when available, otherwise a generic black frame.")
             }
+
+            Section {
+                Toggle(
+                    "Overlay device details",
+                    isOn: $preferences.screenshotOverlaysDeviceDetails
+                )
+            } header: {
+                Text("Device Details")
+            } footer: {
+                Text("Adds the Android version and API level to the top-left of saved screenshots.")
+            }
         }
         .formStyle(.grouped)
         .scenePadding()
