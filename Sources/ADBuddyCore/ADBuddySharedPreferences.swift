@@ -9,6 +9,7 @@ public enum ADBuddySharedPreferences {
     public static let screenRecordingBitRateMegabitsPerSecondKey = "screenRecordingBitRateMegabitsPerSecond"
     public static let screenRecordingResolutionPercentageKey = "screenRecordingResolutionPercentage"
     public static let screenRecordingShowsTapsKey = "screenRecordingShowsTaps"
+    public static let screenRecordingAddsFrameKey = "screenRecordingAddsFrame"
 
     public static func userDefaults(
         bundleIdentifier: String? = Bundle.main.bundleIdentifier
@@ -61,6 +62,14 @@ public enum ADBuddySharedPreferences {
             addsFrame: userDefaults.object(forKey: screenshotAddsFrameKey) as? Bool ?? false,
             alsoSavesOriginal: userDefaults.object(forKey: screenshotAlsoSavesOriginalKey) as? Bool ?? false,
             overlaysDeviceDetails: userDefaults.object(forKey: screenshotOverlaysDeviceDetailsKey) as? Bool ?? false
+        )
+    }
+
+    public static func screenRecordingFramingOptions(
+        userDefaults: UserDefaults = userDefaults()
+    ) -> ScreenRecordingFramingOptions {
+        ScreenRecordingFramingOptions(
+            addsFrame: userDefaults.object(forKey: screenRecordingAddsFrameKey) as? Bool ?? false
         )
     }
 }

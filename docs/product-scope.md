@@ -70,6 +70,11 @@ The first implementation is a complete vertical slice, not a visual mockup.
   MP4, and remove its temporary device-side file.
 - Save MP4s into the same configured destination as screenshots. Do not create
   a separate recording directory or a destination picker in this phase.
+- Offer an opt-in Settings preference to add a device frame to saved screen
+  recordings. For an emulator, use its configured Android SDK skin when it is
+  available and compatible; otherwise use a generic black device frame. Keep
+  the original MP4 and save the processed recording as a collision-safe
+  `_framed.mp4` sibling.
 - Deliver a native success notification for each saved MP4, including a
   first-frame preview and a **Reveal in Finder** action.
 - When Show taps is enabled, preserve the existing Android setting and restore

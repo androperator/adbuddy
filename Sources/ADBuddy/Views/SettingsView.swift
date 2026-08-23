@@ -100,10 +100,15 @@ private struct ScreenshotSettingsView: View {
                     isOn: $preferences.screenshotAlsoSavesOriginal
                 )
                 .disabled(!preferences.screenshotAddsFrame)
+
+                Toggle(
+                    "Add a device frame to screen recordings",
+                    isOn: $preferences.screenRecordingAddsFrame
+                )
             } header: {
                 Text("Device Frame")
             } footer: {
-                Text("ADBuddy uses the matching Android SDK emulator frame when available, otherwise a generic black frame.")
+                Text("ADBuddy uses the matching Android SDK emulator frame when available, otherwise a generic black frame. Framed recordings retain the original MP4 alongside the _framed version.")
             }
 
             Section {

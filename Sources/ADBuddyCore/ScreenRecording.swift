@@ -33,6 +33,24 @@ public struct ScreenRecordingOptions: Equatable, Sendable {
     }
 }
 
+public struct ScreenRecordingCaptureOutput: Equatable, Sendable {
+    public let primaryFileURL: URL
+    public let originalFileURL: URL?
+
+    public init(primaryFileURL: URL, originalFileURL: URL?) {
+        self.primaryFileURL = primaryFileURL
+        self.originalFileURL = originalFileURL
+    }
+
+    public var savedFileURLs: [URL] {
+        if let originalFileURL {
+            [originalFileURL, primaryFileURL]
+        } else {
+            [primaryFileURL]
+        }
+    }
+}
+
 public enum ScreenRecordingResolution: Int, CaseIterable, Equatable, Identifiable, Sendable {
     case native = 100
     case seventyFivePercent = 75

@@ -16,6 +16,7 @@ final class AppPreferences {
         static let screenRecordingBitRateMegabitsPerSecond = ADBuddySharedPreferences.screenRecordingBitRateMegabitsPerSecondKey
         static let screenRecordingResolutionPercentage = ADBuddySharedPreferences.screenRecordingResolutionPercentageKey
         static let screenRecordingShowsTaps = ADBuddySharedPreferences.screenRecordingShowsTapsKey
+        static let screenRecordingAddsFrame = ADBuddySharedPreferences.screenRecordingAddsFrameKey
         static let logcatColors = "logcatColors"
         static let logcatTablePreferences = "logcatTablePreferences"
         static let deepLinkLauncherEnabled = "deepLinkLauncherEnabled"
@@ -84,6 +85,12 @@ final class AppPreferences {
         }
     }
 
+    var screenRecordingAddsFrame: Bool {
+        didSet {
+            userDefaults.set(screenRecordingAddsFrame, forKey: Key.screenRecordingAddsFrame)
+        }
+    }
+
     var isDeepLinkLauncherEnabled: Bool {
         didSet {
             userDefaults.set(isDeepLinkLauncherEnabled, forKey: Key.deepLinkLauncherEnabled)
@@ -143,6 +150,7 @@ final class AppPreferences {
             ?? ScreenRecordingOptions.default.resolution.rawValue
         screenRecordingShowsTaps = userDefaults.object(forKey: Key.screenRecordingShowsTaps) as? Bool
             ?? ScreenRecordingOptions.default.showsTaps
+        screenRecordingAddsFrame = userDefaults.object(forKey: Key.screenRecordingAddsFrame) as? Bool ?? false
         isDeepLinkLauncherEnabled = userDefaults.object(forKey: Key.deepLinkLauncherEnabled) as? Bool ?? false
         logcatColors = Self.loadLogcatColors(from: userDefaults) ?? LogcatPriority.defaultColors
         logcatTablePreferences = Self.loadLogcatTablePreferences(from: userDefaults)

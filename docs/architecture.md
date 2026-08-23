@@ -78,6 +78,7 @@ AppPreferences -> Finder reveal preference -> MediaFinderRevealService
 DeviceStore -> MediaNotificationService -> macOS notification center
 AppPreferences -> recording options -> ScreenRecordingService
 DeviceStore -> ScreenRecordingService -> ADB screenrecord, pull, cleanup
+ScreenRecordingService -> AVFoundation -> framed MP4 export
 DeviceStore discovery by serial -> LogcatWindowView -> LogcatStore
 DeviceStore emulator entries -> EmulatorStore -> AndroidEmulatorService
 EmulatorStore -> AndroidEmulatorService -> Emulator executable -> standalone Emulator window
@@ -229,17 +230,18 @@ macOS consumes writable attachment files.
 
 `AppPreferences` is an application-owned wrapper around `UserDefaults`.
 It persists a screenshot destination path, screenshot framing and
-original-retention preferences, the optional device-details overlay, and whether
-successful screenshots and recordings are automatically copied to the
-clipboard. The same path is the shared media destination for screenshots and
-MP4 recordings. It also persists whether media is automatically revealed in
-Finder, and stores a recording bit rate, resolution percentage, and Show taps
-value for the next recording. The directory defaults to the current user's
-`~/Screenshots` directory, automatic copying defaults to enabled, screenshot
-framing and the device-details overlay default to disabled, and automatic
-Finder reveal defaults to disabled. It also persists whether ADBuddy is shown
-in the menu bar, which defaults to enabled. The service layer receives values
-from the preferences store rather than accessing `UserDefaults` itself.
+original-retention preferences, the optional device-details overlay, recording
+framing, and whether successful screenshots and recordings are automatically
+copied to the clipboard. The same path is the shared media destination for
+screenshots and MP4 recordings. It also persists whether media is automatically
+revealed in Finder, and stores a recording bit rate, resolution percentage, and
+Show taps value for the next recording. The directory defaults to the current
+user's `~/Screenshots` directory, automatic copying defaults to enabled,
+screenshot framing, recording framing, and the device-details overlay default
+to disabled, and automatic Finder reveal defaults to disabled. It also persists
+whether ADBuddy is shown in the menu bar, which defaults to enabled. The service
+layer receives values from the preferences store rather than accessing
+`UserDefaults` itself.
 
 The same store persists six serializable sRGB component values for global
 Logcat severity colors. Settings changes update every open Logcat window
@@ -272,6 +274,17 @@ generated path, allowing Android's recorder to finish the MP4. It pulls to a
 temporary local file in the shared media directory, then moves that file to a
 collision-resistant final name. This avoids replacing an existing media file.
 
+When recording framing is enabled, the original MP4 is retained. The service
+reserves an original and `_framed.mp4` pair before capture, then uses
+AVFoundation and Core Animation to export the framed sibling without external
+executables. It preserves the video timing, preferred orientation, and source
+audio tracks. An emulator recording uses the same locally discovered SDK skin
+layout as screenshots; an unavailable, incompatible, or ambiguous skin uses
+the generic black frame. Export work writes to a temporary MP4, supports task
+cancellation, and only moves the completed export into its reserved final name.
+If framing fails, the original recording remains and the user receives a
+warning.
+
 Show taps is implemented through Android's `show_touches` system setting. The
 service reads the prior setting, enables it for the recording, and restores the
 saved value after the recorder exits. If restoration fails, the saved recording
@@ -291,7 +304,8 @@ Test pure behavior without a device:
 - SDK skin layout matching, generic-frame fallback, and PNG composition;
 - process result to user-facing error mapping.
 - display-size parsing, recording argument construction, Show taps restoration,
-  and non-overwriting MP4 retrieval.
+  non-overwriting MP4 retrieval, recording-frame filename pairs, frame geometry,
+  and video-composition transforms.
 - incremental Logcat parsing, filtering, retention, process cancellation,
   reconnect policy, preferences, and window-scoped inspection controls.
 - installed-AVD parsing, emulator launch and lifecycle argument construction,

@@ -56,6 +56,16 @@ final class ADBuddySharedPreferencesTests: XCTestCase {
         )
     }
 
+    func testScreenRecordingFramingOptionsUseSharedSavedValue() {
+        let userDefaults = makeUserDefaults()
+        userDefaults.set(true, forKey: ADBuddySharedPreferences.screenRecordingAddsFrameKey)
+
+        XCTAssertEqual(
+            ADBuddySharedPreferences.screenRecordingFramingOptions(userDefaults: userDefaults),
+            ScreenRecordingFramingOptions(addsFrame: true)
+        )
+    }
+
     private func makeUserDefaults() -> UserDefaults {
         let suiteName = "ADBuddySharedPreferencesTests.\(UUID().uuidString)"
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {

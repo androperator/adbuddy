@@ -196,14 +196,20 @@ actor ADBuddyMCPService {
         )
         let session = ScreenRecordingSession(device: device)
         let readiness = RecordingReadiness()
-        let recordingService = ScreenRecordingService(adbPath: sdk.adbPath, processRunner: processRunner)
+        let recordingService = ScreenRecordingService(
+            adbPath: sdk.adbPath,
+            sdkRootPath: sdk.rootPath,
+            processRunner: processRunner
+        )
         let destination = ADBuddySharedPreferences.mediaDestination()
+        let framing = ADBuddySharedPreferences.screenRecordingFramingOptions()
         AppLogger.recording.info("MCP screen recording requested")
         let task = Task {
             let result = await recordingService.record(
                 session: session,
                 options: options,
                 destination: destination,
+                framing: framing,
                 onScreenRecorderStarted: {
                     Task {
                         await readiness.markStarted()
@@ -264,13 +270,16 @@ actor ADBuddyMCPService {
         let result = await recording.task.value
         recordings[recordingID] = nil
         switch result {
-        case .success(let fileURL, let warning):
+        case .success(let output, let warning):
             AppLogger.recording.info("MCP screen recording saved")
             var response: [String: Any] = [
                 "recordingId": recordingID,
-                "path": fileURL.path,
+                "path": output.primaryFileURL.path,
                 "mediaType": "video/mp4",
             ]
+            if let originalFileURL = output.originalFileURL {
+                response["originalPath"] = originalFileURL.path
+            }
             if let warning {
                 response["warning"] = warning
             }

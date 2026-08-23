@@ -235,15 +235,20 @@ final class DeviceStore {
 
         let screenRecordingService = ScreenRecordingService(
             adbPath: resolvedSDK.adbPath,
+            sdkRootPath: resolvedSDK.rootPath,
             processRunner: processRunner
         )
         let destination = preferences.screenshotDirectory
+        let framing = ScreenRecordingFramingOptions(
+            addsFrame: preferences.screenRecordingAddsFrame
+        )
 
         Task { [weak self] in
             let result = await screenRecordingService.record(
                 session: session,
                 options: options,
                 destination: destination,
+                framing: framing,
                 onScreenRecorderStarted: { @MainActor [weak self] in
                     self?.markScreenRecordingStarted(session)
                 }
@@ -603,18 +608,18 @@ final class DeviceStore {
         screenRecordingActivity = nil
 
         switch result {
-        case .success(let fileURL, let warning):
-            let copiedToClipboard = copyRecordingToClipboardIfNeeded(at: fileURL)
-            revealMediaInFinderIfNeeded(at: [fileURL])
+        case .success(let output, let warning):
+            let copiedToClipboard = copyRecordingToClipboardIfNeeded(at: output.primaryFileURL)
+            revealMediaInFinderIfNeeded(at: output.savedFileURLs)
             AppLogger.recording.info("Screen recording saved")
             showScreenRecordingFeedback(
-                .success(fileURL, warning: warning, copiedToClipboard: copiedToClipboard)
+                .success(output.primaryFileURL, warning: warning, copiedToClipboard: copiedToClipboard)
             )
 
             let mediaNotifier = mediaNotifier
             Task {
                 await mediaNotifier.notifyAboutSavedMedia(
-                    at: fileURL,
+                    at: output.primaryFileURL,
                     kind: .recording(copiedToClipboard: copiedToClipboard)
                 )
             }

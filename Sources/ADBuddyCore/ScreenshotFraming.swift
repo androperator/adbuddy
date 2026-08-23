@@ -125,7 +125,11 @@ struct ScreenshotFrameRenderer: Sendable {
                adbPath: adbPath,
                sdkRootURL: sdkRootURL,
                processRunner: processRunner
-           ).matchingLayout(for: device, screenshot: screenshot),
+           ).matchingLayout(
+                for: device,
+                displayWidth: screenshot.width,
+                displayHeight: screenshot.height
+           ),
            let framedImage = AndroidSDKSkinFrameRenderer.render(
                screenshot,
                using: frameLayout
@@ -173,14 +177,15 @@ private struct CachedSkinIndex {
     let index: AndroidSDKSkinIndex
 }
 
-private struct AndroidSDKSkinResolver: Sendable {
+struct AndroidSDKSkinResolver: Sendable {
     let adbPath: String
     let sdkRootURL: URL
     let processRunner: any ProcessRunning
 
     func matchingLayout(
         for device: AndroidDevice,
-        screenshot: CGImage
+        displayWidth: Int,
+        displayHeight: Int
     ) async -> AndroidSDKSkinFrameLayout? {
         let avdPathResult = await processRunner.run(
             executablePath: adbPath,
@@ -200,8 +205,8 @@ private struct AndroidSDKSkinResolver: Sendable {
         let preferredSkinIdentifiers = configuration.preferredSkinIdentifiers
         let index = await AndroidSDKSkinIndexCache.shared.index(for: sdkRootURL)
         return index.bestLayout(
-            forScreenshotWidth: screenshot.width,
-            height: screenshot.height,
+            forScreenshotWidth: displayWidth,
+            height: displayHeight,
             preferredSkinIdentifiers: preferredSkinIdentifiers
         )
     }
@@ -308,7 +313,7 @@ private struct AndroidSDKSkinIndex: Sendable {
     }
 }
 
-private struct AndroidSDKSkinFrameLayout: Sendable {
+struct AndroidSDKSkinFrameLayout: Sendable {
     let skinIdentifier: String
     let canvasSize: CGSize
     let displayRect: CGRect
@@ -550,7 +555,7 @@ private struct SkinLayoutNode {
     }
 }
 
-private struct PositionedSkinAsset: Sendable {
+struct PositionedSkinAsset: Sendable {
     let url: URL
     let origin: CGPoint
 }
@@ -561,7 +566,58 @@ private extension URL {
     }
 }
 
-private enum AndroidSDKSkinFrameRenderer {
+enum AndroidSDKSkinFrameRenderer {
+    static func backdropImage(
+        using layout: AndroidSDKSkinFrameLayout,
+        scale: CGFloat
+    ) -> CGImage? {
+        let canvasWidth = Int((layout.canvasSize.width * scale).rounded())
+        let canvasHeight = Int((layout.canvasSize.height * scale).rounded())
+        guard let context = ImageCanvas.makeContext(width: canvasWidth, height: canvasHeight) else {
+            return nil
+        }
+
+        let backdropImages = layout.backdropImageURLs.compactMap(ImageCanvas.image)
+        guard backdropImages.count == layout.backdropImageURLs.count else {
+            return nil
+        }
+
+        for image in backdropImages {
+            ImageCanvas.draw(image, in: context, scale: scale, canvasHeight: canvasHeight)
+        }
+        return context.makeImage()
+    }
+
+    static func overlayImage(
+        using layout: AndroidSDKSkinFrameLayout,
+        scale: CGFloat
+    ) -> CGImage? {
+        guard !layout.overlayImageURLs.isEmpty || !layout.frameOverlayImageURLs.isEmpty else {
+            return nil
+        }
+
+        let canvasWidth = Int((layout.canvasSize.width * scale).rounded())
+        let canvasHeight = Int((layout.canvasSize.height * scale).rounded())
+        guard let context = ImageCanvas.makeContext(width: canvasWidth, height: canvasHeight) else {
+            return nil
+        }
+
+        let overlayImages = layout.overlayImageURLs.compactMap(ImageCanvas.image)
+        let frameOverlayImages = layout.frameOverlayImageURLs.compactMap(ImageCanvas.image)
+        guard overlayImages.count == layout.overlayImageURLs.count,
+              frameOverlayImages.count == layout.frameOverlayImageURLs.count else {
+            return nil
+        }
+
+        for image in overlayImages {
+            ImageCanvas.draw(image, in: context, scale: scale, canvasHeight: canvasHeight)
+        }
+        for image in frameOverlayImages {
+            ImageCanvas.draw(image, in: context, scale: scale, canvasHeight: canvasHeight)
+        }
+        return context.makeImage()
+    }
+
     static func render(
         _ screenshot: CGImage,
         using layout: AndroidSDKSkinFrameLayout
@@ -578,20 +634,12 @@ private enum AndroidSDKSkinFrameRenderer {
             return nil
         }
 
-        let backdropImages = layout.backdropImageURLs.compactMap(ImageCanvas.image)
         let displayMaskImages = layout.displayMaskImageURLs.compactMap(ImageCanvas.image)
-        let overlayImages = layout.overlayImageURLs.compactMap(ImageCanvas.image)
-        let frameOverlayImages = layout.frameOverlayImageURLs.compactMap(ImageCanvas.image)
-        guard backdropImages.count == layout.backdropImageURLs.count,
-              displayMaskImages.count == layout.displayMaskImageURLs.count,
-              overlayImages.count == layout.overlayImageURLs.count,
-              frameOverlayImages.count == layout.frameOverlayImageURLs.count else {
+        guard displayMaskImages.count == layout.displayMaskImageURLs.count,
+              let backdropImage = backdropImage(using: layout, scale: scaleX) else {
             return nil
         }
-
-        for image in backdropImages {
-            ImageCanvas.draw(image, in: context, scale: scaleX, canvasHeight: canvasHeight)
-        }
+        context.draw(backdropImage, in: CGRect(x: 0, y: 0, width: canvasWidth, height: canvasHeight))
 
         let displayDrawingRect = ImageCanvas.topLeftRect(
             layout.displayRect,
@@ -628,11 +676,8 @@ private enum AndroidSDKSkinFrameRenderer {
         context.draw(screenshot, in: displayDrawingRect)
         context.restoreGState()
 
-        for image in overlayImages {
-            ImageCanvas.draw(image, in: context, scale: scaleX, canvasHeight: canvasHeight)
-        }
-        for image in frameOverlayImages {
-            ImageCanvas.draw(image, in: context, scale: scaleX, canvasHeight: canvasHeight)
+        if let overlayImage = overlayImage(using: layout, scale: scaleX) {
+            context.draw(overlayImage, in: CGRect(x: 0, y: 0, width: canvasWidth, height: canvasHeight))
         }
 
         return context.makeImage()

@@ -1,7 +1,7 @@
 import Foundation
 
 public enum ScreenRecordingResult: Equatable, Sendable {
-    case success(URL, warning: String?)
+    case success(ScreenRecordingCaptureOutput, warning: String?)
     case failure(ScreenRecordingError)
 }
 
@@ -68,21 +68,30 @@ public struct ScreenRecordingService: Sendable {
     private let adbPath: String
     private let processRunner: any ProcessRunning
     private let fileManager: any ScreenRecordingFileManaging
+    private let recordingFramer: any ScreenRecordingFraming
 
     public init(
         adbPath: String,
+        sdkRootPath: String? = nil,
         processRunner: any ProcessRunning,
-        fileManager: any ScreenRecordingFileManaging = LocalScreenRecordingFileManager()
+        fileManager: any ScreenRecordingFileManaging = LocalScreenRecordingFileManager(),
+        recordingFramer: (any ScreenRecordingFraming)? = nil
     ) {
         self.adbPath = adbPath
         self.processRunner = processRunner
         self.fileManager = fileManager
+        self.recordingFramer = recordingFramer ?? AVFoundationScreenRecordingFramer(
+            adbPath: adbPath,
+            sdkRootPath: sdkRootPath,
+            processRunner: processRunner
+        )
     }
 
     public func record(
         session: ScreenRecordingSession,
         options: ScreenRecordingOptions,
         destination: URL,
+        framing: ScreenRecordingFramingOptions = .disabled,
         date: Date = Date(),
         onScreenRecorderStarted: @escaping @MainActor @Sendable () -> Void
     ) async -> ScreenRecordingResult {
@@ -100,7 +109,8 @@ public struct ScreenRecordingService: Sendable {
             destinationURLs = makeDestinationURLs(
                 directory: destination,
                 deviceName: session.device.displayName,
-                date: date
+                date: date,
+                addsFrame: framing.addsFrame
             )
         } catch {
             return .failure(.unableToPrepareDestination(error.localizedDescription))
@@ -182,16 +192,56 @@ public struct ScreenRecordingService: Sendable {
         }
 
         do {
-            try fileManager.moveItem(at: destinationURLs.temporaryURL, to: destinationURLs.finalURL)
+            try fileManager.moveItem(at: destinationURLs.temporaryURL, to: destinationURLs.originalURL)
         } catch {
             fileManager.removeItemIfPresent(at: destinationURLs.temporaryURL)
             return .failure(.unableToSave(error.localizedDescription))
         }
 
-        let restoreWarning = showTapsRestoreFailure.map {
-            "\(destinationURLs.finalURL.lastPathComponent) was saved, but Show taps could not be restored: \($0)"
+        var warnings = showTapsRestoreFailure.map {
+            ["\(destinationURLs.originalURL.lastPathComponent) was saved, but Show taps could not be restored: \($0)"]
+        } ?? []
+
+        guard let framedURL = destinationURLs.framedURL else {
+            return .success(
+                ScreenRecordingCaptureOutput(
+                    primaryFileURL: destinationURLs.originalURL,
+                    originalFileURL: nil
+                ),
+                warning: warnings.isEmpty ? nil : warnings.joined(separator: " ")
+            )
         }
-        return .success(destinationURLs.finalURL, warning: restoreWarning)
+
+        switch await recordingFramer.frame(
+            recordingAt: destinationURLs.originalURL,
+            outputURL: framedURL,
+            device: session.device
+        ) {
+        case .success:
+            return .success(
+                ScreenRecordingCaptureOutput(
+                    primaryFileURL: framedURL,
+                    originalFileURL: destinationURLs.originalURL
+                ),
+                warning: warnings.isEmpty ? nil : warnings.joined(separator: " ")
+            )
+        case .failure(let message):
+            warnings.append(
+                "\(destinationURLs.originalURL.lastPathComponent) was saved, but ADBuddy could not add a device frame: \(message)"
+            )
+        case .cancelled:
+            warnings.append(
+                "\(destinationURLs.originalURL.lastPathComponent) was saved, but device framing was cancelled."
+            )
+        }
+
+        return .success(
+            ScreenRecordingCaptureOutput(
+                primaryFileURL: destinationURLs.originalURL,
+                originalFileURL: nil
+            ),
+            warning: warnings.joined(separator: " ")
+        )
     }
 
     public func stop(session: ScreenRecordingSession) async -> ScreenRecordingStopResult {
@@ -212,19 +262,39 @@ public struct ScreenRecordingService: Sendable {
     private func makeDestinationURLs(
         directory: URL,
         deviceName: String,
-        date: Date
+        date: Date,
+        addsFrame: Bool
     ) -> RecordingDestinationURLs {
-        let finalURL = ScreenshotFilename.uniqueURL(
-            in: directory,
-            deviceName: deviceName,
-            date: date,
-            fileExtension: "mp4",
-            fileExists: fileManager.fileExists(at:)
-        )
+        let originalURL: URL
+        let framedURL: URL?
+        if addsFrame {
+            let urls = ScreenshotFilename.uniqueOriginalAndFramedURLs(
+                in: directory,
+                deviceName: deviceName,
+                date: date,
+                fileExtension: "mp4",
+                fileExists: fileManager.fileExists(at:)
+            )
+            originalURL = urls.original
+            framedURL = urls.framed
+        } else {
+            originalURL = ScreenshotFilename.uniqueURL(
+                in: directory,
+                deviceName: deviceName,
+                date: date,
+                fileExtension: "mp4",
+                fileExists: fileManager.fileExists(at:)
+            )
+            framedURL = nil
+        }
         let temporaryURL = directory.appendingPathComponent(
             ".adbuddy-recording-\(UUID().uuidString).partial"
         )
-        return RecordingDestinationURLs(finalURL: finalURL, temporaryURL: temporaryURL)
+        return RecordingDestinationURLs(
+            originalURL: originalURL,
+            framedURL: framedURL,
+            temporaryURL: temporaryURL
+        )
     }
 
     private func screenRecordArguments(
@@ -290,7 +360,8 @@ public struct ScreenRecordingService: Sendable {
 }
 
 private struct RecordingDestinationURLs {
-    let finalURL: URL
+    let originalURL: URL
+    let framedURL: URL?
     let temporaryURL: URL
 }
 
