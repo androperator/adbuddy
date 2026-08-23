@@ -112,9 +112,9 @@ struct SettingsSheet: View {
     }
 
     private func colorPicker(for priority: LogcatPriority) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             Text(priority.displayName)
-                .frame(width: 96, alignment: .leading)
+                .frame(width: 72, alignment: .leading)
 
             ColorPicker(
                 "",
