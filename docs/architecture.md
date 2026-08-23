@@ -254,9 +254,9 @@ Show taps value for the next recording. The directory defaults to the current
 user's `~/Screenshots` directory, automatic copying defaults to enabled,
 screenshot framing, recording framing, and the device-details overlay default
 to disabled, and automatic Finder reveal defaults to disabled. It also persists
-whether ADBuddy is shown in the menu bar, which defaults to enabled. The service
-layer receives values from the preferences store rather than accessing
-`UserDefaults` itself.
+whether ADBuddy is shown in the menu bar and whether successful action feedback
+banners are shown, both of which default to enabled. The service layer receives
+values from the preferences store rather than accessing `UserDefaults` itself.
 
 The same store persists six serializable sRGB component values for global
 Logcat severity colors. Settings changes update every open Logcat window

@@ -14,43 +14,50 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .overlay(alignment: .bottom) {
             VStack(spacing: 8) {
-                if let feedback = deviceStore.screenshotFeedback {
+                if let feedback = deviceStore.screenshotFeedback,
+                   preferences.showSuccessFeedbackBanners || !feedback.isSuccess {
                     ScreenshotFeedbackBanner(feedback: feedback) {
                         deviceStore.clearScreenshotFeedback(ifMatching: feedback)
                     }
                 }
 
-                if let feedback = deviceStore.screenRecordingFeedback {
+                if let feedback = deviceStore.screenRecordingFeedback,
+                   preferences.showSuccessFeedbackBanners || !feedback.isSuccess {
                     ScreenRecordingFeedbackBanner(feedback: feedback) {
                         deviceStore.clearScreenRecordingFeedback(ifMatching: feedback)
                     }
                 }
 
-                if let feedback = deviceStore.appActionFeedback {
+                if let feedback = deviceStore.appActionFeedback,
+                   preferences.showSuccessFeedbackBanners || !feedback.isSuccess {
                     AppActionFeedbackBanner(feedback: feedback) {
                         deviceStore.clearAppActionFeedback(ifMatching: feedback)
                     }
                 }
 
-                if let feedback = deviceStore.deepLinkLaunchFeedback {
+                if let feedback = deviceStore.deepLinkLaunchFeedback,
+                   preferences.showSuccessFeedbackBanners || !feedback.isSuccess {
                     DeepLinkLaunchFeedbackBanner(feedback: feedback) {
                         deviceStore.clearDeepLinkLaunchFeedback(ifMatching: feedback)
                     }
                 }
 
-                if let feedback = deviceStore.deviceSettingFeedback {
+                if let feedback = deviceStore.deviceSettingFeedback,
+                   preferences.showSuccessFeedbackBanners || !feedback.isSuccess {
                     DeviceSettingFeedbackBanner(feedback: feedback) {
                         deviceStore.clearDeviceSettingFeedback(ifMatching: feedback)
                     }
                 }
 
-                if let feedback = apkInstallationStore.feedback {
+                if let feedback = apkInstallationStore.feedback,
+                   preferences.showSuccessFeedbackBanners || !feedback.isSuccess {
                     APKInstallationFeedbackBanner(feedback: feedback) {
                         apkInstallationStore.clearFeedback(ifMatching: feedback)
                     }
                 }
 
-                if let feedback = emulatorStore.feedback {
+                if let feedback = emulatorStore.feedback,
+                   preferences.showSuccessFeedbackBanners || !feedback.isSuccess {
                     EmulatorFeedbackBanner(feedback: feedback) {
                         emulatorStore.clearFeedback(ifMatching: feedback)
                     }
@@ -65,6 +72,7 @@ struct ContentView: View {
         .animation(.default, value: deviceStore.deviceSettingFeedback)
         .animation(.default, value: apkInstallationStore.feedback)
         .animation(.default, value: emulatorStore.feedback)
+        .animation(.default, value: preferences.showSuccessFeedbackBanners)
         .onChange(of: deviceStore.devices) { _, devices in
             emulatorStore.updateRunningStatus(using: devices, sdk: deviceStore.resolvedSDK)
         }

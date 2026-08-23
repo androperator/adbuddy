@@ -43,6 +43,14 @@ private struct GeneralSettingsView: View {
             } footer: {
                 Text("When hidden, you can show ADBuddy in the menu bar again from this setting.")
             }
+
+            Section {
+                Toggle("Show success banners", isOn: $preferences.showSuccessFeedbackBanners)
+            } header: {
+                Text("Feedback")
+            } footer: {
+                Text("Shows temporary in-window confirmations for completed actions. Errors are always shown.")
+            }
         }
         .formStyle(.grouped)
         .scenePadding()
