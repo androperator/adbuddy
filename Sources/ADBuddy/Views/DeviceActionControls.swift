@@ -44,6 +44,9 @@ struct DeviceActionControls: View {
             .buttonStyle(.bordered)
             .accessibilityLabel("Open Logcat")
             .help("Open Logcat")
+
+            Divider()
+                .frame(height: 20)
         }
     }
 
