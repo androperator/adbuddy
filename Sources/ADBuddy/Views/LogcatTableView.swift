@@ -146,13 +146,13 @@ struct LogcatTableView: NSViewRepresentable {
             self.applicationIDForProcessID = applicationIDForProcessID
             let colorsChanged = self.priorityColors != priorityColors
             self.priorityColors = priorityColors
-            let columnVisibilityChanged = updateColumnVisibility(
+            updateColumnVisibility(
                 in: tableView,
                 showsProcessID: showsProcessID,
                 showsThreadID: showsThreadID,
                 showsApplicationID: showsApplicationID
             )
-            if entriesChanged || applicationIDsChanged || colorsChanged || columnVisibilityChanged {
+            if entriesChanged || applicationIDsChanged || colorsChanged {
                 tableView.reloadData()
             }
 
@@ -237,7 +237,7 @@ struct LogcatTableView: NSViewRepresentable {
             showsProcessID: Bool,
             showsThreadID: Bool,
             showsApplicationID: Bool
-        ) -> Bool {
+        ) {
             let processIDColumn = tableView.tableColumn(
                 withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.processID.identifier)
             )
@@ -247,13 +247,9 @@ struct LogcatTableView: NSViewRepresentable {
             let applicationIDColumn = tableView.tableColumn(
                 withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.applicationID.identifier)
             )
-            let processIDChanged = processIDColumn?.isHidden == showsProcessID
-            let threadIDChanged = threadIDColumn?.isHidden == showsThreadID
-            let applicationIDChanged = applicationIDColumn?.isHidden == showsApplicationID
             processIDColumn?.isHidden = !showsProcessID
             threadIDColumn?.isHidden = !showsThreadID
             applicationIDColumn?.isHidden = !showsApplicationID
-            return processIDChanged || threadIDChanged || applicationIDChanged
         }
 
         private func scrollToLatest(in tableView: NSTableView) {
