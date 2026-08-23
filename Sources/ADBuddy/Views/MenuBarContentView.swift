@@ -39,6 +39,7 @@ struct MenuBarContentView: View {
         SettingsLink {
             Text("Settings…")
         }
+        .keyboardShortcut(",", modifiers: .command)
 
         Button("Open ADBuddy") {
             AppLogger.menuBar.info("Open main window selected")
