@@ -373,13 +373,16 @@ public struct AVFoundationScreenRecordingFramer: ScreenRecordingFraming, @unchec
             parentLayer.addSublayer(backdropLayer)
         }
 
+        guard let videoMaskLayer = videoMaskLayer(
+            for: frameDescriptor,
+            canvasSize: configuration.renderSize,
+            displayRect: configuration.videoRect
+        ) else {
+            return nil
+        }
         let videoLayer = CALayer()
         videoLayer.frame = parentLayer.bounds
-        videoLayer.mask = displayMaskLayer(
-            canvasSize: configuration.renderSize,
-            displayRect: configuration.videoRect,
-            cornerRadius: frameDescriptor.geometry.screenCornerRadius
-        )
+        videoLayer.mask = videoMaskLayer
         parentLayer.addSublayer(videoLayer)
 
         if case .sdk(let layout, let scale) = frameDescriptor.style,
@@ -510,17 +513,28 @@ public struct AVFoundationScreenRecordingFramer: ScreenRecordingFraming, @unchec
         return overlayLayer
     }
 
-    private func displayMaskLayer(
+    private func videoMaskLayer(
+        for frameDescriptor: RecordingFrameDescriptor,
         canvasSize: CGSize,
-        displayRect: CGRect,
-        cornerRadius: CGFloat
-    ) -> CALayer {
+        displayRect: CGRect
+    ) -> CALayer? {
+        if case .sdk(let layout, let scale) = frameDescriptor.style,
+           let displayMaskImage = AndroidSDKSkinFrameRenderer.displayMaskImage(
+               using: layout,
+               scale: scale
+           ) {
+            let maskLayer = CALayer()
+            maskLayer.frame = CGRect(origin: .zero, size: canvasSize)
+            maskLayer.contents = displayMaskImage
+            return maskLayer
+        }
+
         let maskLayer = CAShapeLayer()
         maskLayer.frame = CGRect(origin: .zero, size: canvasSize)
         maskLayer.path = CGPath(
             roundedRect: displayRect,
-            cornerWidth: cornerRadius,
-            cornerHeight: cornerRadius,
+            cornerWidth: frameDescriptor.geometry.screenCornerRadius,
+            cornerHeight: frameDescriptor.geometry.screenCornerRadius,
             transform: nil
         )
         maskLayer.fillColor = CGColor(gray: 1, alpha: 1)

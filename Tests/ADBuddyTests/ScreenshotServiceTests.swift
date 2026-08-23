@@ -184,6 +184,39 @@ final class ScreenshotServiceTests: XCTestCase {
         XCTAssertGreaterThan(maskedFramePixel[1], 200)
     }
 
+    func testVideoDisplayMaskPreservesSkinEdgesWithoutCameraCutouts() throws {
+        let fixture = try ScreenshotFrameFixture.make(
+            includesDisplayMask: true,
+            includesInteriorMaskCutout: true
+        )
+        defer {
+            try? FileManager.default.removeItem(at: fixture.temporaryDirectory)
+        }
+
+        let maskURL = fixture.sdkRootURL
+            .appendingPathComponent("skins/pixel_test/mask.png")
+        let layout = AndroidSDKSkinFrameLayout(
+            skinIdentifier: "pixel_test",
+            canvasSize: CGSize(width: 4, height: 8),
+            displayRect: CGRect(x: 0, y: 0, width: 4, height: 8),
+            displayCornerRadius: 0,
+            backdropImageURLs: [],
+            displayMaskImageURLs: [PositionedSkinAsset(url: maskURL, origin: .zero)],
+            overlayImageURLs: [],
+            frameOverlayImageURLs: []
+        )
+
+        let displayMask = try XCTUnwrap(
+            AndroidSDKSkinFrameRenderer.displayMaskImage(using: layout, scale: 1)
+        )
+        let pixels = try XCTUnwrap(pixelImage(in: displayMask))
+
+        // The edge-connected mask component still excludes video.
+        XCTAssertEqual(pixels.pixel(atX: 2, y: 0)[3], 0)
+        // The isolated camera-cutout component is intentionally left drawable.
+        XCTAssertEqual(pixels.pixel(atX: 1, y: 4)[3], 255)
+    }
+
     func testSavesOriginalAlongsideFramedScreenshotWhenRequested() async throws {
         let fixture = try ScreenshotFrameFixture.make()
         defer {
@@ -467,6 +500,10 @@ final class ScreenshotServiceTests: XCTestCase {
             return nil
         }
 
+        return pixelImage(in: image)
+    }
+
+    private func pixelImage(in image: CGImage) -> PixelImage? {
         var pixels = [UInt8](repeating: 0, count: image.width * image.height * 4)
         let didDraw = pixels.withUnsafeMutableBytes { bytes in
             guard let context = CGContext(
@@ -572,7 +609,10 @@ private struct ScreenshotFrameFixture {
     let avdDirectoryURL: URL
     let screenshotData: Data
 
-    static func make(includesDisplayMask: Bool = false) throws -> ScreenshotFrameFixture {
+    static func make(
+        includesDisplayMask: Bool = false,
+        includesInteriorMaskCutout: Bool = false
+    ) throws -> ScreenshotFrameFixture {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ADBuddyScreenshotFrameTests-\(UUID().uuidString)", isDirectory: true)
         let sdkRootURL = temporaryDirectory.appendingPathComponent("sdk", isDirectory: true)
@@ -635,7 +675,9 @@ private struct ScreenshotFrameFixture {
             to: skinDirectoryURL.appendingPathComponent("back.png")
         )
         if includesDisplayMask {
-            try displayMaskPNGData().write(to: skinDirectoryURL.appendingPathComponent("mask.png"))
+            try displayMaskPNGData(includesInteriorCutout: includesInteriorMaskCutout).write(
+                to: skinDirectoryURL.appendingPathComponent("mask.png")
+            )
         }
 
         return ScreenshotFrameFixture(
@@ -696,7 +738,7 @@ private struct ScreenshotFrameFixture {
         return try encodedPNGData(from: image)
     }
 
-    private static func displayMaskPNGData() throws -> Data {
+    private static func displayMaskPNGData(includesInteriorCutout: Bool) throws -> Data {
         guard let context = CGContext(
             data: nil,
             width: 4,
@@ -711,6 +753,9 @@ private struct ScreenshotFrameFixture {
         context.clear(CGRect(x: 0, y: 0, width: 4, height: 8))
         context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 0.5))
         context.fill(CGRect(x: 2, y: 0, width: 1, height: 8))
+        if includesInteriorCutout {
+            context.fill(CGRect(x: 1, y: 4, width: 1, height: 1))
+        }
         guard let image = context.makeImage() else {
             throw ScreenshotFrameFixtureError.unableToCreateImage
         }

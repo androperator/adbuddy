@@ -618,6 +618,57 @@ enum AndroidSDKSkinFrameRenderer {
         return context.makeImage()
     }
 
+    static func displayMaskImage(
+        using layout: AndroidSDKSkinFrameLayout,
+        scale: CGFloat
+    ) -> CGImage? {
+        guard !layout.displayMaskImageURLs.isEmpty else {
+            return nil
+        }
+
+        let canvasWidth = Int((layout.canvasSize.width * scale).rounded())
+        let canvasHeight = Int((layout.canvasSize.height * scale).rounded())
+        guard let context = ImageCanvas.makeContext(width: canvasWidth, height: canvasHeight) else {
+            return nil
+        }
+
+        let displayMaskImages = layout.displayMaskImageURLs.compactMap(ImageCanvas.image)
+        guard displayMaskImages.count == layout.displayMaskImageURLs.count else {
+            return nil
+        }
+
+        let displayDrawingRect = ImageCanvas.topLeftRect(
+            layout.displayRect,
+            scale: scale,
+            canvasHeight: canvasHeight
+        )
+        context.saveGState()
+        for displayMaskImage in displayMaskImages {
+            guard let screenMask = ScreenMask.make(
+                from: displayMaskImage.image,
+                ignoresInteriorCutouts: true
+            ) else {
+                context.restoreGState()
+                return nil
+            }
+            let maskRect = ImageCanvas.topLeftRect(
+                CGRect(
+                    x: displayMaskImage.origin.x,
+                    y: displayMaskImage.origin.y,
+                    width: CGFloat(displayMaskImage.image.width),
+                    height: CGFloat(displayMaskImage.image.height)
+                ),
+                scale: scale,
+                canvasHeight: canvasHeight
+            )
+            context.clip(to: maskRect, mask: screenMask)
+        }
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
+        context.fill(displayDrawingRect)
+        context.restoreGState()
+        return context.makeImage()
+    }
+
     static func render(
         _ screenshot: CGImage,
         using layout: AndroidSDKSkinFrameLayout
@@ -685,7 +736,10 @@ enum AndroidSDKSkinFrameRenderer {
 }
 
 private enum ScreenMask {
-    static func make(from displayMask: CGImage) -> CGImage? {
+    static func make(
+        from displayMask: CGImage,
+        ignoresInteriorCutouts: Bool = false
+    ) -> CGImage? {
         let width = displayMask.width
         let height = displayMask.height
         guard width > 0,
@@ -717,6 +771,10 @@ private enum ScreenMask {
             screenPixels[pixelIndex] = alpha == 0 ? 0 : 255
         }
 
+        if ignoresInteriorCutouts {
+            clearInteriorMaskComponents(in: &screenPixels, width: width, height: height)
+        }
+
         guard let provider = CGDataProvider(data: Data(screenPixels) as CFData) else {
             return nil
         }
@@ -730,6 +788,68 @@ private enum ScreenMask {
             decode: nil,
             shouldInterpolate: false
         )
+    }
+
+    private static func clearInteriorMaskComponents(
+        in pixels: inout [UInt8],
+        width: Int,
+        height: Int
+    ) {
+        var visited = [Bool](repeating: false, count: pixels.count)
+
+        for startingIndex in pixels.indices where pixels[startingIndex] == 255 && !visited[startingIndex] {
+            var component = [Int]()
+            var queue = [startingIndex]
+            var queueIndex = 0
+            var touchesEdge = false
+            visited[startingIndex] = true
+
+            while queueIndex < queue.count {
+                let currentIndex = queue[queueIndex]
+                queueIndex += 1
+
+                let x = currentIndex % width
+                let y = currentIndex / width
+                if x == 0 || y == 0 || x == width - 1 || y == height - 1 {
+                    touchesEdge = true
+                    component.removeAll(keepingCapacity: true)
+                } else if !touchesEdge {
+                    component.append(currentIndex)
+                }
+
+                if x > 0 {
+                    appendToComponentIfNeeded(currentIndex - 1, pixels: pixels, visited: &visited, queue: &queue)
+                }
+                if x < width - 1 {
+                    appendToComponentIfNeeded(currentIndex + 1, pixels: pixels, visited: &visited, queue: &queue)
+                }
+                if y > 0 {
+                    appendToComponentIfNeeded(currentIndex - width, pixels: pixels, visited: &visited, queue: &queue)
+                }
+                if y < height - 1 {
+                    appendToComponentIfNeeded(currentIndex + width, pixels: pixels, visited: &visited, queue: &queue)
+                }
+            }
+
+            if !touchesEdge {
+                for componentIndex in component {
+                    pixels[componentIndex] = 0
+                }
+            }
+        }
+    }
+
+    private static func appendToComponentIfNeeded(
+        _ index: Int,
+        pixels: [UInt8],
+        visited: inout [Bool],
+        queue: inout [Int]
+    ) {
+        guard !visited[index], pixels[index] == 255 else {
+            return
+        }
+        visited[index] = true
+        queue.append(index)
     }
 }
 
