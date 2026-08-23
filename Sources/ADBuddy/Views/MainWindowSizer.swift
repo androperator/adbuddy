@@ -79,18 +79,33 @@ struct MainWindowSizer: NSViewRepresentable {
                     currentContentSize,
                     updatingHeight: pendingContentSize.height
                 )
+                let frameSize = window.frameRect(
+                    forContentRect: NSRect(origin: .zero, size: contentSize)
+                ).size
+                let minimumFrameWidth = DeviceListLayout.minimumWindowFrameWidth(
+                    for: window.minSize.width
+                )
 
                 // Keep the window vertically fitted to the visible rows while preserving width.
                 window.contentMinSize = CGSize(
                     width: DeviceListLayout.windowWidth,
                     height: 0
                 )
+                window.minSize = CGSize(width: minimumFrameWidth, height: 0)
+                window.setContentSize(contentSize)
                 window.contentMaxSize = CGSize(
                     width: .greatestFiniteMagnitude,
                     height: contentSize.height
                 )
-                window.contentMinSize = contentSize
-                window.setContentSize(contentSize)
+                window.maxSize = CGSize(
+                    width: .greatestFiniteMagnitude,
+                    height: frameSize.height
+                )
+                window.contentMinSize = CGSize(
+                    width: DeviceListLayout.windowWidth,
+                    height: contentSize.height
+                )
+                window.minSize = CGSize(width: minimumFrameWidth, height: frameSize.height)
                 self.appliedContentHeight = contentSize.height
             }
         }
