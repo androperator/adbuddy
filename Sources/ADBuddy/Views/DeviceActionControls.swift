@@ -13,8 +13,6 @@ struct DeviceActionControls: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            screenRecordingControl
-
             Button {
                 takeScreenshot()
             } label: {
@@ -32,6 +30,8 @@ struct DeviceActionControls: View {
             .buttonStyle(.bordered)
             .disabled(isCapturing)
             .help("Take Screenshot")
+
+            screenRecordingControl
 
             Divider()
                 .frame(height: 20)
