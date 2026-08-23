@@ -458,9 +458,10 @@ The toolbar contains:
 2. a minimum-level menu that shows the selected full level name;
 3. a local **Search Logcat** field, focused with `Command-F`;
 4. a toggle to show crashes and exceptions;
-5. **Pause** or **Resume**;
-6. **Clear**;
-7. **Jump to Latest**, shown or emphasized when follow mode is disabled.
+5. a **Wrap** toggle for long messages;
+6. **Pause** or **Resume**;
+7. **Clear**;
+8. **Jump to Latest**, shown or emphasized when follow mode is disabled.
 
 Controls need labels in accessibility and Help text even when their visible
 form is only a glyph or level letter. Filters should update the visible result
@@ -479,6 +480,7 @@ HH:MM:SS.SSS | level | tag | message
 - Application ID resolves from the current process list and is blank for processes that do not
   identify as Android applications.
 - Long messages remain on one line by default and can scroll horizontally.
+  **Wrap** displays the full message over as many word-wrapped lines as needed.
 - Double-clicking a visible column divider sizes that column to its widest
   current header or retained entry.
 - Rows support selection and standard macOS copy behavior with `Command-C`.

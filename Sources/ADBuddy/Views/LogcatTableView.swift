@@ -14,6 +14,7 @@ struct LogcatTableView: NSViewRepresentable {
     let showsProcessID: Bool
     let showsThreadID: Bool
     let showsApplicationID: Bool
+    let wrapsMessages: Bool
     let priorityColors: [LogcatPriority: LogcatColorComponents]
     let onUserScrollAwayFromLatest: () -> Void
 
@@ -36,7 +37,7 @@ struct LogcatTableView: NSViewRepresentable {
         tableView.headerView = headerView
 
         tableView.columnAutoresizingStyle = .noColumnAutoresizing
-        tableView.rowHeight = 18
+        tableView.rowHeight = LogcatWrappedMessageLayout.compactRowHeight
         tableView.intercellSpacing = .zero
         tableView.usesAlternatingRowBackgroundColors = false
         tableView.allowsMultipleSelection = true
@@ -71,7 +72,8 @@ struct LogcatTableView: NSViewRepresentable {
             priorityColors: priorityColors,
             showsProcessID: showsProcessID,
             showsThreadID: showsThreadID,
-            showsApplicationID: showsApplicationID
+            showsApplicationID: showsApplicationID,
+            wrapsMessages: wrapsMessages
         )
     }
 
@@ -97,13 +99,18 @@ struct LogcatTableView: NSViewRepresentable {
         private weak var tableView: CopyableLogcatTableView?
         private weak var scrollView: NSScrollView?
         private var boundsObserver: NSObjectProtocol?
+        private var columnResizeObserver: NSObjectProtocol?
         private var isPerformingProgrammaticScroll = false
+        private var isSuppressingScrollEventsForLayout = false
         private var wasFollowingLatest = false
         private var showsOnlyCrashesAndExceptions: Bool?
         private var colorScheme: ColorScheme?
         private var priorityColors = LogcatPriority.defaultColors
         private var previouslySelectedRows = IndexSet()
         private var selectionReloadScheduler = LogcatTableSelectionReloadScheduler()
+        private var wrapsMessages: Bool?
+        private var messageColumnWidth: CGFloat?
+        private var suppressesScrollEventOnNextReload = false
         private let textFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
 
         init(onUserScrollAwayFromLatest: @escaping () -> Void) {
@@ -113,6 +120,9 @@ struct LogcatTableView: NSViewRepresentable {
         deinit {
             if let boundsObserver {
                 NotificationCenter.default.removeObserver(boundsObserver)
+            }
+            if let columnResizeObserver {
+                NotificationCenter.default.removeObserver(columnResizeObserver)
             }
         }
 
@@ -142,6 +152,15 @@ struct LogcatTableView: NSViewRepresentable {
                     self?.handleScrollPositionChange()
                 }
             }
+            columnResizeObserver = NotificationCenter.default.addObserver(
+                forName: NSTableView.columnDidResizeNotification,
+                object: tableView,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.handleColumnResize()
+                }
+            }
         }
 
         func update(
@@ -156,7 +175,8 @@ struct LogcatTableView: NSViewRepresentable {
             priorityColors: [LogcatPriority: LogcatColorComponents],
             showsProcessID: Bool,
             showsThreadID: Bool,
-            showsApplicationID: Bool
+            showsApplicationID: Bool,
+            wrapsMessages: Bool
         ) {
             guard let tableView else {
                 return
@@ -166,7 +186,15 @@ struct LogcatTableView: NSViewRepresentable {
             let applicationIDsChanged = self.applicationIDRevision != applicationIDRevision
             let colorSchemeChanged = self.colorScheme != colorScheme
             let colorsChanged = self.priorityColors != priorityColors
-            let shouldReload = entriesChanged || applicationIDsChanged || colorSchemeChanged || colorsChanged
+            let wrappingChanged = self.wrapsMessages != wrapsMessages
+            if wrappingChanged {
+                suppressesScrollEventOnNextReload = true
+            }
+            let shouldReload = entriesChanged ||
+                applicationIDsChanged ||
+                colorSchemeChanged ||
+                colorsChanged ||
+                wrappingChanged
             let isExpandingCrashFilter = self.showsOnlyCrashesAndExceptions == true &&
                 !showsOnlyCrashesAndExceptions
             let shouldReloadImmediately = shouldReload && selectionReloadScheduler.shouldReloadImmediately(
@@ -187,6 +215,8 @@ struct LogcatTableView: NSViewRepresentable {
             self.showsOnlyCrashesAndExceptions = showsOnlyCrashesAndExceptions
             self.colorScheme = colorScheme
             self.priorityColors = priorityColors
+            self.wrapsMessages = wrapsMessages
+            messageColumnWidth = messageColumnWidth(in: tableView)
             updateColumnVisibility(
                 in: tableView,
                 showsProcessID: showsProcessID,
@@ -208,7 +238,7 @@ struct LogcatTableView: NSViewRepresentable {
             if followsLatest &&
                 !didScrollToSelectionAnchor &&
                 !tableView.isTrackingRowSelection &&
-                (entriesChanged || !wasFollowingLatest) {
+                (entriesChanged || !wasFollowingLatest || wrappingChanged) {
                 scrollToLatest(in: tableView)
             }
             wasFollowingLatest = followsLatest
@@ -246,6 +276,11 @@ struct LogcatTableView: NSViewRepresentable {
             in tableView: NSTableView,
             preserving selections: [LogcatTableSelection]
         ) {
+            let suppressesScrollEvent = suppressesScrollEventOnNextReload
+            suppressesScrollEventOnNextReload = false
+            if suppressesScrollEvent {
+                suppressScrollEventsDuringLayout()
+            }
             tableView.reloadData()
             restoreSelection(selections, in: tableView)
         }
@@ -284,6 +319,22 @@ struct LogcatTableView: NSViewRepresentable {
             entryCount
         }
 
+        func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
+            guard wrapsMessages == true,
+                  let entry = entryAt(row),
+                  let messageColumn = tableView.tableColumn(
+                    withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.message.identifier)
+                  ) else {
+                return LogcatWrappedMessageLayout.compactRowHeight
+            }
+
+            return LogcatWrappedMessageLayout.rowHeight(
+                for: entry.message,
+                availableWidth: messageColumn.width - 8,
+                font: textFont
+            )
+        }
+
         func tableView(
             _ tableView: NSTableView,
             viewFor tableColumn: NSTableColumn?,
@@ -311,6 +362,11 @@ struct LogcatTableView: NSViewRepresentable {
             let definition = LogcatTableColumn.allCases.first { $0.identifier == identifier.rawValue }
             textField.setAccessibilityLabel(definition?.accessibilityLabel ?? "Logcat entry")
             textField.textColor = tableView.isRowSelected(row) ? .selectedTextColor : .labelColor
+            if identifier.rawValue == LogcatTableColumn.message.identifier {
+                textField.lineBreakMode = wrapsMessages == true ? .byWordWrapping : .byClipping
+                textField.maximumNumberOfLines = wrapsMessages == true ? 0 : 1
+                textField.usesSingleLineMode = wrapsMessages != true
+            }
 
             switch identifier.rawValue {
             case "time":
@@ -423,6 +479,40 @@ struct LogcatTableView: NSViewRepresentable {
             applicationIDColumn?.isHidden = !showsApplicationID
         }
 
+        private func handleColumnResize() {
+            guard wrapsMessages == true,
+                  let tableView,
+                  let currentMessageColumnWidth = messageColumnWidth(in: tableView),
+                  currentMessageColumnWidth != messageColumnWidth else {
+                return
+            }
+
+            messageColumnWidth = currentMessageColumnWidth
+            guard entryCount > 0 else {
+                return
+            }
+
+            suppressScrollEventsDuringLayout()
+            tableView.noteHeightOfRows(
+                withIndexesChanged: IndexSet(integersIn: 0..<entryCount)
+            )
+        }
+
+        private func messageColumnWidth(in tableView: NSTableView) -> CGFloat? {
+            tableView.tableColumn(
+                withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.message.identifier)
+            )?.width
+        }
+
+        private func suppressScrollEventsDuringLayout() {
+            isPerformingProgrammaticScroll = true
+            isSuppressingScrollEventsForLayout = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(250)) { [weak self] in
+                self?.isSuppressingScrollEventsForLayout = false
+                self?.isPerformingProgrammaticScroll = false
+            }
+        }
+
         private func scrollToLatest(in tableView: NSTableView) {
             guard entryCount > 0 else {
                 return
@@ -459,6 +549,9 @@ struct LogcatTableView: NSViewRepresentable {
             contentView.scroll(to: NSPoint(x: contentView.bounds.origin.x, y: originY))
             scrollView.reflectScrolledClipView(contentView)
             DispatchQueue.main.async { [weak self] in
+                guard self?.isSuppressingScrollEventsForLayout != true else {
+                    return
+                }
                 self?.isPerformingProgrammaticScroll = false
             }
             return true

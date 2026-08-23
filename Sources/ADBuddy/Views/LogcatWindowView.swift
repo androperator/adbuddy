@@ -9,6 +9,7 @@ struct LogcatWindowView: View {
     @State private var showsProcessID = false
     @State private var showsThreadID = false
     @State private var showsApplicationID = false
+    @State private var wrapsMessages = false
     @State private var isSearchPresented = false
 
     init(windowID: LogcatWindowID) {
@@ -53,6 +54,7 @@ struct LogcatWindowView: View {
                 showsProcessID: showsProcessID,
                 showsThreadID: showsThreadID,
                 showsApplicationID: showsApplicationID,
+                wrapsMessages: wrapsMessages,
                 priorityColors: preferences.logcatColors,
                 onUserScrollAwayFromLatest: logcatStore.userScrolledAwayFromLatest
             )
@@ -119,6 +121,12 @@ struct LogcatWindowView: View {
                 }
                 .accessibilityLabel("Logcat Columns")
                 .help("Show Logcat Columns")
+
+                Toggle("Wrap", isOn: $wrapsMessages)
+                    .toggleStyle(.button)
+                    .accessibilityLabel("Wrap Logcat Messages")
+                    .accessibilityValue(wrapsMessages ? "On" : "Off")
+                    .help("Wrap long log messages")
 
                 Button {
                     logcatStore.togglePause()
