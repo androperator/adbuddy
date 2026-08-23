@@ -142,6 +142,9 @@ private struct ConnectedDeviceRow: View {
     let revealEmulatorHostWindow: () -> Void
     let openLogcat: (AndroidDevice) -> Void
 
+    private let deviceIdentifierClipboard = DeviceIdentifierClipboardService()
+    private let virtualDeviceFinderRevealer = AndroidVirtualDeviceFinderRevealService()
+
     var body: some View {
         HStack(spacing: 12) {
             HStack(spacing: 12) {
@@ -199,6 +202,17 @@ private struct ConnectedDeviceRow: View {
         .padding(.vertical, 2)
         .apkDropTarget(isEnabled: device.isUsable) { fileURL in
             apkInstallationStore.presentInstaller(for: fileURL, preferredDevice: device)
+        }
+        .contextMenu {
+            Button("Copy Device ID") {
+                deviceIdentifierClipboard.copyDeviceIdentifier(device.serial)
+            }
+
+            if let virtualDevice {
+                Button("Reveal in Finder") {
+                    virtualDeviceFinderRevealer.revealVirtualDevice(named: virtualDevice.name)
+                }
+            }
         }
     }
 
