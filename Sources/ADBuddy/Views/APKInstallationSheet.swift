@@ -86,13 +86,12 @@ struct APKInstallationSheet: View {
                 }
             }
 
-            Toggle("Open after install", isOn: $openAfterInstall)
-                .disabled(isInstalling)
+            Divider()
+                .padding(.vertical, 2)
 
-            Text("Opening uses the APK's launcher activity when the Android SDK build tools are available.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Toggle("Open after install", isOn: $openAfterInstall)
+                .help("Launches the installed app after a successful install when available.")
+                .disabled(isInstalling)
 
             if !deviceStates.isEmpty {
                 Divider()
