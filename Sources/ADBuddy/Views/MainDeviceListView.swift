@@ -13,20 +13,27 @@ struct MainDeviceListView: View {
             Section {
                 if connectedDevices.isEmpty {
                     EmptyDeviceSectionRow(
-                        title: "No physical devices connected",
+                        title: "No Android devices connected",
                         systemImage: "cable.connector.slash"
                     )
                 } else {
                     ForEach(connectedDevices) { device in
                         ConnectedDeviceRow(
                             device: device,
+                            virtualDevice: runningVirtualDevice(for: device),
                             deviceStore: deviceStore,
+                            stopEmulator: {
+                                guard let virtualDevice = runningVirtualDevice(for: device) else {
+                                    return
+                                }
+                                emulatorStore.stop(virtualDevice)
+                            },
                             openLogcat: openLogcat
                         )
                     }
                 }
             } header: {
-                Text("Connected Devices")
+                Text("Connected Android Devices")
                     .textCase(nil)
             }
 
@@ -53,13 +60,15 @@ struct MainDeviceListView: View {
             }
             .padding(.vertical, 6)
         case .ready:
-            if virtualDevices.isEmpty {
+            if availableVirtualDevices.isEmpty {
                 EmptyDeviceSectionRow(
-                    title: "No Android Virtual Devices",
+                    title: virtualDevices.isEmpty
+                        ? "No Android Virtual Devices"
+                        : "All installed emulators are connected",
                     systemImage: "laptopcomputer.slash"
                 )
             } else {
-                ForEach(virtualDevices) { virtualDevice in
+                ForEach(availableVirtualDevices) { virtualDevice in
                     VirtualDeviceRow(
                         virtualDevice: virtualDevice,
                         deviceStore: deviceStore,
@@ -87,14 +96,34 @@ struct MainDeviceListView: View {
     private var listHeight: CGFloat {
         DeviceListLayout.sectionedListHeight(
             connectedDeviceCount: connectedDevices.count,
-            virtualDeviceCount: virtualDevices.count
+            virtualDeviceCount: availableVirtualDevices.count
         )
+    }
+
+    private var availableVirtualDevices: [AndroidVirtualDevice] {
+        virtualDevices.filter {
+            if case .running = $0.status {
+                return false
+            }
+            return true
+        }
+    }
+
+    private func runningVirtualDevice(for device: AndroidDevice) -> AndroidVirtualDevice? {
+        virtualDevices.first {
+            guard case .running(let runningDevice) = $0.status else {
+                return false
+            }
+            return runningDevice.serial == device.serial
+        }
     }
 }
 
 private struct ConnectedDeviceRow: View {
     let device: AndroidDevice
+    let virtualDevice: AndroidVirtualDevice?
     let deviceStore: DeviceStore
+    let stopEmulator: () -> Void
     let openLogcat: (AndroidDevice) -> Void
 
     var body: some View {
@@ -104,13 +133,23 @@ private struct ConnectedDeviceRow: View {
                 .frame(width: 18)
 
             DeviceIdentityView(
-                name: device.displayName,
+                name: virtualDevice?.name ?? device.displayName,
                 detail: device.serial
             )
 
             Spacer()
 
             if device.isUsable {
+                if virtualDevice != nil {
+                    Button(action: stopEmulator) {
+                        Label("Stop Emulator", systemImage: "stop.fill")
+                            .labelStyle(.iconOnly)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.red)
+                    .help("Stop Emulator")
+                }
+
                 DeviceActionControls(
                     isCapturing: deviceStore.isCapturingScreenshot(for: device),
                     isPreparingScreenRecording: deviceStore.isPreparingScreenRecording(for: device),

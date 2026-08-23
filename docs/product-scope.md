@@ -68,10 +68,13 @@ The first implementation is a complete vertical slice, not a visual mockup.
 
 ### Phase 3 - Emulator management
 
-- Separate usable physical devices from installed Android Virtual Devices
-  (AVDs) in the compact main-window list.
+- Show all connected Android devices, physical and emulator, together in the
+  compact main-window list. A connected emulator is shown once, with its AVD
+  name, ADB serial, stop control, and device actions.
 - Show every installed AVD and whether it is stopped, starting, running, or
-  stopping. A running AVD maps to its ADB serial before device actions appear.
+  stopping. To avoid duplicate rows, a running AVD is represented by its
+  connected Android device row; the installed-emulators section keeps stopped
+  and transitional AVDs.
 - Let users start a stopped AVD with Quick Boot, use Cold Boot from its action
   menu, or stop a running AVD.
 - Require an explicit confirmation before **Wipe Data and Start**, because it

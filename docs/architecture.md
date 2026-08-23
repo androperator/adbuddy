@@ -17,8 +17,8 @@ The app has separate, explicit scene roots:
 
 ```text
 WindowGroup(id: "main")
-  Compact Connected Devices and Android Emulators sections, or an explanatory
-  unavailable state
+  Compact Connected Android Devices and available Android Emulators sections,
+  or an explanatory unavailable state
 
 MenuBarExtra
   Fast per-device screenshot and recording commands, installed-emulator launch,
@@ -117,10 +117,11 @@ one short-lived operation and `DeviceStore` presents the result.
 
 `EmulatorStore` loads installed AVD names on demand, maps usable ADB emulator
 serials back to their AVD names, and owns lifecycle state plus concise user
-feedback. The main window renders physical devices only in **Connected
-Devices**, and renders every installed AVD under **Android Emulators**. A
-running AVD then exposes the same capture and Logcat actions as a connected
-device.
+feedback. The main window renders every physical device and usable ADB emulator
+under **Connected Android Devices**. A running AVD maps to that device row,
+where it exposes its AVD name, stop control, capture, and Logcat actions. The
+**Android Emulators** section keeps only stopped and transitional installed
+AVDs, avoiding a second row for an already-connected emulator.
 
 `AndroidEmulatorService` asks the SDK's `emulator` executable for
 `-list-avds`, then starts a selected AVD through a short-lived foreground

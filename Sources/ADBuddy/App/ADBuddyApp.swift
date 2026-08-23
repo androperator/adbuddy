@@ -20,11 +20,17 @@ struct ADBuddyApp: App {
     }
 
     var body: some Scene {
-        let connectedDeviceCount = deviceStore.devices.filter { $0.kind == .physical }.count
+        let connectedDeviceCount = deviceStore.devices.count
+        let availableVirtualDeviceCount = emulatorStore.virtualDevices.filter {
+            if case .running = $0.status {
+                return false
+            }
+            return true
+        }.count
         let initialWindowContentSize = DeviceListLayout.initialWindowContentSize(
             for: deviceStore.status,
             connectedDeviceCount: connectedDeviceCount,
-            virtualDeviceCount: emulatorStore.virtualDevices.count,
+            virtualDeviceCount: availableVirtualDeviceCount,
             isEmulatorListReady: emulatorStore.status != .loading
         )
 

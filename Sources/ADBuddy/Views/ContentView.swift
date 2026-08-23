@@ -185,7 +185,7 @@ struct ContentView: View {
             .frame(minWidth: 440, minHeight: 220)
         case .noDevices, .devicesAvailable:
             MainDeviceListView(
-                connectedDevices: deviceStore.devices.filter { $0.kind == .physical },
+                connectedDevices: deviceStore.devices,
                 virtualDevices: emulatorStore.virtualDevices,
                 emulatorStatus: emulatorStore.status,
                 deviceStore: deviceStore,
