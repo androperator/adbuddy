@@ -480,6 +480,7 @@ HH:MM:SS.SSS | level | tag | message
   identify as Android applications.
 - Long messages remain on one line by default and can scroll horizontally.
 - Rows support selection and standard macOS copy behavior with `Command-C`.
+  Live updates preserve selected entries while they remain visible.
 
 The log table must be virtualized and accept batched updates. The implementation
 may use a narrow `NSTableView` bridge if a pure SwiftUI list cannot maintain

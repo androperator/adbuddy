@@ -138,13 +138,21 @@ struct LogcatTableView: NSViewRepresentable {
             }
 
             let entriesChanged = self.entryRevision != entryRevision
+            let applicationIDsChanged = self.applicationIDRevision != applicationIDRevision
+            let colorsChanged = self.priorityColors != priorityColors
+            let shouldReload = entriesChanged || applicationIDsChanged || colorsChanged
+            let selectedEntries = shouldReload
+                ? LogcatTableSelectionRestorer.selections(
+                    at: tableView.selectedRowIndexes,
+                    entryAt: self.entryAt
+                )
+                : []
+
             self.entryCount = entryCount
             self.entryRevision = entryRevision
             self.entryAt = entryAt
-            let applicationIDsChanged = self.applicationIDRevision != applicationIDRevision
             self.applicationIDRevision = applicationIDRevision
             self.applicationIDForProcessID = applicationIDForProcessID
-            let colorsChanged = self.priorityColors != priorityColors
             self.priorityColors = priorityColors
             updateColumnVisibility(
                 in: tableView,
@@ -152,14 +160,31 @@ struct LogcatTableView: NSViewRepresentable {
                 showsThreadID: showsThreadID,
                 showsApplicationID: showsApplicationID
             )
-            if entriesChanged || applicationIDsChanged || colorsChanged {
+            if shouldReload {
                 tableView.reloadData()
+                restoreSelection(selectedEntries, in: tableView)
             }
 
             if followsLatest && (entriesChanged || !wasFollowingLatest) {
                 scrollToLatest(in: tableView)
             }
             wasFollowingLatest = followsLatest
+        }
+
+        private func restoreSelection(
+            _ selections: [LogcatTableSelection],
+            in tableView: NSTableView
+        ) {
+            guard !selections.isEmpty else {
+                return
+            }
+
+            let restoredRows = LogcatTableSelectionRestorer.rows(
+                for: selections,
+                entryCount: entryCount,
+                entryAt: entryAt
+            )
+            tableView.selectRowIndexes(restoredRows, byExtendingSelection: false)
         }
 
         func numberOfRows(in tableView: NSTableView) -> Int {
