@@ -6,15 +6,10 @@ struct DeviceActionControls: View {
     let isScreenRecording: Bool
     let isStoppingScreenRecording: Bool
     let canStartScreenRecording: Bool
-    let isPerformingAppAction: Bool
-    let isPerformingDeviceSetting: Bool
     let takeScreenshot: () -> Void
     let showScreenRecordingOptions: () -> Void
     let stopScreenRecording: () -> Void
     let openLogcat: () -> Void
-    let performAppAction: (AndroidAppAction) -> Void
-    let requestUninstallForegroundApp: () -> Void
-    let performDeviceSetting: (AndroidDeviceSettingAction) -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -34,7 +29,7 @@ struct DeviceActionControls: View {
                 }
             }
             .frame(width: DeviceListLayout.actionControlWidth)
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
             .disabled(isCapturing)
             .help("Take Screenshot")
 
@@ -49,63 +44,7 @@ struct DeviceActionControls: View {
             .buttonStyle(.bordered)
             .accessibilityLabel("Open Logcat")
             .help("Open Logcat")
-
-            foregroundAppActionsMenu
-            deviceSettingsMenu
         }
-    }
-
-    private var foregroundAppActionsMenu: some View {
-        Menu {
-            Button("Start Foreground App") {
-                performAppAction(.start)
-            }
-            Button("Kill Foreground App") {
-                performAppAction(.forceStop)
-            }
-            Button("Restart Foreground App") {
-                performAppAction(.restart)
-            }
-
-            Divider()
-
-            Button("Clear Foreground App Data") {
-                performAppAction(.clearData)
-            }
-            Button("Clear App Data and Restart") {
-                performAppAction(.clearDataAndRestart)
-            }
-
-            Divider()
-
-            Button("Uninstall Foreground App…", role: .destructive) {
-                requestUninstallForegroundApp()
-            }
-        } label: {
-            Label("Foreground App Actions", systemImage: "app.badge")
-                .labelStyle(.iconOnly)
-                .frame(width: DeviceListLayout.actionMenuLabelWidth)
-        }
-        .frame(width: DeviceListLayout.actionControlWidth)
-        .menuStyle(.borderedButton)
-        .disabled(isPerformingAppAction)
-        .accessibilityLabel("Foreground App Actions")
-        .help("Foreground App Actions")
-    }
-
-    private var deviceSettingsMenu: some View {
-        Menu {
-            DeviceSettingsMenuContent(perform: performDeviceSetting)
-        } label: {
-            Label("Device Settings", systemImage: "slider.horizontal.3")
-                .labelStyle(.iconOnly)
-                .frame(width: DeviceListLayout.actionMenuLabelWidth)
-        }
-        .frame(width: DeviceListLayout.actionControlWidth)
-        .menuStyle(.borderedButton)
-        .disabled(isPerformingDeviceSetting)
-        .accessibilityLabel("Device Settings")
-        .help("Device Settings")
     }
 
     @ViewBuilder
@@ -123,6 +62,7 @@ struct DeviceActionControls: View {
             }
             .frame(width: DeviceListLayout.actionControlWidth)
             .buttonStyle(.bordered)
+            .tint(.red)
             .help("Stop Recording")
         } else if isStoppingScreenRecording {
             ProgressView()
@@ -136,7 +76,7 @@ struct DeviceActionControls: View {
                     .frame(width: DeviceListLayout.actionButtonLabelWidth)
             }
             .frame(width: DeviceListLayout.actionControlWidth)
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.bordered)
             .disabled(!canStartScreenRecording)
             .help("Record Screen")
         }

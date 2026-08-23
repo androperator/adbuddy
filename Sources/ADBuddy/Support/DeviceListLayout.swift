@@ -2,9 +2,9 @@ import CoreGraphics
 
 enum DeviceListLayout {
     static let windowWidth: CGFloat = 900
-    static let actionControlWidth: CGFloat = 72
-    static let actionButtonLabelWidth: CGFloat = 40
-    static let actionMenuLabelWidth: CGFloat = 28
+    static let actionControlWidth: CGFloat = 44
+    static let actionButtonLabelWidth: CGFloat = 28
+    static let actionMenuLabelWidth: CGFloat = 24
     static let rowHeight: CGFloat = 58
     static let verticalInsets: CGFloat = 16
     static let maximumVisibleDeviceCount = 4

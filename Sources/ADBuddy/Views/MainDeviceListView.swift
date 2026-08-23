@@ -80,17 +80,12 @@ struct MainDeviceListView: View {
                 ForEach(availableVirtualDevices) { virtualDevice in
                     VirtualDeviceRow(
                         virtualDevice: virtualDevice,
-                        deviceStore: deviceStore,
                         start: { mode in
                             emulatorStore.start(virtualDevice, mode: mode)
                         },
-                        stop: {
-                            emulatorStore.stop(virtualDevice)
-                        },
                         requestWipeDataAndStart: {
                             emulatorStore.requestWipeDataAndStart(virtualDevice)
-                        },
-                        openLogcat: openLogcat
+                        }
                     )
                 }
             }
@@ -159,36 +154,42 @@ private struct ConnectedDeviceRow: View {
             Spacer()
 
             if device.isUsable {
-                if virtualDevice != nil {
-                    Button(action: stopEmulator) {
-                        Label("Stop Emulator", systemImage: "stop.fill")
-                            .labelStyle(.iconOnly)
-                            .frame(width: DeviceListLayout.actionButtonLabelWidth)
-                    }
-                    .frame(width: DeviceListLayout.actionControlWidth)
-                    .buttonStyle(.bordered)
-                    .tint(.red)
-                    .help("Stop Emulator")
-                }
+                HStack(spacing: 8) {
+                    DeviceActionControls(
+                        isCapturing: deviceStore.isCapturingScreenshot(for: device),
+                        isPreparingScreenRecording: deviceStore.isPreparingScreenRecording(for: device),
+                        isScreenRecording: deviceStore.canStopScreenRecording(for: device),
+                        isStoppingScreenRecording: deviceStore.isStoppingScreenRecording(for: device),
+                        canStartScreenRecording: deviceStore.canStartScreenRecording(for: device),
+                        takeScreenshot: { deviceStore.takeScreenshot(of: device) },
+                        showScreenRecordingOptions: { deviceStore.presentScreenRecordingOptions(for: device) },
+                        stopScreenRecording: { deviceStore.stopScreenRecording(for: device) },
+                        openLogcat: { openLogcat(device) }
+                    )
 
-                DeviceActionControls(
-                    isCapturing: deviceStore.isCapturingScreenshot(for: device),
-                    isPreparingScreenRecording: deviceStore.isPreparingScreenRecording(for: device),
-                    isScreenRecording: deviceStore.canStopScreenRecording(for: device),
-                    isStoppingScreenRecording: deviceStore.isStoppingScreenRecording(for: device),
-                    canStartScreenRecording: deviceStore.canStartScreenRecording(for: device),
-                    isPerformingAppAction: deviceStore.isPerformingAppAction(for: device),
-                    isPerformingDeviceSetting: deviceStore.isPerformingDeviceSetting(for: device),
-                    takeScreenshot: { deviceStore.takeScreenshot(of: device) },
-                    showScreenRecordingOptions: { deviceStore.presentScreenRecordingOptions(for: device) },
-                    stopScreenRecording: { deviceStore.stopScreenRecording(for: device) },
-                    openLogcat: { openLogcat(device) },
-                    performAppAction: { deviceStore.performAppAction($0, for: device) },
-                    requestUninstallForegroundApp: {
-                        deviceStore.requestUninstallForegroundApp(for: device)
-                    },
-                    performDeviceSetting: { deviceStore.performDeviceSetting($0, for: device) }
-                )
+                    if virtualDevice != nil {
+                        Button(action: stopEmulator) {
+                            Label("Stop Emulator", systemImage: "stop.fill")
+                                .labelStyle(.iconOnly)
+                                .frame(width: DeviceListLayout.actionButtonLabelWidth)
+                        }
+                        .frame(width: DeviceListLayout.actionControlWidth)
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                        .help("Stop Emulator")
+                    }
+
+                    DeviceOverflowMenu(
+                        isPerformingAppAction: deviceStore.isPerformingAppAction(for: device),
+                        isPerformingDeviceSetting: deviceStore.isPerformingDeviceSetting(for: device),
+                        openEmulatorWindow: openEmulatorWindow,
+                        performAppAction: { deviceStore.performAppAction($0, for: device) },
+                        requestUninstallForegroundApp: {
+                            deviceStore.requestUninstallForegroundApp(for: device)
+                        },
+                        performDeviceSetting: { deviceStore.performDeviceSetting($0, for: device) }
+                    )
+                }
             } else {
                 Text(device.connectionState.displayName)
                     .font(.caption)
@@ -208,29 +209,25 @@ private struct ConnectedDeviceRow: View {
                 Text("·")
                     .foregroundStyle(.secondary)
 
-                switch emulatorWindowPresentation {
-                case .standalone:
-                    Button("Show", action: showEmulatorWindow)
-                        .buttonStyle(.link)
-                        .accessibilityLabel("Show Emulator Window")
-                        .help("Show Emulator Window")
-                case .embeddedInAndroidStudio, .headless, .unknown:
-                    Text(emulatorWindowPresentation.detail)
-                        .foregroundStyle(.secondary)
-                }
+                Text(emulatorWindowPresentation.detail)
+                    .foregroundStyle(.secondary)
             }
         }
         .font(.caption)
+    }
+
+    private var openEmulatorWindow: (() -> Void)? {
+        guard case .standalone = emulatorWindowPresentation else {
+            return nil
+        }
+        return showEmulatorWindow
     }
 }
 
 private struct VirtualDeviceRow: View {
     let virtualDevice: AndroidVirtualDevice
-    let deviceStore: DeviceStore
     let start: (AndroidEmulatorStartMode) -> Void
-    let stop: () -> Void
     let requestWipeDataAndStart: () -> Void
-    let openLogcat: (AndroidDevice) -> Void
 
     var body: some View {
         HStack(spacing: 12) {
@@ -279,51 +276,29 @@ private struct VirtualDeviceRow: View {
     private var lifecycleControls: some View {
         switch virtualDevice.status {
         case .stopped:
-            Button {
-                start(.quickBoot)
-            } label: {
-                Label("Start Emulator", systemImage: "play.fill")
-                    .labelStyle(.iconOnly)
-                    .frame(width: DeviceListLayout.actionButtonLabelWidth)
-            }
-            .frame(width: DeviceListLayout.actionControlWidth)
-            .buttonStyle(.borderedProminent)
-            .help("Start Emulator (Quick Boot)")
+            HStack(spacing: 8) {
+                Button {
+                    start(.quickBoot)
+                } label: {
+                    Label("Start Emulator", systemImage: "play.fill")
+                        .labelStyle(.iconOnly)
+                        .frame(width: DeviceListLayout.actionButtonLabelWidth)
+                }
+                .frame(width: DeviceListLayout.actionControlWidth)
+                .buttonStyle(.borderedProminent)
+                .help("Start Emulator (Quick Boot)")
 
-            actionsMenu
+                EmulatorOverflowMenu(
+                    coldBoot: { start(.coldBoot) },
+                    requestWipeDataAndStart: requestWipeDataAndStart
+                )
+            }
         case .starting:
             ProgressView()
                 .controlSize(.small)
                 .help("Starting Emulator")
-        case .running(let device):
-            Button(action: stop) {
-                Label("Stop Emulator", systemImage: "stop.fill")
-                    .labelStyle(.iconOnly)
-                    .frame(width: DeviceListLayout.actionButtonLabelWidth)
-            }
-            .frame(width: DeviceListLayout.actionControlWidth)
-            .buttonStyle(.bordered)
-            .tint(.red)
-            .help("Stop Emulator")
-
-            DeviceActionControls(
-                isCapturing: deviceStore.isCapturingScreenshot(for: device),
-                isPreparingScreenRecording: deviceStore.isPreparingScreenRecording(for: device),
-                isScreenRecording: deviceStore.canStopScreenRecording(for: device),
-                isStoppingScreenRecording: deviceStore.isStoppingScreenRecording(for: device),
-                canStartScreenRecording: deviceStore.canStartScreenRecording(for: device),
-                isPerformingAppAction: deviceStore.isPerformingAppAction(for: device),
-                isPerformingDeviceSetting: deviceStore.isPerformingDeviceSetting(for: device),
-                takeScreenshot: { deviceStore.takeScreenshot(of: device) },
-                showScreenRecordingOptions: { deviceStore.presentScreenRecordingOptions(for: device) },
-                stopScreenRecording: { deviceStore.stopScreenRecording(for: device) },
-                openLogcat: { openLogcat(device) },
-                performAppAction: { deviceStore.performAppAction($0, for: device) },
-                requestUninstallForegroundApp: {
-                    deviceStore.requestUninstallForegroundApp(for: device)
-                },
-                performDeviceSetting: { deviceStore.performDeviceSetting($0, for: device) }
-            )
+        case .running:
+            EmptyView()
         case .stopping:
             ProgressView()
                 .controlSize(.small)
@@ -331,29 +306,6 @@ private struct VirtualDeviceRow: View {
         }
     }
 
-    private var actionsMenu: some View {
-        Menu {
-            Button("Start (Quick Boot)") {
-                start(.quickBoot)
-            }
-            Button("Cold Boot") {
-                start(.coldBoot)
-            }
-
-            Divider()
-
-            Button("Wipe Data and Start…", role: .destructive) {
-                requestWipeDataAndStart()
-            }
-        } label: {
-            Label("Emulator Actions", systemImage: "ellipsis.circle")
-                .labelStyle(.iconOnly)
-                .frame(width: DeviceListLayout.actionMenuLabelWidth)
-        }
-        .frame(width: DeviceListLayout.actionControlWidth)
-        .menuStyle(.borderedButton)
-        .help("Emulator Actions")
-    }
 }
 
 private struct EmptyDeviceSectionRow: View {
