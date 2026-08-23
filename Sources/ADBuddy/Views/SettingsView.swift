@@ -114,7 +114,7 @@ private struct ScreenshotSettingsView: View {
             } header: {
                 Text("Device Details")
             } footer: {
-                Text("Adds the Android version and API level to the top-left of saved screenshots.")
+                Text("Adds “Android 16 / API 36” to the top-left of saved screenshots.")
             }
         }
         .formStyle(.grouped)

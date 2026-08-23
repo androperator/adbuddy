@@ -232,6 +232,75 @@ final class ScreenshotServiceTests: XCTestCase {
         ])
     }
 
+    func testOverlaysDeviceDetailsOverTheFrame() async throws {
+        let fixture = try ScreenshotFrameFixture.make()
+        let screenshotData = try ScreenshotFrameFixture.pngData(
+            width: 400,
+            height: 800,
+            red: 0,
+            green: 0,
+            blue: 1
+        )
+        defer {
+            try? FileManager.default.removeItem(at: fixture.temporaryDirectory)
+        }
+
+        let unannotatedFileManager = RecordingScreenshotFileManager()
+        let unannotatedResult = await ScreenshotService(
+            adbPath: "/SDK/platform-tools/adb",
+            sdkRootPath: fixture.sdkRootURL.path,
+            processRunner: ScriptedScreenshotProcessRunner(results: [
+                successfulProcessResult(standardOutput: screenshotData),
+                successfulProcessResult(standardOutput: "\(fixture.avdDirectoryURL.path)\nOK\n"),
+            ]),
+            fileManager: unannotatedFileManager
+        ).capture(
+            device: emulatorDevice,
+            destination: URL(fileURLWithPath: "/tmp/screenshots", isDirectory: true),
+            framing: ScreenshotFramingOptions(addsFrame: true, alsoSavesOriginal: false)
+        )
+
+        let annotatedFileManager = RecordingScreenshotFileManager()
+        let annotatedResult = await ScreenshotService(
+            adbPath: "/SDK/platform-tools/adb",
+            sdkRootPath: fixture.sdkRootURL.path,
+            processRunner: ScriptedScreenshotProcessRunner(results: [
+                successfulProcessResult(standardOutput: screenshotData),
+                successfulProcessResult(standardOutput: "16\n"),
+                successfulProcessResult(standardOutput: "36\n"),
+                successfulProcessResult(standardOutput: "\(fixture.avdDirectoryURL.path)\nOK\n"),
+            ]),
+            fileManager: annotatedFileManager
+        ).capture(
+            device: emulatorDevice,
+            destination: URL(fileURLWithPath: "/tmp/screenshots", isDirectory: true),
+            framing: ScreenshotFramingOptions(
+                addsFrame: true,
+                alsoSavesOriginal: false,
+                overlaysDeviceDetails: true
+            )
+        )
+
+        guard case .success(let unannotatedOutput) = unannotatedResult,
+              case .success(let annotatedOutput) = annotatedResult,
+              let unannotatedFrameData = unannotatedFileManager.writtenFiles[unannotatedOutput.primaryFileURL],
+              let annotatedFrameData = annotatedFileManager.writtenFiles[annotatedOutput.primaryFileURL] else {
+            return XCTFail("Expected framed screenshots")
+        }
+
+        let unannotatedPixels = try XCTUnwrap(pixelImage(in: unannotatedFrameData))
+        let annotatedPixels = try XCTUnwrap(pixelImage(in: annotatedFrameData))
+        XCTAssertEqual(try XCTUnwrap(imageSize(in: annotatedFrameData)), CGSize(width: 800, height: 1_200))
+        XCTAssertTrue(annotatedPixels.differs(
+            from: unannotatedPixels,
+            in: CGRect(x: 0, y: 0, width: 180, height: 160)
+        ))
+        XCTAssertFalse(annotatedPixels.differs(
+            from: unannotatedPixels,
+            in: CGRect(x: 0, y: 1_040, width: 180, height: 160)
+        ))
+    }
+
     func testDoesNotSaveWhenTheDeviceDetailsOverlayCannotBeResolved() async {
         let fileManager = RecordingScreenshotFileManager()
         let result = await ScreenshotService(

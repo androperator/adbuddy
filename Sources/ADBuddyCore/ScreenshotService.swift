@@ -97,12 +97,22 @@ public struct ScreenshotService: Sendable {
             return .failure(.invalidPNG)
         }
 
-        let annotatedScreenshotData: Data
+        let deviceDetails: AndroidDeviceDetails?
         if framing.overlaysDeviceDetails {
-            guard let deviceDetails = await AndroidDeviceDetailsService(
+            guard let resolvedDeviceDetails = await AndroidDeviceDetailsService(
                 adbPath: adbPath,
                 processRunner: processRunner
-            ).details(for: device), let overlayData = ScreenshotDeviceDetailsOverlayRenderer.overlay(
+            ).details(for: device) else {
+                return .failure(.unableToAddDeviceDetails)
+            }
+            deviceDetails = resolvedDeviceDetails
+        } else {
+            deviceDetails = nil
+        }
+
+        let annotatedScreenshotData: Data
+        if let deviceDetails {
+            guard let overlayData = ScreenshotDeviceDetailsOverlayRenderer.overlay(
                 deviceDetails: deviceDetails,
                 on: processResult.standardOutput
             ) else {
@@ -115,14 +125,24 @@ public struct ScreenshotService: Sendable {
 
         let framingData: Data?
         if framing.addsFrame {
-            framingData = await ScreenshotFrameRenderer(
+            guard let unannotatedFrameData = await ScreenshotFrameRenderer(
                 adbPath: adbPath,
                 sdkRootPath: sdkRootPath,
                 processRunner: processRunner
-            ).framedPNG(from: annotatedScreenshotData, for: device)
-
-            guard framingData != nil else {
+            ).framedPNG(from: processResult.standardOutput, for: device) else {
                 return .failure(.unableToAddFrame)
+            }
+
+            if let deviceDetails {
+                guard let frameWithOverlayData = ScreenshotDeviceDetailsOverlayRenderer.overlay(
+                    deviceDetails: deviceDetails,
+                    on: unannotatedFrameData
+                ) else {
+                    return .failure(.unableToAddDeviceDetails)
+                }
+                framingData = frameWithOverlayData
+            } else {
+                framingData = unannotatedFrameData
             }
         } else {
             framingData = nil

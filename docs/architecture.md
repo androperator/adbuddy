@@ -201,9 +201,10 @@ size.
 
 When the device-details overlay preference is enabled, `ScreenshotService`
 uses fixed ADB `getprop` arguments to read `ro.build.version.release` and
-`ro.build.version.sdk`. It writes the resulting `Android version / API level`
-label into the top-left of the captured screenshot before optionally framing
-it, so the unframed and framed saved variants contain the same device details.
+`ro.build.version.sdk`. It writes the resulting `Android 16 / API 36` label
+into the top-left of each saved image. A framed screenshot receives its label
+after the device frame is composed, so it appears over the frame rather than
+inside the device display.
 
 Screenshot filenames must be sanitized, timestamped, and collision-resistant.
 The service must not silently replace an existing file. A framed capture uses
