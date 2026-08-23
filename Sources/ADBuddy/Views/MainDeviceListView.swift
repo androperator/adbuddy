@@ -220,13 +220,19 @@ private struct ConnectedDeviceRow: View {
                 Label("Stop Emulator", systemImage: "stop.fill")
                     .labelStyle(.iconOnly)
             }
-            .frame(width: DeviceListLayout.lifecycleControlWidth)
+            .frame(
+                width: DeviceListLayout.lifecycleControlWidth,
+                height: DeviceListLayout.actionControlHeight
+            )
             .buttonStyle(.bordered)
             .tint(.red)
             .help("Stop Emulator")
         } else {
             Color.clear
-                .frame(width: DeviceListLayout.lifecycleControlWidth, height: 28)
+                .frame(
+                    width: DeviceListLayout.lifecycleControlWidth,
+                    height: DeviceListLayout.actionControlHeight
+                )
                 .accessibilityHidden(true)
         }
     }
@@ -296,7 +302,10 @@ private struct VirtualDeviceRow: View {
                     Label("Start Emulator", systemImage: "play.fill")
                         .labelStyle(.iconOnly)
                 }
-                .frame(width: DeviceListLayout.lifecycleControlWidth)
+                .frame(
+                    width: DeviceListLayout.lifecycleControlWidth,
+                    height: DeviceListLayout.actionControlHeight
+                )
                 .buttonStyle(.bordered)
                 .help("Start Emulator (Quick Boot)")
             }

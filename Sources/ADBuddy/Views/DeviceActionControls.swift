@@ -26,7 +26,10 @@ struct DeviceActionControls: View {
                         .frame(width: DeviceListLayout.actionButtonLabelWidth)
                 }
             }
-            .frame(width: DeviceListLayout.actionControlWidth)
+            .frame(
+                width: DeviceListLayout.actionControlWidth,
+                height: DeviceListLayout.actionControlHeight
+            )
             .buttonStyle(.bordered)
             .disabled(isCapturing)
             .help("Take Screenshot")
@@ -40,7 +43,10 @@ struct DeviceActionControls: View {
                 AndroidStudioLogcatGlyph()
                     .frame(width: DeviceListLayout.actionButtonLabelWidth)
             }
-            .frame(width: DeviceListLayout.actionControlWidth)
+            .frame(
+                width: DeviceListLayout.actionControlWidth,
+                height: DeviceListLayout.actionControlHeight
+            )
             .buttonStyle(.bordered)
             .accessibilityLabel("Open Logcat")
             .help("Open Logcat")
@@ -55,7 +61,10 @@ struct DeviceActionControls: View {
         if isPreparingScreenRecording {
             ProgressView()
                 .controlSize(.small)
-                .frame(width: DeviceListLayout.actionControlWidth)
+                .frame(
+                    width: DeviceListLayout.actionControlWidth,
+                    height: DeviceListLayout.actionControlHeight
+                )
                 .help("Preparing Screen Recording")
         } else if isScreenRecording {
             Button(action: stopScreenRecording) {
@@ -63,14 +72,20 @@ struct DeviceActionControls: View {
                     .labelStyle(.iconOnly)
                     .frame(width: DeviceListLayout.actionButtonLabelWidth)
             }
-            .frame(width: DeviceListLayout.actionControlWidth)
+            .frame(
+                width: DeviceListLayout.actionControlWidth,
+                height: DeviceListLayout.actionControlHeight
+            )
             .buttonStyle(.bordered)
             .tint(.red)
             .help("Stop Recording")
         } else if isStoppingScreenRecording {
             ProgressView()
                 .controlSize(.small)
-                .frame(width: DeviceListLayout.actionControlWidth)
+                .frame(
+                    width: DeviceListLayout.actionControlWidth,
+                    height: DeviceListLayout.actionControlHeight
+                )
                 .help("Stopping Screen Recording")
         } else {
             Button(action: showScreenRecordingOptions) {
@@ -78,7 +93,10 @@ struct DeviceActionControls: View {
                     .labelStyle(.iconOnly)
                     .frame(width: DeviceListLayout.actionButtonLabelWidth)
             }
-            .frame(width: DeviceListLayout.actionControlWidth)
+            .frame(
+                width: DeviceListLayout.actionControlWidth,
+                height: DeviceListLayout.actionControlHeight
+            )
             .buttonStyle(.bordered)
             .disabled(!canStartScreenRecording)
             .help("Record Screen")

@@ -38,6 +38,7 @@ final class DeviceListLayoutTests: XCTestCase {
 
     func testUsesStableActionControlDimensions() {
         XCTAssertEqual(DeviceListLayout.actionControlWidth, 44)
+        XCTAssertEqual(DeviceListLayout.actionControlHeight, 24)
         XCTAssertEqual(DeviceListLayout.actionButtonLabelWidth, 28)
         XCTAssertEqual(DeviceListLayout.actionMenuLabelWidth, 24)
         XCTAssertEqual(DeviceListLayout.lifecycleControlWidth, 28)

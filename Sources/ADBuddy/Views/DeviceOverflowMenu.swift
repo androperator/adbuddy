@@ -33,7 +33,10 @@ struct DeviceOverflowMenu: View {
                 .labelStyle(.iconOnly)
                 .frame(width: DeviceListLayout.actionMenuLabelWidth)
         }
-        .frame(width: DeviceListLayout.actionControlWidth)
+        .frame(
+            width: DeviceListLayout.actionControlWidth,
+            height: DeviceListLayout.actionControlHeight
+        )
         .menuStyle(.borderedButton)
         .accessibilityLabel("More Device Actions")
         .help("More Device Actions")
@@ -56,7 +59,10 @@ struct EmulatorOverflowMenu: View {
                 .labelStyle(.iconOnly)
                 .frame(width: DeviceListLayout.actionMenuLabelWidth)
         }
-        .frame(width: DeviceListLayout.actionControlWidth)
+        .frame(
+            width: DeviceListLayout.actionControlWidth,
+            height: DeviceListLayout.actionControlHeight
+        )
         .menuStyle(.borderedButton)
         .accessibilityLabel("More Emulator Actions")
         .help("More Emulator Actions")
