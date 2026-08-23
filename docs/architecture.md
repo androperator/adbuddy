@@ -145,9 +145,10 @@ AVDs, avoiding a second row for an already-connected emulator.
 
 `EmulatorWindowService` is a narrow GUI-side host-process bridge. It parses the
 fixed `/bin/ps` process listing to associate an AVD with a standalone window,
-an Android Studio-managed window, or a headless launch. Only a standalone
-window can be activated through `NSRunningApplication`; the SwiftUI view reads
-the resulting presentation state without inspecting processes itself.
+an Android Studio-managed window, or a headless launch. A double-click on a
+connected emulator reveals its standalone Emulator process or the running
+Android Studio host application. The SwiftUI view reads the resulting
+presentation state without inspecting processes itself.
 
 `AndroidEmulatorService` asks the SDK's `emulator` executable for
 `-list-avds`, then starts a selected AVD through a short-lived foreground

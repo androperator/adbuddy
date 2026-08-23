@@ -33,11 +33,11 @@ struct MainDeviceListView: View {
                                 }
                                 emulatorStore.stop(virtualDevice)
                             },
-                            showEmulatorWindow: {
+                            revealEmulatorHostWindow: {
                                 guard let virtualDevice = runningVirtualDevice(for: device) else {
                                     return
                                 }
-                                emulatorStore.openStandaloneWindow(for: virtualDevice)
+                                emulatorStore.revealHostWindow(for: virtualDevice)
                             },
                             openLogcat: openLogcat
                         )
@@ -139,22 +139,30 @@ private struct ConnectedDeviceRow: View {
     let deviceStore: DeviceStore
     let apkInstallationStore: APKInstallationStore
     let stopEmulator: () -> Void
-    let showEmulatorWindow: () -> Void
+    let revealEmulatorHostWindow: () -> Void
     let openLogcat: (AndroidDevice) -> Void
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: device.kind.symbolName)
-                .foregroundStyle(.secondary)
-                .frame(width: 18)
+            HStack(spacing: 12) {
+                Image(systemName: device.kind.symbolName)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 18)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(virtualDevice?.name ?? device.displayName)
-                    .fontWeight(.medium)
-                deviceDetail
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(virtualDevice?.name ?? device.displayName)
+                        .fontWeight(.medium)
+                    deviceDetail
+                }
             }
-
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) {
+                guard emulatorWindowPresentation?.canRevealHostWindow == true else {
+                    return
+                }
+                revealEmulatorHostWindow()
+            }
 
             if device.isUsable {
                 HStack(spacing: 8) {
@@ -173,7 +181,6 @@ private struct ConnectedDeviceRow: View {
                     DeviceOverflowMenu(
                         isPerformingAppAction: deviceStore.isPerformingAppAction(for: device),
                         isPerformingDeviceSetting: deviceStore.isPerformingDeviceSetting(for: device),
-                        openEmulatorWindow: openEmulatorWindow,
                         performAppAction: { deviceStore.performAppAction($0, for: device) },
                         requestUninstallForegroundApp: {
                             deviceStore.requestUninstallForegroundApp(for: device)
@@ -210,13 +217,6 @@ private struct ConnectedDeviceRow: View {
             }
         }
         .font(.caption)
-    }
-
-    private var openEmulatorWindow: (() -> Void)? {
-        guard case .standalone = emulatorWindowPresentation else {
-            return nil
-        }
-        return showEmulatorWindow
     }
 
     @ViewBuilder

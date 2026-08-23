@@ -20,6 +20,15 @@ enum EmulatorWindowPresentation: Equatable, Sendable {
             "Window unavailable"
         }
     }
+
+    var canRevealHostWindow: Bool {
+        switch self {
+        case .standalone, .embeddedInAndroidStudio:
+            true
+        case .headless, .unknown:
+            false
+        }
+    }
 }
 
 struct EmulatorWindowService: Sendable {
@@ -48,6 +57,17 @@ struct EmulatorWindowService: Sendable {
     @MainActor
     static func activateStandaloneWindow(processIdentifier: Int32) -> Bool {
         guard let application = NSRunningApplication(processIdentifier: pid_t(processIdentifier)) else {
+            return false
+        }
+
+        return application.activate(options: [])
+    }
+
+    @MainActor
+    static func activateAndroidStudioWindow() -> Bool {
+        guard let application = NSWorkspace.shared.runningApplications.first(where: {
+            $0.bundleIdentifier?.hasPrefix("com.google.android.studio") == true
+        }) else {
             return false
         }
 

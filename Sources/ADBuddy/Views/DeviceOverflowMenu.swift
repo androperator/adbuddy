@@ -3,19 +3,12 @@ import SwiftUI
 struct DeviceOverflowMenu: View {
     let isPerformingAppAction: Bool
     let isPerformingDeviceSetting: Bool
-    let openEmulatorWindow: (() -> Void)?
     let performAppAction: (AndroidAppAction) -> Void
     let requestUninstallForegroundApp: () -> Void
     let performDeviceSetting: (AndroidDeviceSettingAction) -> Void
 
     var body: some View {
         Menu {
-            if let openEmulatorWindow {
-                Button("Open Emulator Window", action: openEmulatorWindow)
-
-                Divider()
-            }
-
             Menu("Foreground App") {
                 ForegroundAppActionsMenuContent(
                     perform: performAppAction,

@@ -49,6 +49,13 @@ final class EmulatorWindowServiceTests: XCTestCase {
         XCTAssertEqual(presentations, [:])
     }
 
+    func testIdentifiesPresentationsWithRevealableHostWindows() {
+        XCTAssertTrue(EmulatorWindowPresentation.standalone(processIdentifier: 19338).canRevealHostWindow)
+        XCTAssertTrue(EmulatorWindowPresentation.embeddedInAndroidStudio.canRevealHostWindow)
+        XCTAssertFalse(EmulatorWindowPresentation.headless.canRevealHostWindow)
+        XCTAssertFalse(EmulatorWindowPresentation.unknown.canRevealHostWindow)
+    }
+
     private func successfulResult(standardOutput: String) -> ProcessResult {
         ProcessResult(
             standardOutput: Data(standardOutput.utf8),

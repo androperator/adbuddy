@@ -30,9 +30,9 @@ enum EmulatorFeedback: Equatable {
         case .stopRequested:
             "Stopping Android Emulator"
         case .windowActivated:
-            "Emulator Window Opened"
+            "Host Window Revealed"
         case .windowActivationFailed:
-            "Could Not Open Emulator Window"
+            "Could Not Reveal Host Window"
         case .failure(let failure):
             failure.title
         }
@@ -47,7 +47,7 @@ enum EmulatorFeedback: Equatable {
         case .windowActivated(let virtualDevice):
             "\(virtualDevice.name) was brought to the front."
         case .windowActivationFailed(let virtualDevice):
-            "A standalone macOS window is no longer available for \(virtualDevice.name)."
+            "No host macOS window is available for \(virtualDevice.name)."
         case .failure(let failure):
             failure.detail
         }
@@ -180,12 +180,22 @@ final class EmulatorStore {
         emulatorWindowPresentations[virtualDevice.name] ?? .unknown
     }
 
-    func openStandaloneWindow(for virtualDevice: AndroidVirtualDevice) {
-        guard case .standalone(let processIdentifier) = windowPresentation(for: virtualDevice) else {
+    func revealHostWindow(for virtualDevice: AndroidVirtualDevice) {
+        let presentation = windowPresentation(for: virtualDevice)
+        let wasActivated: Bool
+
+        switch presentation {
+        case .standalone(let processIdentifier):
+            wasActivated = EmulatorWindowService.activateStandaloneWindow(
+                processIdentifier: processIdentifier
+            )
+        case .embeddedInAndroidStudio:
+            wasActivated = EmulatorWindowService.activateAndroidStudioWindow()
+        case .headless, .unknown:
             return
         }
 
-        guard EmulatorWindowService.activateStandaloneWindow(processIdentifier: processIdentifier) else {
+        guard wasActivated else {
             showFeedback(.windowActivationFailed(virtualDevice))
             return
         }
