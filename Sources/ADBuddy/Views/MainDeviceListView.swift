@@ -155,8 +155,10 @@ private struct ConnectedDeviceRow: View {
                     .fontWeight(.medium)
                 deviceDetail
             }
-
-            Spacer()
+            .frame(
+                width: DeviceListLayout.deviceIdentityWidth,
+                alignment: .leading
+            )
 
             if device.isUsable {
                 if virtualDevice != nil {
@@ -164,6 +166,7 @@ private struct ConnectedDeviceRow: View {
                         Label("Stop Emulator", systemImage: "stop.fill")
                             .labelStyle(.iconOnly)
                     }
+                    .frame(width: DeviceListLayout.actionControlWidth)
                     .buttonStyle(.bordered)
                     .tint(.red)
                     .help("Stop Emulator")
@@ -241,8 +244,10 @@ private struct VirtualDeviceRow: View {
                 detail: statusDetail,
                 detailTint: statusTint
             )
-
-            Spacer()
+            .frame(
+                width: DeviceListLayout.deviceIdentityWidth,
+                alignment: .leading
+            )
 
             lifecycleControls
         }
@@ -283,6 +288,7 @@ private struct VirtualDeviceRow: View {
                 Label("Start Emulator", systemImage: "play.fill")
                     .labelStyle(.iconOnly)
             }
+            .frame(width: DeviceListLayout.actionControlWidth)
             .buttonStyle(.borderedProminent)
             .help("Start Emulator (Quick Boot)")
 
@@ -296,6 +302,7 @@ private struct VirtualDeviceRow: View {
                 Label("Stop Emulator", systemImage: "stop.fill")
                     .labelStyle(.iconOnly)
             }
+            .frame(width: DeviceListLayout.actionControlWidth)
             .buttonStyle(.bordered)
             .tint(.red)
             .help("Stop Emulator")
@@ -343,6 +350,8 @@ private struct VirtualDeviceRow: View {
             Label("Emulator Actions", systemImage: "ellipsis.circle")
                 .labelStyle(.iconOnly)
         }
+        .frame(width: DeviceListLayout.actionControlWidth)
+        .menuStyle(.borderedButton)
         .help("Emulator Actions")
     }
 }
@@ -368,9 +377,13 @@ private struct DeviceIdentityView: View {
         VStack(alignment: .leading, spacing: 3) {
             Text(name)
                 .fontWeight(.medium)
+                .lineLimit(1)
+                .truncationMode(.tail)
             Text(detail)
                 .font(.caption)
                 .foregroundStyle(detailTint)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
     }
 }

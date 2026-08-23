@@ -1,7 +1,9 @@
 import CoreGraphics
 
 enum DeviceListLayout {
-    static let windowWidth: CGFloat = 520
+    static let windowWidth: CGFloat = 900
+    static let deviceIdentityWidth: CGFloat = 280
+    static let actionControlWidth: CGFloat = 72
     static let rowHeight: CGFloat = 58
     static let verticalInsets: CGFloat = 16
     static let maximumVisibleDeviceCount = 4
@@ -36,8 +38,8 @@ enum DeviceListLayout {
         )
     }
 
-    static func minimumWindowFrameWidth(for currentFrameWidth: CGFloat) -> CGFloat {
-        max(currentFrameWidth, windowWidth)
+    static func minimumWindowFrameWidth(for _: CGFloat) -> CGFloat {
+        windowWidth
     }
 
     static func mainWindowContentSize(
