@@ -287,18 +287,10 @@ final class EmulatorStore {
     }
 
     private func applyRunningStatuses(_ runningDevices: [String: AndroidDevice]) {
-        let updatedDevices = virtualDevices.map { virtualDevice in
-            if let device = runningDevices[virtualDevice.name] {
-                return AndroidVirtualDevice(name: virtualDevice.name, status: .running(device))
-            }
-
-            switch virtualDevice.status {
-            case .starting, .stopping:
-                return virtualDevice
-            case .stopped, .running:
-                return AndroidVirtualDevice(name: virtualDevice.name, status: .stopped)
-            }
-        }
+        let updatedDevices = EmulatorVirtualDeviceStatusResolver.reconciledVirtualDevices(
+            virtualDevices,
+            runningDevices: runningDevices
+        )
 
         if virtualDevices != updatedDevices {
             virtualDevices = updatedDevices
