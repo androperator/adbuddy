@@ -14,7 +14,7 @@ APP_MACOS="$APP_CONTENTS/MacOS"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 MCP_BINARY="$APP_MACOS/adbuddy-mcp"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
-LOGCAT_ICON="$ROOT_DIR/Assets/AndroidStudio/Logcat@20x20.svg"
+ANDROID_STUDIO_ASSETS="$ROOT_DIR/Assets/AndroidStudio"
 
 usage() {
   cat >&2 <<'USAGE'
@@ -57,7 +57,7 @@ done
 
 VERSION_FILE="$ROOT_DIR/VERSION"
 [[ -f "$VERSION_FILE" ]] || fail "release version file is missing: $VERSION_FILE"
-[[ -f "$LOGCAT_ICON" ]] || fail "Android Studio Logcat icon is missing: $LOGCAT_ICON"
+[[ -d "$ANDROID_STUDIO_ASSETS" ]] || fail "Android Studio assets directory is missing: $ANDROID_STUDIO_ASSETS"
 VERSION="$(<"$VERSION_FILE")"
 [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}([.-][0-9A-Za-z]+)*$ ]] || \
   fail "release version in $VERSION_FILE must look like 0.1.0"
@@ -103,7 +103,7 @@ mkdir -p "$APP_MACOS" "$APP_CONTENTS/Resources"
 
 /usr/bin/lipo -create "$ARM64_APP_BINARY" "$X86_64_APP_BINARY" -output "$APP_BINARY"
 /usr/bin/lipo -create "$ARM64_MCP_BINARY" "$X86_64_MCP_BINARY" -output "$MCP_BINARY"
-cp "$LOGCAT_ICON" "$APP_CONTENTS/Resources/Logcat@20x20.svg"
+cp -R "$ANDROID_STUDIO_ASSETS"/. "$APP_CONTENTS/Resources/"
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
