@@ -36,6 +36,7 @@ The app should retain normal application behavior with a visible main window
 and a Dock presence, rather than behaving as a menu-only accessory app.
 It opts out of automatic window tabbing because the main window is a focused
 utility surface, not a document workspace.
+The main window does not offer a full-screen control.
 Its window frame cannot be resized narrower than its initial or restored width,
 so device controls and toolbar actions remain usable.
 

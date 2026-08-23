@@ -37,6 +37,7 @@ struct MainWindowSizer: NSViewRepresentable {
                 }
 
                 window.tabbingMode = .disallowed
+                window.standardWindowButton(.zoomButton)?.isHidden = true
                 window.contentMinSize = CGSize(width: DeviceListLayout.windowWidth, height: 0)
 
                 if let contentView = window.contentView {
