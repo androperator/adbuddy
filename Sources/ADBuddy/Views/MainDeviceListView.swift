@@ -6,6 +6,7 @@ struct MainDeviceListView: View {
     let emulatorStatus: EmulatorDiscoveryStatus
     let deviceStore: DeviceStore
     let emulatorStore: EmulatorStore
+    let apkInstallationStore: APKInstallationStore
     let openLogcat: (AndroidDevice) -> Void
 
     var body: some View {
@@ -25,6 +26,7 @@ struct MainDeviceListView: View {
                                 emulatorStore.windowPresentation(for: $0)
                             },
                             deviceStore: deviceStore,
+                            apkInstallationStore: apkInstallationStore,
                             stopEmulator: {
                                 guard let virtualDevice = runningVirtualDevice(for: device) else {
                                     return
@@ -135,6 +137,7 @@ private struct ConnectedDeviceRow: View {
     let virtualDevice: AndroidVirtualDevice?
     let emulatorWindowPresentation: EmulatorWindowPresentation?
     let deviceStore: DeviceStore
+    let apkInstallationStore: APKInstallationStore
     let stopEmulator: () -> Void
     let showEmulatorWindow: () -> Void
     let openLogcat: (AndroidDevice) -> Void
@@ -187,6 +190,9 @@ private struct ConnectedDeviceRow: View {
             }
         }
         .padding(.vertical, 2)
+        .apkDropTarget(isEnabled: device.isUsable) { fileURL in
+            apkInstallationStore.presentInstaller(for: fileURL, preferredDevice: device)
+        }
     }
 
     @ViewBuilder

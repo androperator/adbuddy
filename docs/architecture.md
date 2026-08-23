@@ -85,6 +85,8 @@ EmulatorStore -> AndroidEmulatorService -> Emulator executable -> standalone Emu
 EmulatorStore -> AndroidEmulatorService -> adb emulator-console commands
 DeviceStore -> AndroidDeepLinkService -> adb activity manager ACTION_VIEW intent
 DeviceStore -> AndroidDeviceSettingsService -> adb system settings and properties
+DeviceStore devices -> APKInstallationStore -> APKInstallationService -> adb install
+APKInstallationService -> Android SDK aapt2 -> APK package and launcher metadata
 LogcatStore -> LogcatService -> StreamingProcessRunner -> adb logcat
 ADBuddyMCP stdio transport -> ADBuddyCore -> Android SDK services -> adb and Emulator executable
 ```
@@ -113,6 +115,19 @@ package identifier, and an explicit device serial. It starts an `ACTION_VIEW`
 intent with fixed ADB arguments and reports both process failures and Android
 activity-manager error output. The compact launcher sheet owns URI entry and
 device selection; it delegates launch state and feedback to `DeviceStore`.
+
+`APKInstallationStore` owns the short-lived local APK selection, per-device
+install progress, and presentation feedback. It receives a user-selected local
+file URL from an AppKit open panel, Finder document opening, or a SwiftUI drop
+target, but keeps all installation work in `APKInstallationService`.
+`APKInstallationService` validates the archive and invokes `adb -s <serial>
+install -r <path>` with a fixed executable and argument array. When the user
+asks to open the installed app, it uses the newest executable `aapt2` under
+the resolved SDK's `build-tools` directory to resolve a package and launcher
+activity before installation, then starts that exact activity through ADB. An
+unavailable build tool or missing launcher is a launch warning after a
+successful install, not an installation error. Multiple selected devices run
+independently, so each device receives its own outcome.
 
 `AndroidDeviceSettingsService` applies one explicit system setting to a usable
 device with fixed ADB arguments. It covers dark or light system theme, gesture

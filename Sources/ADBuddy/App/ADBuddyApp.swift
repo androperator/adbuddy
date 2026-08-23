@@ -8,12 +8,14 @@ struct ADBuddyApp: App {
     @State private var deviceStore: DeviceStore
     @State private var emulatorStore: EmulatorStore
     @State private var preferences: AppPreferences
+    @State private var apkInstallationStore: APKInstallationStore
 
     init() {
         let preferences = AppPreferences()
         _preferences = State(initialValue: preferences)
         _deviceStore = State(initialValue: DeviceStore(preferences: preferences))
         _emulatorStore = State(initialValue: EmulatorStore())
+        _apkInstallationStore = State(initialValue: APKInstallationStore())
         AppLogger.lifecycle.info("ADBuddy launch requested")
     }
 
@@ -31,6 +33,7 @@ struct ADBuddyApp: App {
                 .environment(deviceStore)
                 .environment(emulatorStore)
                 .environment(preferences)
+                .environment(apkInstallationStore)
                 .overlay(alignment: .topLeading) {
                     MainWindowSizer(targetContentSize: mainWindowContentSize)
                         .frame(width: 0, height: 0)
@@ -39,6 +42,14 @@ struct ADBuddyApp: App {
                 .task {
                     deviceStore.start()
                     emulatorStore.refreshVirtualDevices()
+                }
+                .onAppear {
+                    appDelegate.setAPKDocumentHandler { fileURLs in
+                        guard let fileURL = fileURLs.first else {
+                            return
+                        }
+                        apkInstallationStore.presentInstaller(for: fileURL)
+                    }
                 }
         }
         .defaultSize(
@@ -86,6 +97,7 @@ struct ADBuddyApp: App {
                 .environment(deviceStore)
                 .environment(emulatorStore)
                 .environment(preferences)
+                .environment(apkInstallationStore)
         }
         .menuBarExtraStyle(.menu)
     }
@@ -104,6 +116,9 @@ struct ADBuddyApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var apkDocumentHandler: (([URL]) -> Void)?
+    private var pendingAPKDocumentURLs: [URL] = []
+
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSWindow.allowsAutomaticWindowTabbing = false
     }
@@ -112,5 +127,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         AppLogger.lifecycle.info("ADBuddy application launched")
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        let apkURLs = urls.filter {
+            $0.isFileURL && $0.pathExtension.caseInsensitiveCompare("apk") == .orderedSame
+        }
+        guard !apkURLs.isEmpty else {
+            return
+        }
+
+        NSApp.activate(ignoringOtherApps: true)
+        if let apkDocumentHandler {
+            apkDocumentHandler(apkURLs)
+        } else {
+            pendingAPKDocumentURLs.append(contentsOf: apkURLs)
+        }
+    }
+
+    func setAPKDocumentHandler(_ handler: @escaping ([URL]) -> Void) {
+        apkDocumentHandler = handler
+        guard !pendingAPKDocumentURLs.isEmpty else {
+            return
+        }
+
+        let pendingURLs = pendingAPKDocumentURLs
+        pendingAPKDocumentURLs = []
+        handler(pendingURLs)
     }
 }

@@ -136,6 +136,25 @@ The first implementation is a complete vertical slice, not a visual mockup.
   arguments. Leave the target package blank to use Android's normal intent
   resolution.
 
+### Local APK installation
+
+- Offer **Install APK** from the main-window toolbar and menu bar utility.
+- Accept a local `.apk` file dropped onto a usable connected-device row.
+- Register APK documents so Finder can offer **Open With ADBuddy** without
+  taking over the user's preferred default application.
+- Present one native install sheet that lets users select one or more usable
+  devices and optionally open the app after installation.
+- Install each selected device with `adb -s <serial> install -r <path>` using
+  a fixed argument array. Do not allow downgrades or uninstall existing apps
+  implicitly.
+- For optional opening, read the APK's package and launcher activity through
+  the newest available Android SDK `aapt2`, then use an explicit ADB activity
+  launch. A missing `aapt2` or non-launchable APK must not turn a successful
+  installation into a failure.
+- The first version supports one ordinary APK at a time. Defer split APKs,
+  `.apks` archives, and Android App Bundles until their install behavior can be
+  presented clearly.
+
 ### Local MCP access
 
 - Provide a local stdio MCP server for agents that need the completed device,

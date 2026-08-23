@@ -24,6 +24,8 @@ currently provides:
 - optional screenshot and recording Finder reveal;
 - foreground-app actions per device: start, kill, restart, clear app data,
   clear app data and restart, and confirmed uninstall;
+- single-APK installation to one or more devices from the toolbar, menu bar,
+  Finder's **Open With ADBuddy**, or by dropping an APK on a usable device;
 - a dedicated Logcat window per device, with recent history, live streaming,
   application and minimum-level filtering, pause, copy, follow, and optional
   PID/TID columns;
@@ -44,6 +46,19 @@ and Phase 1 acceptance criteria.
 ADBuddy will find the Android SDK through `ANDROID_HOME`, `ANDROID_SDK_ROOT`,
 or the standard `~/Library/Android/sdk` installation. It will not assume that a
 GUI app inherits a useful shell `PATH`.
+
+## Install APK
+
+Choose **Install APK** from the toolbar or menu bar, open an APK through Finder,
+or drop one onto a usable connected-device row. The install sheet supports one
+ordinary `.apk` file at a time and can target multiple devices. It uses
+`adb install -r`, retaining app data while replacing an existing compatible
+build. ADBuddy does not enable app downgrades or uninstall an app implicitly.
+
+Select **Open after install** to launch the app when its APK exposes a launcher
+activity and the Android SDK includes `aapt2` in `build-tools`. A successful
+install remains successful if that optional launch step is unavailable. Split
+APKs, `.apks` archives, and Android App Bundles are not supported yet.
 
 ## Media destination
 

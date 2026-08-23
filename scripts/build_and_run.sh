@@ -65,6 +65,43 @@ cat >"$INFO_PLIST" <<PLIST
   <string>Copyright © Action Launcher Pty Ltd</string>
   <key>LSMinimumSystemVersion</key>
   <string>$MIN_SYSTEM_VERSION</string>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>Android Package Archive</string>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>LSHandlerRank</key>
+      <string>Alternate</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>com.clawperator.adbuddy.android-package-archive</string>
+      </array>
+    </dict>
+  </array>
+  <key>UTExportedTypeDeclarations</key>
+  <array>
+    <dict>
+      <key>UTTypeIdentifier</key>
+      <string>com.clawperator.adbuddy.android-package-archive</string>
+      <key>UTTypeDescription</key>
+      <string>Android Package Archive</string>
+      <key>UTTypeConformsTo</key>
+      <array>
+        <string>public.data</string>
+      </array>
+      <key>UTTypeTagSpecification</key>
+      <dict>
+        <key>public.filename-extension</key>
+        <array>
+          <string>apk</string>
+        </array>
+        <key>public.mime-type</key>
+        <string>application/vnd.android.package-archive</string>
+      </dict>
+    </dict>
+  </array>
   <key>NSPrincipalClass</key>
   <string>NSApplication</string>
 </dict>

@@ -5,6 +5,7 @@ struct MenuBarContentView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(DeviceStore.self) private var deviceStore
     @Environment(AppPreferences.self) private var preferences
+    @Environment(APKInstallationStore.self) private var apkInstallationStore
 
     var body: some View {
         @Bindable var preferences = preferences
@@ -31,6 +32,16 @@ struct MenuBarContentView: View {
             }
             .disabled(!deviceStore.devices.contains(where: \.isUsable))
         }
+
+        Button("Install APK…") {
+            openWindow(id: "main")
+            NSApp.activate(ignoringOtherApps: true)
+            guard let fileURL = APKFilePicker.chooseAPK() else {
+                return
+            }
+            apkInstallationStore.presentInstaller(for: fileURL)
+        }
+        .disabled(!deviceStore.devices.contains(where: \.isUsable))
 
         Divider()
 

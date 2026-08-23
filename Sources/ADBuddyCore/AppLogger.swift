@@ -17,4 +17,5 @@ public enum AppLogger {
     public static let appActions = Logger(subsystem: subsystem, category: "AppActions")
     public static let deepLinks = Logger(subsystem: subsystem, category: "DeepLinks")
     public static let deviceSettings = Logger(subsystem: subsystem, category: "DeviceSettings")
+    public static let apkInstallation = Logger(subsystem: subsystem, category: "APKInstallation")
 }

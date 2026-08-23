@@ -100,6 +100,11 @@ Manual verification should cover, where locally available:
 18. Check a standalone emulator displays **Open Emulator Window** and brings
     that window to the front. Check Android Studio-managed and headless
     emulators clearly state that no standalone window can be opened.
+19. Choose **Install APK**, select a single APK and one or more usable devices,
+    then verify each device reports its own installation outcome. If `aapt2` is
+    available and the APK has a launcher activity, verify **Open after install**
+    opens the installed app. Also drag an APK onto a usable device row and open
+    the packaged app from Finder using **Open With ADBuddy**.
 
 ## Change discipline
 

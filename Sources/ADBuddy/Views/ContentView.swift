@@ -5,6 +5,7 @@ struct ContentView: View {
     @Environment(DeviceStore.self) private var deviceStore
     @Environment(EmulatorStore.self) private var emulatorStore
     @Environment(AppPreferences.self) private var preferences
+    @Environment(APKInstallationStore.self) private var apkInstallationStore
 
     var body: some View {
         @Bindable var deviceStore = deviceStore
@@ -43,6 +44,12 @@ struct ContentView: View {
                     }
                 }
 
+                if let feedback = apkInstallationStore.feedback {
+                    APKInstallationFeedbackBanner(feedback: feedback) {
+                        apkInstallationStore.clearFeedback(ifMatching: feedback)
+                    }
+                }
+
                 if let feedback = emulatorStore.feedback {
                     EmulatorFeedbackBanner(feedback: feedback) {
                         emulatorStore.clearFeedback(ifMatching: feedback)
@@ -56,6 +63,7 @@ struct ContentView: View {
         .animation(.default, value: deviceStore.appActionFeedback)
         .animation(.default, value: deviceStore.deepLinkLaunchFeedback)
         .animation(.default, value: deviceStore.deviceSettingFeedback)
+        .animation(.default, value: apkInstallationStore.feedback)
         .animation(.default, value: emulatorStore.feedback)
         .onChange(of: deviceStore.devices) { _, devices in
             emulatorStore.updateRunningStatus(using: devices, sdk: deviceStore.resolvedSDK)
@@ -87,6 +95,36 @@ struct ContentView: View {
                 dismiss: deviceStore.dismissDeepLinkLauncher,
                 launch: deviceStore.launchDeepLink
             )
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { apkInstallationStore.isPresentingInstaller },
+                set: { isPresented in
+                    if !isPresented {
+                        apkInstallationStore.dismissInstaller()
+                    }
+                }
+            )
+        ) {
+            if let archive = apkInstallationStore.archive {
+                APKInstallationSheet(
+                    archive: archive,
+                    devices: deviceStore.devices.filter(\.isUsable),
+                    installationDevices: apkInstallationStore.installationDevices,
+                    preferredDeviceSerial: apkInstallationStore.preferredDeviceSerial,
+                    deviceStates: apkInstallationStore.deviceStates,
+                    isInstalling: apkInstallationStore.isInstalling,
+                    dismiss: apkInstallationStore.dismissInstaller,
+                    install: { devices, openAfterInstall in
+                        apkInstallationStore.install(
+                            archive: archive,
+                            on: devices,
+                            sdk: deviceStore.resolvedSDK,
+                            openAfterInstall: openAfterInstall
+                        )
+                    }
+                )
+            }
         }
         .alert(
             "Wipe Emulator Data?",
@@ -132,6 +170,14 @@ struct ContentView: View {
         }
         .navigationTitle("ADBuddy")
         .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: chooseAPK) {
+                    Label("Install APK", systemImage: "shippingbox")
+                }
+                .disabled(!deviceStore.devices.contains(where: \.isUsable))
+                .help("Install APK on Android Device")
+            }
+
             if preferences.isDeepLinkLauncherEnabled {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -176,6 +222,7 @@ struct ContentView: View {
                 emulatorStatus: emulatorStore.status,
                 deviceStore: deviceStore,
                 emulatorStore: emulatorStore,
+                apkInstallationStore: apkInstallationStore,
                 openLogcat: openLogcat
             )
         }
@@ -185,10 +232,42 @@ struct ContentView: View {
         AppLogger.devices.info("Logcat requested from the main window")
         openWindow(value: LogcatWindowID(serial: device.serial))
     }
+
+    private func chooseAPK() {
+        guard let fileURL = APKFilePicker.chooseAPK() else {
+            return
+        }
+        apkInstallationStore.presentInstaller(for: fileURL)
+    }
 }
 
 private struct EmulatorFeedbackBanner: View {
     let feedback: EmulatorFeedback
+    let dismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: feedback.isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                .foregroundStyle(feedback.isSuccess ? .green : .orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(feedback.title)
+                    .font(.subheadline.weight(.medium))
+                Text(feedback.detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            Button("Dismiss", action: dismiss)
+                .buttonStyle(.borderless)
+        }
+        .padding(10)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .shadow(radius: 4, y: 2)
+    }
+}
+
+private struct APKInstallationFeedbackBanner: View {
+    let feedback: APKInstallationFeedback
     let dismiss: () -> Void
 
     var body: some View {
