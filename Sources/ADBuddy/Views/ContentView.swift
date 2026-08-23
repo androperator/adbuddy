@@ -5,7 +5,6 @@ struct ContentView: View {
     @Environment(DeviceStore.self) private var deviceStore
     @Environment(EmulatorStore.self) private var emulatorStore
     @Environment(AppPreferences.self) private var preferences
-    @Binding var isShowingSettings: Bool
 
     var body: some View {
         @Bindable var deviceStore = deviceStore
@@ -80,9 +79,6 @@ struct ContentView: View {
                 }
             )
         }
-        .sheet(isPresented: $isShowingSettings) {
-            SettingsSheet(preferences: preferences)
-        }
         .sheet(isPresented: $deviceStore.isPresentingDeepLinkLauncher) {
             DeepLinkLauncherSheet(
                 devices: deviceStore.devices.filter(\.isUsable),
@@ -149,10 +145,7 @@ struct ContentView: View {
             }
 
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    AppLogger.settings.info("Settings requested from the toolbar")
-                    isShowingSettings = true
-                } label: {
+                SettingsLink {
                     Label("Settings", systemImage: "gearshape")
                 }
                 .help("Settings")

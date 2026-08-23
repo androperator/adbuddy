@@ -5,11 +5,6 @@ struct MenuBarContentView: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(DeviceStore.self) private var deviceStore
     @Environment(AppPreferences.self) private var preferences
-    private let showSettings: () -> Void
-
-    init(showSettings: @escaping () -> Void) {
-        self.showSettings = showSettings
-    }
 
     var body: some View {
         if let recordingDevice = deviceStore.activeScreenRecordingDevice {
@@ -41,11 +36,8 @@ struct MenuBarContentView: View {
 
         Divider()
 
-        Button("Settings…") {
-            AppLogger.settings.info("Settings requested from the menu bar")
-            openWindow(id: "main")
-            NSApp.activate(ignoringOtherApps: true)
-            showSettings()
+        SettingsLink {
+            Text("Settings…")
         }
 
         Button("Open ADBuddy") {

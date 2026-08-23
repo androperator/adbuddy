@@ -8,7 +8,6 @@ struct ADBuddyApp: App {
     @State private var deviceStore: DeviceStore
     @State private var emulatorStore: EmulatorStore
     @State private var preferences: AppPreferences
-    @State private var isShowingSettings = false
 
     init() {
         let preferences = AppPreferences()
@@ -27,7 +26,7 @@ struct ADBuddyApp: App {
         )
 
         WindowGroup("ADBuddy", id: "main") {
-            ContentView(isShowingSettings: $isShowingSettings)
+            ContentView()
                 .frame(minWidth: DeviceListLayout.windowWidth)
                 .environment(deviceStore)
                 .environment(emulatorStore)
@@ -47,14 +46,9 @@ struct ADBuddyApp: App {
             height: DeviceListLayout.unavailableContentHeight
         )
         .windowResizability(.contentMinSize)
-        .commands {
-            CommandGroup(replacing: .appSettings) {
-                Button("Settings…") {
-                    AppLogger.settings.info("Settings requested from the application menu")
-                    isShowingSettings = true
-                }
-                .keyboardShortcut(",", modifiers: .command)
-            }
+
+        Settings {
+            SettingsView(preferences: preferences)
         }
 
         WindowGroup(for: LogcatWindowID.self) { $windowID in
@@ -80,9 +74,7 @@ struct ADBuddyApp: App {
             "ADBuddy",
             systemImage: deviceStore.hasActiveScreenRecording ? "stop.fill" : "camera"
         ) {
-            MenuBarContentView(showSettings: {
-                isShowingSettings = true
-            })
+            MenuBarContentView()
                 .environment(deviceStore)
                 .environment(emulatorStore)
                 .environment(preferences)
