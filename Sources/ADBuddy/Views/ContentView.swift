@@ -119,6 +119,12 @@ struct ContentView: View {
                     archive: archive,
                     devices: deviceStore.devices.filter(\.isUsable),
                     installationDevices: apkInstallationStore.installationDevices,
+                    deviceDisplayName: { device in
+                        EmulatorVirtualDeviceStatusResolver.displayName(
+                            for: device,
+                            among: emulatorStore.virtualDevices
+                        )
+                    },
                     preferredDeviceSerial: apkInstallationStore.preferredDeviceSerial,
                     deviceStates: apkInstallationStore.deviceStates,
                     isInstalling: apkInstallationStore.isInstalling,

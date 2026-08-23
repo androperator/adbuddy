@@ -4,6 +4,7 @@ struct APKInstallationSheet: View {
     let archive: AndroidPackageArchive
     let devices: [AndroidDevice]
     let installationDevices: [AndroidDevice]
+    let deviceDisplayName: (AndroidDevice) -> String
     let preferredDeviceSerial: String?
     let deviceStates: [String: APKInstallationDeviceState]
     let isInstalling: Bool
@@ -18,6 +19,7 @@ struct APKInstallationSheet: View {
         archive: AndroidPackageArchive,
         devices: [AndroidDevice],
         installationDevices: [AndroidDevice],
+        deviceDisplayName: @escaping (AndroidDevice) -> String,
         preferredDeviceSerial: String?,
         deviceStates: [String: APKInstallationDeviceState],
         isInstalling: Bool,
@@ -27,6 +29,7 @@ struct APKInstallationSheet: View {
         self.archive = archive
         self.devices = devices
         self.installationDevices = installationDevices
+        self.deviceDisplayName = deviceDisplayName
         self.preferredDeviceSerial = preferredDeviceSerial
         self.deviceStates = deviceStates
         self.isInstalling = isInstalling
@@ -72,7 +75,7 @@ struct APKInstallationSheet: View {
                 ForEach(devices) { device in
                     Toggle(isOn: selectionBinding(for: device)) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(device.displayName)
+                            Text(deviceDisplayName(device))
                             Text(device.serial)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -146,7 +149,7 @@ struct APKInstallationSheet: View {
                     HStack(alignment: .top, spacing: 8) {
                         statusImage(for: state)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(device.displayName)
+                            Text(deviceDisplayName(device))
                                 .font(.subheadline.weight(.medium))
                             Text(statusDetail(for: state))
                                 .font(.caption)

@@ -1,6 +1,19 @@
 import Foundation
 
 enum EmulatorVirtualDeviceStatusResolver {
+    static func displayName(
+        for device: AndroidDevice,
+        among virtualDevices: [AndroidVirtualDevice]
+    ) -> String {
+        guard let virtualDevice = virtualDevices.first(where: {
+            $0.status.runningDevice?.serial == device.serial
+        }) else {
+            return device.displayName
+        }
+
+        return virtualDevice.name
+    }
+
     static func reconciledVirtualDevices(
         _ virtualDevices: [AndroidVirtualDevice],
         runningDevices: [String: AndroidDevice]
