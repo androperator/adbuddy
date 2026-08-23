@@ -8,6 +8,7 @@ final class AppPreferences {
         static let screenshotDirectoryPath = ADBuddySharedPreferences.screenshotDirectoryPathKey
         static let automaticallyCopyMedia = "automaticallyCopyMedia"
         static let legacyAutomaticallyCopyScreenshots = "automaticallyCopyScreenshots"
+        static let revealMediaInFinder = "revealMediaInFinder"
         static let screenRecordingBitRateMegabitsPerSecond = ADBuddySharedPreferences.screenRecordingBitRateMegabitsPerSecondKey
         static let screenRecordingResolutionPercentage = ADBuddySharedPreferences.screenRecordingResolutionPercentageKey
         static let screenRecordingShowsTaps = ADBuddySharedPreferences.screenRecordingShowsTapsKey
@@ -28,6 +29,12 @@ final class AppPreferences {
     var automaticallyCopyMedia: Bool {
         didSet {
             userDefaults.set(automaticallyCopyMedia, forKey: Key.automaticallyCopyMedia)
+        }
+    }
+
+    var revealMediaInFinder: Bool {
+        didSet {
+            userDefaults.set(revealMediaInFinder, forKey: Key.revealMediaInFinder)
         }
     }
 
@@ -97,6 +104,7 @@ final class AppPreferences {
         } else {
             automaticallyCopyMedia = true
         }
+        revealMediaInFinder = userDefaults.object(forKey: Key.revealMediaInFinder) as? Bool ?? false
         screenRecordingBitRateMegabitsPerSecond = userDefaults.object(forKey: Key.screenRecordingBitRateMegabitsPerSecond) as? Int
             ?? ScreenRecordingOptions.default.bitRateMegabitsPerSecond
         screenRecordingResolutionPercentage = userDefaults.object(forKey: Key.screenRecordingResolutionPercentage) as? Int

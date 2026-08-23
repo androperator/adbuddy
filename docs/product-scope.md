@@ -44,6 +44,8 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Copy successful screenshots and saved MP4 recordings to the clipboard by
   default. This behavior is a persisted preference exposed by the app's
   Settings sheet.
+- Optionally reveal each saved screenshot and MP4 recording in Finder through a
+  persisted Settings preference.
 - Let users choose the shared media destination from the Settings sheet. The
   selected folder is used for both screenshots and recordings.
 

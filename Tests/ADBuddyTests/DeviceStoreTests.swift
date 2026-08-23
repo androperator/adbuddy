@@ -215,6 +215,47 @@ final class DeviceStoreTests: XCTestCase {
         )
     }
 
+    func testRevealsSavedScreenshotsAndRecordingsWhenEnabled() async throws {
+        let suiteName = "DeviceStoreTests.\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Could not create isolated user defaults")
+        }
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let mediaDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ADBuddyDeviceStoreTests-\(UUID().uuidString)", isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: mediaDirectory)
+        }
+        let preferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: mediaDirectory
+        )
+        preferences.revealMediaInFinder = true
+        let finderRevealer = RecordingMediaFinderRevealer()
+        let store = DeviceStore(
+            preferences: preferences,
+            sdkLocator: sdkLocator,
+            processRunner: RecordingDeviceStoreProcessRunner(),
+            mediaClipboard: TestMediaClipboard(),
+            mediaFinderRevealer: finderRevealer,
+            mediaNotifier: TestMediaNotifier()
+        )
+        store.refreshFromPolling()
+        await waitForDeviceRefresh()
+        let device = try XCTUnwrap(store.devices.first)
+
+        store.takeScreenshot(of: device)
+        await waitForScreenshotFeedback(in: store)
+
+        store.startScreenRecording(of: device, options: .default)
+        await waitForScreenRecordingFeedback(in: store)
+
+        XCTAssertEqual(finderRevealer.mediaURLs.map(\.pathExtension), ["png", "mp4"])
+    }
+
     private func makeDeviceStore(
         processRunner: any ProcessRunning = DeviceListProcessRunner()
     ) -> DeviceStore {
@@ -291,6 +332,16 @@ final class DeviceStoreTests: XCTestCase {
         XCTFail("Timed out waiting for screen recording feedback.")
     }
 
+    private func waitForScreenshotFeedback(in store: DeviceStore) async {
+        for _ in 0..<100 {
+            if store.screenshotFeedback != nil {
+                return
+            }
+            await Task.yield()
+        }
+        XCTFail("Timed out waiting for screenshot feedback.")
+    }
+
     private func successfulResult(standardOutput: String = "") -> ProcessResult {
         ProcessResult(
             standardOutput: Data(standardOutput.utf8),
@@ -359,12 +410,25 @@ private final class RecordingMediaClipboard: MediaClipboardCopying {
     }
 }
 
+@MainActor
+private final class RecordingMediaFinderRevealer: MediaFinderRevealing {
+    private(set) var mediaURLs: [URL] = []
+
+    func revealMedia(at fileURL: URL) {
+        mediaURLs.append(fileURL)
+    }
+}
+
 private actor RecordingDeviceStoreProcessRunner: ProcessRunning {
     func run(executablePath: String, arguments: [String]) async -> ProcessResult {
         if arguments == ["devices", "-l"] {
             return successfulResult(
                 standardOutput: "List of devices attached\nserial\tdevice model:Pixel_9\n"
             )
+        }
+
+        if arguments.contains("exec-out") {
+            return successfulResult(standardOutput: Self.validPNG)
         }
 
         if arguments.contains("pull"), let temporaryPath = arguments.last {
@@ -394,6 +458,17 @@ private actor RecordingDeviceStoreProcessRunner: ProcessRunning {
         )
     }
 
+    private func successfulResult(standardOutput: Data) -> ProcessResult {
+        ProcessResult(
+            standardOutput: standardOutput,
+            standardError: Data(),
+            exitStatus: 0,
+            durationMilliseconds: 1,
+            failureDescription: nil,
+            wasCancelled: false
+        )
+    }
+
     private func failedResult(_ message: String) -> ProcessResult {
         ProcessResult(
             standardOutput: Data(),
@@ -404,6 +479,11 @@ private actor RecordingDeviceStoreProcessRunner: ProcessRunning {
             wasCancelled: false
         )
     }
+
+    private static let validPNG = Data([
+        137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13,
+        73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1,
+    ])
 }
 
 private struct TestMediaNotifier: SavedMediaNotifying {

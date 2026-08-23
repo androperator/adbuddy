@@ -25,7 +25,7 @@ MenuBarExtra
   app navigation, and Settings
 
 Settings sheet (owned by the main window)
-  Shared media destination, media clipboard-copy, and Logcat colors
+  Shared media destination, media clipboard-copy, Finder reveal, and Logcat colors
 
 Logcat WindowGroup (one window per device serial)
   Dedicated streaming viewer with window-scoped filters, follow state, and retention
@@ -71,6 +71,7 @@ SwiftUI scene
 AndroidSDKLocator -> resolved adb path -> ADBClient
 AppPreferences -> screenshot destination -> ScreenshotService
 AppPreferences -> clipboard preference -> MediaClipboardService
+AppPreferences -> Finder reveal preference -> MediaFinderRevealService
 DeviceStore -> MediaNotificationService -> macOS notification center
 AppPreferences -> recording options -> ScreenRecordingService
 DeviceStore -> ScreenRecordingService -> ADB screenrecord, pull, cleanup
@@ -193,7 +194,9 @@ The service must not silently replace an existing file.
 After a successful screenshot or recording save, `DeviceStore` can copy media
 to the macOS pasteboard through `MediaClipboardService`. Screenshots copy PNG
 bytes, while recordings copy the saved MP4's file URL without loading the
-entire video into memory. For saved screenshots and recordings, it asks
+entire video into memory. When the Finder reveal preference is enabled,
+`DeviceStore` uses `MediaFinderRevealService` to ask Finder to select each
+saved item. For saved screenshots and recordings, it asks
 `MediaNotificationService` to post a native
 notification. The service registers a **Reveal in Finder** notification action
 and routes that action to `NSWorkspace` for the saved file URL. It attaches the
@@ -207,12 +210,13 @@ macOS consumes writable attachment files.
 `AppPreferences` is an application-owned wrapper around `UserDefaults`.
 It persists a screenshot destination path and whether successful screenshots
 and recordings are automatically copied to the clipboard. The same path is the
-shared media destination for screenshots and MP4 recordings. It also stores a
-recording bit rate, resolution percentage, and Show taps value for the next
-recording. The directory defaults to the current user's `~/Screenshots`
-directory and automatic copying defaults to enabled. The service layer
-receives values from the preferences store rather than accessing `UserDefaults`
-itself.
+shared media destination for screenshots and MP4 recordings. It also persists
+whether media is automatically revealed in Finder, and stores a recording bit
+rate, resolution percentage, and Show taps value for the next recording. The
+directory defaults to the current user's `~/Screenshots` directory, automatic
+copying defaults to enabled, and automatic Finder reveal defaults to disabled.
+The service layer receives values from the preferences store rather than
+accessing `UserDefaults` itself.
 
 The same store persists six serializable sRGB component values for global
 Logcat severity colors. Settings changes update every open Logcat window

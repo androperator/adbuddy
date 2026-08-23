@@ -72,30 +72,32 @@ Manual verification should cover, where locally available:
 5. a successful screenshot notification offering **Reveal in Finder**;
 6. automatic clipboard copy for successful screenshots and recordings when
    that preference is enabled;
-7. a failed ADB invocation presenting an actionable error.
-8. a screen recording with each selected option reaching the same media folder
+7. automatic Finder reveal for successful screenshots and recordings when that
+   preference is enabled;
+8. a failed ADB invocation presenting an actionable error.
+9. a screen recording with each selected option reaching the same media folder
    as screenshots, followed by a successful Stop Recording action;
-9. a successful recording notification offering **Reveal in Finder**;
-10. Show taps returning to its original Android setting after recording.
-11. Installed AVDs appearing in the **Android Emulators** section with correct
+10. a successful recording notification offering **Reveal in Finder**;
+11. Show taps returning to its original Android setting after recording.
+12. Installed AVDs appearing in the **Android Emulators** section with correct
     stopped or running status.
-12. Quick Boot and Cold Boot opening an AVD in the Android Emulator's own
+13. Quick Boot and Cold Boot opening an AVD in the Android Emulator's own
     standalone window, with its ADB serial shown after discovery.
-13. A running AVD stopping through its control. Exercise **Wipe Data and
+14. A running AVD stopping through its control. Exercise **Wipe Data and
     Start** only as far as its confirmation in routine manual testing; do not
     erase a developer's AVD unless that reset is intentional.
-14. Each foreground-app action resolves the active package on the selected
+15. Each foreground-app action resolves the active package on the selected
     device, shows success or actionable failure feedback, and uses the resolved
     package in the uninstall confirmation. Do not confirm an uninstall during
     routine verification unless that removal is intentional.
-15. Open the Link sheet, select a usable device, and launch a URI. Verify an
+16. Open the Link sheet, select a usable device, and launch a URI. Verify an
     optional package target such as `com.android.chrome` receives
     `https://techmeme.com` when Chrome is installed on the selected device.
-16. On an emulator, apply each Device Settings action, check the corresponding
+17. On an emulator, apply each Device Settings action, check the corresponding
     Android system value, then restore light mode, gesture navigation, and
     disabled rendering overlays. Do not change a physical device's system
     settings during routine verification unless that is intentional.
-17. Check a standalone emulator displays **Open Emulator Window** and brings
+18. Check a standalone emulator displays **Open Emulator Window** and brings
     that window to the front. Check Android Studio-managed and headless
     emulators clearly state that no standalone window can be opened.
 

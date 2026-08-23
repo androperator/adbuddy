@@ -41,6 +41,11 @@ struct SettingsSheet: View {
                     isOn: $preferences.automaticallyCopyMedia
                 )
 
+                Toggle(
+                    "Reveal media in Finder",
+                    isOn: $preferences.revealMediaInFinder
+                )
+
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Text("Logcat colors")

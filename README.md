@@ -14,13 +14,14 @@ currently provides:
 - connected-device discovery with clear connection states;
 - a macOS menu bar utility and a compact main-window device list;
 - a compact Settings sheet for the shared screenshot and recording folder, plus
-  automatic media clipboard copying;
+  automatic media clipboard copying and optional Finder reveal;
 - direct PNG screenshot capture from a selected connected device;
 - screen recording with configurable bit rate, native-resolution percentage,
   and Show taps;
 - native screenshot and recording notifications with media previews and a
   **Reveal in Finder** action;
 - automatic screenshot and recording clipboard copy, enabled by default;
+- optional screenshot and recording Finder reveal;
 - foreground-app actions per device: start, kill, restart, clear app data,
   clear app data and restart, and confirmed uninstall;
 - a dedicated Logcat window per device, with recent history, live streaming,
@@ -48,10 +49,11 @@ GUI app inherits a useful shell `PATH`.
 
 Screenshots and screen recordings share one destination. It defaults to
 `~/Screenshots`, which is `/Users/chrislacy/Screenshots` on the initial
-development machine. The destination, automatic clipboard-copy preference, and
-screen-recording options are saved in `UserDefaults`. Automatic screenshot and
-recording copying defaults to enabled. Use **ADBuddy → Settings…** to change
-them, or to adjust the global Logcat severity colors.
+development machine. The destination, automatic clipboard-copy and Finder
+reveal preferences, and screen-recording options are saved in `UserDefaults`.
+Automatic screenshot and recording copying defaults to enabled; automatic
+Finder reveal defaults to disabled. Use **ADBuddy → Settings…** to change them,
+or to adjust the global Logcat severity colors.
 
 ## Logcat
 

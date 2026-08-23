@@ -10,6 +10,7 @@ final class DeviceStore {
     private let sdkLocator: AndroidSDKLocator
     private let processRunner: any ProcessRunning
     private let mediaClipboard: any MediaClipboardCopying
+    private let mediaFinderRevealer: any MediaFinderRevealing
     private let mediaNotifier: any SavedMediaNotifying
     private var pollingTask: Task<Void, Never>?
     @ObservationIgnored
@@ -39,12 +40,14 @@ final class DeviceStore {
         sdkLocator: AndroidSDKLocator = AndroidSDKLocator(),
         processRunner: any ProcessRunning = ProcessRunner(),
         mediaClipboard: any MediaClipboardCopying = MediaClipboardService(),
+        mediaFinderRevealer: any MediaFinderRevealing = MediaFinderRevealService(),
         mediaNotifier: any SavedMediaNotifying = MediaNotificationService()
     ) {
         self.preferences = preferences
         self.sdkLocator = sdkLocator
         self.processRunner = processRunner
         self.mediaClipboard = mediaClipboard
+        self.mediaFinderRevealer = mediaFinderRevealer
         self.mediaNotifier = mediaNotifier
     }
 
@@ -142,6 +145,7 @@ final class DeviceStore {
             switch result {
             case .success(let fileURL):
                 let copiedToClipboard = copyScreenshotToClipboardIfNeeded(at: fileURL)
+                revealMediaInFinderIfNeeded(at: fileURL)
                 AppLogger.screenshot.info("Screenshot capture succeeded")
                 showScreenshotFeedback(.success(fileURL, copiedToClipboard: copiedToClipboard))
 
@@ -594,6 +598,7 @@ final class DeviceStore {
         switch result {
         case .success(let fileURL, let warning):
             let copiedToClipboard = copyRecordingToClipboardIfNeeded(at: fileURL)
+            revealMediaInFinderIfNeeded(at: fileURL)
             AppLogger.recording.info("Screen recording saved")
             showScreenRecordingFeedback(
                 .success(fileURL, warning: warning, copiedToClipboard: copiedToClipboard)
@@ -712,6 +717,14 @@ final class DeviceStore {
             AppLogger.recording.error("Could not copy recording to clipboard: \(message, privacy: .public)")
             return false
         }
+    }
+
+    private func revealMediaInFinderIfNeeded(at fileURL: URL) {
+        guard preferences.revealMediaInFinder else {
+            return
+        }
+        mediaFinderRevealer.revealMedia(at: fileURL)
+        AppLogger.devices.info("Revealed saved media in Finder")
     }
 }
 
