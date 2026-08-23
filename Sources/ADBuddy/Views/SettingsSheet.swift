@@ -37,8 +37,8 @@ struct SettingsSheet: View {
                 }
 
                 Toggle(
-                    "Automatically copy screenshots to the clipboard",
-                    isOn: $preferences.automaticallyCopyScreenshots
+                    "Automatically copy media to clipboard",
+                    isOn: $preferences.automaticallyCopyMedia
                 )
 
                 VStack(alignment: .leading, spacing: 10) {

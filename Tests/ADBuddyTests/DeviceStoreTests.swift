@@ -170,13 +170,58 @@ final class DeviceStoreTests: XCTestCase {
         )
     }
 
+    func testCopiesCompletedRecordingWhenAutomaticMediaCopyIsEnabled() async throws {
+        let suiteName = "DeviceStoreTests.\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Could not create isolated user defaults")
+        }
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let mediaDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ADBuddyDeviceStoreTests-\(UUID().uuidString)", isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: mediaDirectory)
+        }
+        let preferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: mediaDirectory
+        )
+        let mediaClipboard = RecordingMediaClipboard()
+        let store = DeviceStore(
+            preferences: preferences,
+            sdkLocator: sdkLocator,
+            processRunner: RecordingDeviceStoreProcessRunner(),
+            mediaClipboard: mediaClipboard,
+            mediaNotifier: TestMediaNotifier()
+        )
+        store.refreshFromPolling()
+        await waitForDeviceRefresh()
+        let device = try XCTUnwrap(store.devices.first)
+
+        store.startScreenRecording(of: device, options: .default)
+        await waitForScreenRecordingFeedback(in: store)
+
+        XCTAssertEqual(mediaClipboard.recordingURLs.count, 1)
+        XCTAssertEqual(mediaClipboard.recordingURLs.first?.pathExtension, "mp4")
+        XCTAssertEqual(
+            store.screenRecordingFeedback,
+            .success(
+                try XCTUnwrap(mediaClipboard.recordingURLs.first),
+                warning: nil,
+                copiedToClipboard: true
+            )
+        )
+    }
+
     private func makeDeviceStore(
         processRunner: any ProcessRunning = DeviceListProcessRunner()
     ) -> DeviceStore {
         DeviceStore(
             sdkLocator: sdkLocator,
             processRunner: processRunner,
-            screenshotClipboard: TestScreenshotClipboard(),
+            mediaClipboard: TestMediaClipboard(),
             mediaNotifier: TestMediaNotifier()
         )
     }
@@ -236,6 +281,16 @@ final class DeviceStoreTests: XCTestCase {
         XCTFail("Timed out waiting for device setting feedback.")
     }
 
+    private func waitForScreenRecordingFeedback(in store: DeviceStore) async {
+        for _ in 0..<100 {
+            if store.screenRecordingFeedback != nil {
+                return
+            }
+            await Task.yield()
+        }
+        XCTFail("Timed out waiting for screen recording feedback.")
+    }
+
     private func successfulResult(standardOutput: String = "") -> ProcessResult {
         ProcessResult(
             standardOutput: Data(standardOutput.utf8),
@@ -280,9 +335,74 @@ private actor ScriptedDeviceStoreProcessRunner: ProcessRunning {
 }
 
 @MainActor
-private struct TestScreenshotClipboard: ScreenshotClipboardCopying {
-    func copyScreenshot(at fileURL: URL) -> ScreenshotClipboardCopyResult {
+private struct TestMediaClipboard: MediaClipboardCopying {
+    func copyScreenshot(at fileURL: URL) -> MediaClipboardCopyResult {
         .copied
+    }
+
+    func copyRecording(at fileURL: URL) -> MediaClipboardCopyResult {
+        .copied
+    }
+}
+
+@MainActor
+private final class RecordingMediaClipboard: MediaClipboardCopying {
+    private(set) var recordingURLs: [URL] = []
+
+    func copyScreenshot(at fileURL: URL) -> MediaClipboardCopyResult {
+        .copied
+    }
+
+    func copyRecording(at fileURL: URL) -> MediaClipboardCopyResult {
+        recordingURLs.append(fileURL)
+        return .copied
+    }
+}
+
+private actor RecordingDeviceStoreProcessRunner: ProcessRunning {
+    func run(executablePath: String, arguments: [String]) async -> ProcessResult {
+        if arguments == ["devices", "-l"] {
+            return successfulResult(
+                standardOutput: "List of devices attached\nserial\tdevice model:Pixel_9\n"
+            )
+        }
+
+        if arguments.contains("pull"), let temporaryPath = arguments.last {
+            let temporaryURL = URL(fileURLWithPath: temporaryPath)
+            do {
+                try FileManager.default.createDirectory(
+                    at: temporaryURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+                try Data([0x00, 0x01]).write(to: temporaryURL)
+            } catch {
+                return failedResult(error.localizedDescription)
+            }
+        }
+
+        return successfulResult()
+    }
+
+    private func successfulResult(standardOutput: String = "") -> ProcessResult {
+        ProcessResult(
+            standardOutput: Data(standardOutput.utf8),
+            standardError: Data(),
+            exitStatus: 0,
+            durationMilliseconds: 1,
+            failureDescription: nil,
+            wasCancelled: false
+        )
+    }
+
+    private func failedResult(_ message: String) -> ProcessResult {
+        ProcessResult(
+            standardOutput: Data(),
+            standardError: Data(message.utf8),
+            exitStatus: 1,
+            durationMilliseconds: 1,
+            failureDescription: message,
+            wasCancelled: false
+        )
     }
 }
 

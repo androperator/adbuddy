@@ -126,7 +126,7 @@ public enum ScreenRecordingActivity: Equatable {
 }
 
 public enum ScreenRecordingFeedback: Equatable {
-    case success(URL, warning: String?)
+    case success(URL, warning: String?, copiedToClipboard: Bool)
     case failure(String)
 
     public var isSuccess: Bool {
@@ -138,7 +138,7 @@ public enum ScreenRecordingFeedback: Equatable {
 
     public var title: String {
         switch self {
-        case .success(_, let warning):
+        case .success(_, let warning, _):
             warning == nil ? "Recording Saved" : "Recording Saved with Warning"
         case .failure:
             "Recording Failed"
@@ -147,10 +147,16 @@ public enum ScreenRecordingFeedback: Equatable {
 
     public var detail: String {
         switch self {
-        case .success(let fileURL, let warning):
-            warning ?? fileURL.lastPathComponent
+        case .success(let fileURL, let warning, let copiedToClipboard):
+            let copyDetail = copiedToClipboard
+                ? "\(fileURL.lastPathComponent) copied to the clipboard."
+                : fileURL.lastPathComponent
+            guard let warning else {
+                return copyDetail
+            }
+            return copiedToClipboard ? "\(warning) Copied to the clipboard." : warning
         case .failure(let message):
-            message
+            return message
         }
     }
 }

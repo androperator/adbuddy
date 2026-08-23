@@ -145,6 +145,18 @@ final class ScreenRecordingTests: XCTestCase {
         )
     }
 
+    func testCopiedRecordingFeedbackIncludesClipboardDetail() {
+        let recordingURL = URL(fileURLWithPath: "/tmp/Pixel-9-Pro.mp4")
+        let feedback = ScreenRecordingFeedback.success(
+            recordingURL,
+            warning: nil,
+            copiedToClipboard: true
+        )
+
+        XCTAssertEqual(feedback.title, "Recording Saved")
+        XCTAssertEqual(feedback.detail, "Pixel-9-Pro.mp4 copied to the clipboard.")
+    }
+
     private var connectedDevice: AndroidDevice {
         AndroidDevice(
             serial: "device-serial",

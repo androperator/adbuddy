@@ -41,8 +41,9 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Report a concise native success state and a useful failure if capture fails.
 - Deliver a native system notification for a successful capture, including a
   preview of the saved PNG and a **Reveal in Finder** action.
-- Copy successful PNG captures to the clipboard by default. This behavior is a
-  persisted preference exposed by the app's Settings sheet.
+- Copy successful screenshots and saved MP4 recordings to the clipboard by
+  default. This behavior is a persisted preference exposed by the app's
+  Settings sheet.
 - Let users choose the shared media destination from the Settings sheet. The
   selected folder is used for both screenshots and recordings.
 

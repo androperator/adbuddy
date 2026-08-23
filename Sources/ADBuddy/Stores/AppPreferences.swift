@@ -6,7 +6,8 @@ import Observation
 final class AppPreferences {
     private enum Key {
         static let screenshotDirectoryPath = ADBuddySharedPreferences.screenshotDirectoryPathKey
-        static let automaticallyCopyScreenshots = "automaticallyCopyScreenshots"
+        static let automaticallyCopyMedia = "automaticallyCopyMedia"
+        static let legacyAutomaticallyCopyScreenshots = "automaticallyCopyScreenshots"
         static let screenRecordingBitRateMegabitsPerSecond = ADBuddySharedPreferences.screenRecordingBitRateMegabitsPerSecondKey
         static let screenRecordingResolutionPercentage = ADBuddySharedPreferences.screenRecordingResolutionPercentageKey
         static let screenRecordingShowsTaps = ADBuddySharedPreferences.screenRecordingShowsTapsKey
@@ -24,9 +25,9 @@ final class AppPreferences {
         }
     }
 
-    var automaticallyCopyScreenshots: Bool {
+    var automaticallyCopyMedia: Bool {
         didSet {
-            userDefaults.set(automaticallyCopyScreenshots, forKey: Key.automaticallyCopyScreenshots)
+            userDefaults.set(automaticallyCopyMedia, forKey: Key.automaticallyCopyMedia)
         }
     }
 
@@ -86,7 +87,16 @@ final class AppPreferences {
             screenshotDirectory = defaultScreenshotDirectory
         }
 
-        automaticallyCopyScreenshots = userDefaults.object(forKey: Key.automaticallyCopyScreenshots) as? Bool ?? true
+        if let savedValue = userDefaults.object(forKey: Key.automaticallyCopyMedia) as? Bool {
+            automaticallyCopyMedia = savedValue
+        } else if let legacyValue = userDefaults.object(
+            forKey: Key.legacyAutomaticallyCopyScreenshots
+        ) as? Bool {
+            automaticallyCopyMedia = legacyValue
+            userDefaults.set(legacyValue, forKey: Key.automaticallyCopyMedia)
+        } else {
+            automaticallyCopyMedia = true
+        }
         screenRecordingBitRateMegabitsPerSecond = userDefaults.object(forKey: Key.screenRecordingBitRateMegabitsPerSecond) as? Int
             ?? ScreenRecordingOptions.default.bitRateMegabitsPerSecond
         screenRecordingResolutionPercentage = userDefaults.object(forKey: Key.screenRecordingResolutionPercentage) as? Int

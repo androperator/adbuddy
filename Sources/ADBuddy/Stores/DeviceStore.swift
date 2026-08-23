@@ -9,7 +9,7 @@ final class DeviceStore {
     private let preferences: AppPreferences
     private let sdkLocator: AndroidSDKLocator
     private let processRunner: any ProcessRunning
-    private let screenshotClipboard: any ScreenshotClipboardCopying
+    private let mediaClipboard: any MediaClipboardCopying
     private let mediaNotifier: any SavedMediaNotifying
     private var pollingTask: Task<Void, Never>?
     @ObservationIgnored
@@ -38,13 +38,13 @@ final class DeviceStore {
         preferences: AppPreferences = AppPreferences(),
         sdkLocator: AndroidSDKLocator = AndroidSDKLocator(),
         processRunner: any ProcessRunning = ProcessRunner(),
-        screenshotClipboard: any ScreenshotClipboardCopying = ScreenshotClipboardService(),
+        mediaClipboard: any MediaClipboardCopying = MediaClipboardService(),
         mediaNotifier: any SavedMediaNotifying = MediaNotificationService()
     ) {
         self.preferences = preferences
         self.sdkLocator = sdkLocator
         self.processRunner = processRunner
-        self.screenshotClipboard = screenshotClipboard
+        self.mediaClipboard = mediaClipboard
         self.mediaNotifier = mediaNotifier
     }
 
@@ -593,12 +593,18 @@ final class DeviceStore {
 
         switch result {
         case .success(let fileURL, let warning):
+            let copiedToClipboard = copyRecordingToClipboardIfNeeded(at: fileURL)
             AppLogger.recording.info("Screen recording saved")
-            showScreenRecordingFeedback(.success(fileURL, warning: warning))
+            showScreenRecordingFeedback(
+                .success(fileURL, warning: warning, copiedToClipboard: copiedToClipboard)
+            )
 
             let mediaNotifier = mediaNotifier
             Task {
-                await mediaNotifier.notifyAboutSavedMedia(at: fileURL, kind: .recording)
+                await mediaNotifier.notifyAboutSavedMedia(
+                    at: fileURL,
+                    kind: .recording(copiedToClipboard: copiedToClipboard)
+                )
             }
         case .failure(let error):
             AppLogger.recording.error("Screen recording failed: \(error.message, privacy: .public)")
@@ -679,16 +685,31 @@ final class DeviceStore {
     }
 
     private func copyScreenshotToClipboardIfNeeded(at fileURL: URL) -> Bool {
-        guard preferences.automaticallyCopyScreenshots else {
+        guard preferences.automaticallyCopyMedia else {
             return false
         }
 
-        switch screenshotClipboard.copyScreenshot(at: fileURL) {
+        switch mediaClipboard.copyScreenshot(at: fileURL) {
         case .copied:
             AppLogger.screenshot.info("Copied screenshot to clipboard")
             return true
         case .failed(let message):
             AppLogger.screenshot.error("Could not copy screenshot to clipboard: \(message, privacy: .public)")
+            return false
+        }
+    }
+
+    private func copyRecordingToClipboardIfNeeded(at fileURL: URL) -> Bool {
+        guard preferences.automaticallyCopyMedia else {
+            return false
+        }
+
+        switch mediaClipboard.copyRecording(at: fileURL) {
+        case .copied:
+            AppLogger.recording.info("Copied recording to clipboard")
+            return true
+        case .failed(let message):
+            AppLogger.recording.error("Could not copy recording to clipboard: \(message, privacy: .public)")
             return false
         }
     }

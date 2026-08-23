@@ -32,7 +32,7 @@ final class AppPreferencesTests: XCTestCase {
         XCTAssertEqual(reloadedPreferences.screenshotDirectory, configuredDirectory)
     }
 
-    func testAutomaticallyCopyScreenshotsDefaultsToTrueAndPersistsChanges() {
+    func testAutomaticallyCopyMediaDefaultsToTrueAndPersistsChanges() {
         let suiteName = "AppPreferencesTests.\(UUID().uuidString)"
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {
             return XCTFail("Could not create isolated user defaults")
@@ -47,15 +47,35 @@ final class AppPreferencesTests: XCTestCase {
             defaultScreenshotDirectory: fallbackDirectory
         )
 
-        XCTAssertTrue(preferences.automaticallyCopyScreenshots)
+        XCTAssertTrue(preferences.automaticallyCopyMedia)
 
-        preferences.automaticallyCopyScreenshots = false
+        preferences.automaticallyCopyMedia = false
 
         let reloadedPreferences = AppPreferences(
             userDefaults: userDefaults,
             defaultScreenshotDirectory: fallbackDirectory
         )
-        XCTAssertFalse(reloadedPreferences.automaticallyCopyScreenshots)
+        XCTAssertFalse(reloadedPreferences.automaticallyCopyMedia)
+    }
+
+    func testAutomaticallyCopyMediaMigratesTheExistingScreenshotPreference() {
+        let suiteName = "AppPreferencesTests.\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Could not create isolated user defaults")
+        }
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        userDefaults.set(false, forKey: "automaticallyCopyScreenshots")
+
+        let preferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: URL(fileURLWithPath: "/tmp/default-screenshots", isDirectory: true)
+        )
+
+        XCTAssertFalse(preferences.automaticallyCopyMedia)
+        XCTAssertEqual(userDefaults.object(forKey: "automaticallyCopyMedia") as? Bool, false)
     }
 
     func testScreenRecordingOptionsUseStableDefaultsAndPersistChanges() {

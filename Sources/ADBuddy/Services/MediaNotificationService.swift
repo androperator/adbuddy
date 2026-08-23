@@ -4,7 +4,7 @@ import Foundation
 
 enum SavedMediaNotificationKind: Sendable {
     case screenshot(copiedToClipboard: Bool)
-    case recording
+    case recording(copiedToClipboard: Bool)
 
     var title: String {
         switch self {
@@ -21,8 +21,10 @@ enum SavedMediaNotificationKind: Sendable {
             copiedToClipboard
                 ? "\(fileURL.lastPathComponent) was copied to the clipboard."
                 : fileURL.lastPathComponent
-        case .recording:
-            fileURL.lastPathComponent
+        case .recording(let copiedToClipboard):
+            copiedToClipboard
+                ? "\(fileURL.lastPathComponent) was copied to the clipboard."
+                : fileURL.lastPathComponent
         }
     }
 }

@@ -72,13 +72,16 @@ final class MediaNotificationServiceTests: XCTestCase {
         let recordingURL = URL(fileURLWithPath: "/tmp/Pixel-10-Pro_2026-08-22_134419_174.mp4")
         let request = MediaNotificationService.makeNotificationRequest(
             for: recordingURL,
-            kind: .recording,
+            kind: .recording(copiedToClipboard: true),
             identifier: "recording-test"
         )
 
         XCTAssertEqual(request.identifier, "recording-test")
         XCTAssertEqual(request.content.title, "Recording Saved")
-        XCTAssertEqual(request.content.body, recordingURL.lastPathComponent)
+        XCTAssertEqual(
+            request.content.body,
+            "Pixel-10-Pro_2026-08-22_134419_174.mp4 was copied to the clipboard."
+        )
         XCTAssertEqual(request.content.categoryIdentifier, MediaNotificationIdentifier.category)
         XCTAssertEqual(
             request.content.userInfo[MediaNotificationIdentifier.savedMediaPath] as? String,
@@ -87,7 +90,9 @@ final class MediaNotificationServiceTests: XCTestCase {
     }
 
     func testUsesTheFirstVideoFrameForRecordingNotificationThumbnail() {
-        let options = MediaNotificationService.notificationAttachmentOptions(for: .recording)
+        let options = MediaNotificationService.notificationAttachmentOptions(
+            for: .recording(copiedToClipboard: false)
+        )
 
         XCTAssertEqual(options?[UNNotificationAttachmentOptionsThumbnailTimeKey] as? Int, 0)
         XCTAssertNil(
