@@ -10,13 +10,12 @@ enum EmulatorDiscoveryStatus: Equatable {
 enum EmulatorFeedback: Equatable {
     case startRequested(AndroidVirtualDevice, AndroidEmulatorStartMode)
     case stopRequested(AndroidVirtualDevice)
-    case windowActivated(AndroidVirtualDevice)
     case windowActivationFailed(AndroidVirtualDevice)
     case failure(AndroidEmulatorFailure)
 
     var isSuccess: Bool {
         switch self {
-        case .startRequested, .stopRequested, .windowActivated:
+        case .startRequested, .stopRequested:
             return true
         case .windowActivationFailed, .failure:
             return false
@@ -29,8 +28,6 @@ enum EmulatorFeedback: Equatable {
             "Starting Android Emulator"
         case .stopRequested:
             "Stopping Android Emulator"
-        case .windowActivated:
-            "Host Window Revealed"
         case .windowActivationFailed:
             "Could Not Reveal Host Window"
         case .failure(let failure):
@@ -44,8 +41,6 @@ enum EmulatorFeedback: Equatable {
             "\(mode.displayName) requested for \(virtualDevice.name)."
         case .stopRequested(let virtualDevice):
             "Stop requested for \(virtualDevice.name)."
-        case .windowActivated(let virtualDevice):
-            "\(virtualDevice.name) was brought to the front."
         case .windowActivationFailed(let virtualDevice):
             "No host macOS window is available for \(virtualDevice.name)."
         case .failure(let failure):
@@ -199,8 +194,6 @@ final class EmulatorStore {
             showFeedback(.windowActivationFailed(virtualDevice))
             return
         }
-
-        showFeedback(.windowActivated(virtualDevice))
     }
 
     func clearFeedback(ifMatching feedback: EmulatorFeedback) {
