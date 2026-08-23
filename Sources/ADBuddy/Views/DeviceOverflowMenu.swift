@@ -29,19 +29,9 @@ struct DeviceOverflowMenu: View {
             }
             .disabled(isPerformingDeviceSetting)
         } label: {
-            Label("More Device Actions", systemImage: "ellipsis")
-                .labelStyle(.iconOnly)
-                .frame(
-                    width: DeviceListLayout.actionMenuLabelWidth,
-                    height: DeviceListLayout.actionMenuLabelHeight
-                )
+            OverflowMenuLabel()
         }
-        .frame(
-            width: DeviceListLayout.actionControlWidth,
-            height: DeviceListLayout.actionControlHeight
-        )
-        .menuStyle(.borderedButton)
-        .controlSize(.small)
+        .modifier(OverflowMenuControlStyle())
         .accessibilityLabel("More Device Actions")
         .help("More Device Actions")
     }
@@ -59,21 +49,42 @@ struct EmulatorOverflowMenu: View {
 
             Button("Wipe Data and Start…", role: .destructive, action: requestWipeDataAndStart)
         } label: {
-            Label("More Emulator Actions", systemImage: "ellipsis")
-                .labelStyle(.iconOnly)
-                .frame(
-                    width: DeviceListLayout.actionMenuLabelWidth,
-                    height: DeviceListLayout.actionMenuLabelHeight
-                )
+            OverflowMenuLabel()
         }
-        .frame(
-            width: DeviceListLayout.actionControlWidth,
-            height: DeviceListLayout.actionControlHeight
-        )
-        .menuStyle(.borderedButton)
-        .controlSize(.small)
+        .modifier(OverflowMenuControlStyle())
         .accessibilityLabel("More Emulator Actions")
         .help("More Emulator Actions")
+    }
+}
+
+private struct OverflowMenuLabel: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "ellipsis")
+            Image(systemName: "chevron.down")
+                .font(.caption.weight(.semibold))
+        }
+        .foregroundStyle(.primary)
+        .frame(
+            width: DeviceListLayout.actionControlWidth,
+            height: DeviceListLayout.actionMenuLabelHeight
+        )
+    }
+}
+
+private struct OverflowMenuControlStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .frame(
+                width: DeviceListLayout.actionControlWidth,
+                height: DeviceListLayout.actionControlHeight
+            )
+            .menuStyle(.borderlessButton)
+            .background {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.primary.opacity(0.08))
+                    .frame(height: DeviceListLayout.actionMenuLabelHeight)
+            }
     }
 }
 
