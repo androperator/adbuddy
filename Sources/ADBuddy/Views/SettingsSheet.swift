@@ -112,19 +112,25 @@ struct SettingsSheet: View {
     }
 
     private func colorPicker(for priority: LogcatPriority) -> some View {
-        ColorPicker(
-            priority.displayName,
-            selection: Binding(
-                get: { currentLogcatColor(for: priority) },
-                set: { color in
-                    guard let components = LogcatColorComponents(color: color) else {
-                        return
+        HStack(spacing: 12) {
+            Text(priority.displayName)
+                .frame(width: 96, alignment: .leading)
+
+            ColorPicker(
+                "",
+                selection: Binding(
+                    get: { currentLogcatColor(for: priority) },
+                    set: { color in
+                        guard let components = LogcatColorComponents(color: color) else {
+                            return
+                        }
+                        preferences.setLogcatColor(components, for: priority)
                     }
-                    preferences.setLogcatColor(components, for: priority)
-                }
-            ),
-            supportsOpacity: false
-        )
+                ),
+                supportsOpacity: false
+            )
+            .labelsHidden()
+        }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
