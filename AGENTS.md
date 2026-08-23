@@ -91,7 +91,7 @@ concrete types over protocol-heavy abstractions.
   and non-UI service behavior.
 - Test with live ADB only when the local environment permits it; state clearly
   what a device-dependent verification did or did not prove.
-- Build and run the app through `script/build_and_run.sh` once it exists. Use
+- Build and run the app through `scripts/build_and_run.sh` once it exists. Use
   the smallest relevant `swift test` scope before claiming a change complete.
 - Add targeted `Logger` events for app launch, SDK discovery, device refresh,
   ADB failures, and major menu actions.

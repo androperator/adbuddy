@@ -10,11 +10,11 @@ bundle behavior.
 The project includes:
 
 ```text
-script/build_and_run.sh
+scripts/build_and_run.sh
 .codex/environments/environment.toml
 ```
 
-`script/build_and_run.sh` stops a prior local app instance, builds the project,
+`scripts/build_and_run.sh` stops a prior local app instance, builds the project,
 packages and ad-hoc signs the `.app`, launches it, and reports the app location
 or failure. The local signature binds the bundle identity for services such as
 macOS user notifications; it is not a substitute for the Developer ID signing
@@ -37,7 +37,7 @@ Run the smallest relevant check after each coherent change:
 ```sh
 swift build
 swift test
-script/build_and_run.sh
+scripts/build_and_run.sh
 ```
 
 Once the script exists, prefer it for end-to-end local launches. Do not claim

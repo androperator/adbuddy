@@ -25,7 +25,7 @@ For every task:
 2. add or update focused deterministic tests where the task has testable logic;
 3. run the smallest relevant test first, then run `swift test`;
 4. for a UI or process-lifecycle task, run
-   `./script/build_and_run.sh --verify` and perform the listed manual checks;
+   `./scripts/build_and_run.sh --verify` and perform the listed manual checks;
 5. inspect `git status --short` before staging;
 6. do not continue while the task leaves a build or test failure.
 

@@ -101,7 +101,7 @@ The app will use SwiftPM and a shell-first build loop. Once the app scaffold is
 present, the primary local commands will be:
 
 ```sh
-script/build_and_run.sh
+scripts/build_and_run.sh
 swift test
 ```
 

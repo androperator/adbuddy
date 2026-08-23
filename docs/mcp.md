@@ -38,7 +38,7 @@ already receives the resulting path directly.
 Build and package the local app once:
 
 ```sh
-./script/build_and_run.sh --verify
+./scripts/build_and_run.sh --verify
 ```
 
 The packaged helper is then available at:
