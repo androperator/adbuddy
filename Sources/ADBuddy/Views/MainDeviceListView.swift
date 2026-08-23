@@ -155,10 +155,8 @@ private struct ConnectedDeviceRow: View {
                     .fontWeight(.medium)
                 deviceDetail
             }
-            .frame(
-                width: DeviceListLayout.deviceIdentityWidth,
-                alignment: .leading
-            )
+
+            Spacer()
 
             if device.isUsable {
                 if virtualDevice != nil {
@@ -245,10 +243,8 @@ private struct VirtualDeviceRow: View {
                 detail: statusDetail,
                 detailTint: statusTint
             )
-            .frame(
-                width: DeviceListLayout.deviceIdentityWidth,
-                alignment: .leading
-            )
+
+            Spacer()
 
             lifecycleControls
         }
