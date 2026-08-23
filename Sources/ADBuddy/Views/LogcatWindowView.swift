@@ -93,17 +93,7 @@ struct LogcatWindowView: View {
                     Divider()
                         .frame(height: 18)
 
-                    Picker("Minimum Log Level", selection: $logcatStore.minimumPriority) {
-                        ForEach(LogcatPriority.allCases, id: \.self) { priority in
-                            Text(priority.rawValue)
-                                .tag(priority)
-                                .accessibilityLabel(priority.displayName)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 190)
-                    .accessibilityLabel("Minimum Log Level")
-                    .help("Minimum Log Level")
+                    MinimumLogLevelMenu(priority: $logcatStore.minimumPriority)
                 }
                 .controlSize(.small)
             }
@@ -157,6 +147,32 @@ struct LogcatWindowView: View {
                 .help("Jump to Latest")
             }
         }
+    }
+}
+
+private struct MinimumLogLevelMenu: View {
+    @Binding var priority: LogcatPriority
+
+    var body: some View {
+        Menu {
+            ForEach(LogcatPriority.allCases, id: \.self) { option in
+                Button {
+                    priority = option
+                } label: {
+                    if option == priority {
+                        Label(option.displayName, systemImage: "checkmark")
+                    } else {
+                        Text(option.displayName)
+                    }
+                }
+            }
+        } label: {
+            Text("Minimum: \(priority.displayName)")
+        }
+        .menuStyle(.borderedButton)
+        .accessibilityLabel("Minimum Log Level")
+        .accessibilityValue("\(priority.displayName) and above")
+        .help("Show \(priority.displayName) log messages and above")
     }
 }
 

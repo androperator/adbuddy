@@ -253,7 +253,7 @@ Implement it in this order:
 1. Add window-scoped minimum-level state to `LogcatStore`. Default it to Debug.
 2. Derive visible entries from retained entries. Do not discard lower-priority
    entries from retention when the visible minimum changes.
-3. Add a compact segmented control to the toolbar.
+3. Add a compact minimum-level menu to the toolbar that shows the selected level.
 4. Keep ingestion running while the filter changes.
 5. Add tests for every threshold, including Assert at the top and Verbose at
    the bottom.
@@ -455,7 +455,7 @@ The window has a compact toolbar above a dense, monospaced log table.
 The toolbar contains:
 
 1. an editable application-ID picker;
-2. a minimum-level segmented control with `V`, `D`, `I`, `W`, `E`, and `A`;
+2. a minimum-level menu that shows the selected full level name;
 3. a local **Search Logcat** field, focused with `Command-F`;
 4. a toggle to show crashes and exceptions;
 5. **Pause** or **Resume**;
@@ -514,9 +514,10 @@ Log levels use Android's standard severity order:
 Verbose < Debug < Info < Warn < Error < Assert
 ```
 
-The level control selects a minimum rather than independent visibility
-toggles. For example, selecting `I` displays Info, Warn, Error, and Assert.
-The default minimum is Debug, so Verbose messages are initially hidden.
+The level menu selects a minimum rather than independent visibility toggles.
+It shows the selected full level name, with every option named in the menu.
+For example, selecting Info displays Info, Warn, Error, and Assert. The default
+minimum is Debug, so Verbose messages are initially hidden.
 
 The selected minimum level is window-specific and does not alter device-wide
 Logcat settings.
