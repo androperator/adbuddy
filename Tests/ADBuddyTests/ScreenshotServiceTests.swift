@@ -104,6 +104,47 @@ final class ScreenshotServiceTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(imageSize(in: framedData)), CGSize(width: 8, height: 12))
     }
 
+    func testClipsTheScreenshotToTheSDKSkinsRoundedDisplayCorners() async throws {
+        let fixture = try ScreenshotFrameFixture.make()
+        let screenshotData = try ScreenshotFrameFixture.pngData(
+            width: 400,
+            height: 800,
+            red: 1,
+            green: 0,
+            blue: 0
+        )
+        defer {
+            try? FileManager.default.removeItem(at: fixture.temporaryDirectory)
+        }
+
+        let fileManager = RecordingScreenshotFileManager()
+        let result = await ScreenshotService(
+            adbPath: "/SDK/platform-tools/adb",
+            sdkRootPath: fixture.sdkRootURL.path,
+            processRunner: ScriptedScreenshotProcessRunner(results: [
+                successfulProcessResult(standardOutput: screenshotData),
+                successfulProcessResult(standardOutput: "\(fixture.avdDirectoryURL.path)\nOK\n"),
+            ]),
+            fileManager: fileManager
+        ).capture(
+            device: emulatorDevice,
+            destination: URL(fileURLWithPath: "/tmp/screenshots", isDirectory: true),
+            framing: ScreenshotFramingOptions(addsFrame: true, alsoSavesOriginal: false)
+        )
+
+        guard case .success(let output) = result,
+              let framedData = fileManager.writtenFiles[output.primaryFileURL],
+              let framedPixels = pixelImage(in: framedData) else {
+            return XCTFail("Expected a framed screenshot")
+        }
+
+        let bezelPixel = framedPixels.pixel(atX: 100, y: 100)
+        XCTAssertEqual(framedPixels.pixel(atX: 200, y: 200), bezelPixel)
+        XCTAssertEqual(framedPixels.pixel(atX: 599, y: 200), bezelPixel)
+        XCTAssertEqual(framedPixels.pixel(atX: 200, y: 999), bezelPixel)
+        XCTAssertNotEqual(framedPixels.pixel(atX: 400, y: 200), bezelPixel)
+    }
+
     func testSavesOriginalAlongsideFramedScreenshotWhenRequested() async throws {
         let fixture = try ScreenshotFrameFixture.make()
         defer {
@@ -513,6 +554,7 @@ private struct ScreenshotFrameFixture {
                   height 8
                   x 0
                   y 0
+                  corner_radius 1
                 }
               }
               portrait {

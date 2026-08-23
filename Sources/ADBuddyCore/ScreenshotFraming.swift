@@ -312,6 +312,7 @@ private struct AndroidSDKSkinFrameLayout: Sendable {
     let skinIdentifier: String
     let canvasSize: CGSize
     let displayRect: CGRect
+    let displayCornerRadius: CGFloat
     let backdropImageURLs: [PositionedSkinAsset]
     let overlayImageURLs: [PositionedSkinAsset]
     let frameOverlayImageURLs: [PositionedSkinAsset]
@@ -360,6 +361,7 @@ private enum AndroidSDKSkinLayoutParser {
 
         let displayOffsetX = display.integerValue(for: "x") ?? 0
         let displayOffsetY = display.integerValue(for: "y") ?? 0
+        let displayCornerRadius = CGFloat(display.integerValue(for: "corner_radius") ?? 0)
 
         return layouts.children.compactMap { layout in
             guard let canvasWidth = layout.integerValue(for: "width"),
@@ -418,6 +420,7 @@ private enum AndroidSDKSkinLayoutParser {
                 skinIdentifier: skinIdentifier,
                 canvasSize: CGSize(width: canvasWidth, height: canvasHeight),
                 displayRect: displayRect,
+                displayCornerRadius: displayCornerRadius,
                 backdropImageURLs: backdropImageURLs.map { imageURL in
                     imageURL.withPlacement(x: frameX, y: frameY)
                 },
@@ -583,14 +586,24 @@ private enum AndroidSDKSkinFrameRenderer {
             ImageCanvas.draw(image, in: context, scale: scaleX, canvasHeight: canvasHeight)
         }
 
-        context.draw(
-            screenshot,
-            in: ImageCanvas.topLeftRect(
-                layout.displayRect,
-                scale: scaleX,
-                canvasHeight: canvasHeight
-            )
+        let displayDrawingRect = ImageCanvas.topLeftRect(
+            layout.displayRect,
+            scale: scaleX,
+            canvasHeight: canvasHeight
         )
+        context.saveGState()
+        if layout.displayCornerRadius > 0 {
+            let scaledCornerRadius = layout.displayCornerRadius * scaleX
+            context.addPath(CGPath(
+                roundedRect: displayDrawingRect,
+                cornerWidth: scaledCornerRadius,
+                cornerHeight: scaledCornerRadius,
+                transform: nil
+            ))
+            context.clip()
+        }
+        context.draw(screenshot, in: displayDrawingRect)
+        context.restoreGState()
 
         for image in overlayImages {
             ImageCanvas.draw(image, in: context, scale: scaleX, canvasHeight: canvasHeight)
