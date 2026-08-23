@@ -102,8 +102,9 @@ The first implementation is a complete vertical slice, not a visual mockup.
   stopping. To avoid duplicate rows, a running AVD is represented by its
   connected Android device row; the installed-emulators section keeps stopped
   and transitional AVDs.
-- Let users start a stopped AVD with Quick Boot, use Cold Boot from its action
-  menu, or stop a running AVD.
+- Let users start a stopped AVD with Quick Boot through its Start control or by
+  double-clicking its row, use Cold Boot from its action menu, or stop a
+  running AVD.
 - Require an explicit confirmation before **Wipe Data and Start**, because it
   removes the AVD's installed apps and settings.
 - Start each mode with the SDK's `emulator` executable and fixed arguments:

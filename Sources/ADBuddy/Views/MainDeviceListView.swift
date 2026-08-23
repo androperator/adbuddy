@@ -299,7 +299,14 @@ private struct VirtualDeviceRow: View {
 
             lifecycleControls
         }
+        .contentShape(Rectangle())
         .padding(.vertical, 2)
+        .onTapGesture(count: 2) {
+            guard case .stopped = virtualDevice.status else {
+                return
+            }
+            start(.quickBoot)
+        }
         .contextMenu {
             Button("Reveal in Finder") {
                 virtualDeviceFinderRevealer.revealVirtualDevice(named: virtualDevice.name)

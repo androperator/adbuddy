@@ -143,7 +143,9 @@ feedback. The main window renders every physical device and usable ADB emulator
 under **Connected Android Devices**. A running AVD maps to that device row,
 where it exposes its AVD name, stop control, capture, and Logcat actions. The
 **Android Emulators** section keeps only stopped and transitional installed
-AVDs, avoiding a second row for an already-connected emulator.
+AVDs, avoiding a second row for an already-connected emulator. Double-clicking
+a stopped AVD row delegates to the same Quick Boot launch action as its Start
+control.
 
 `EmulatorWindowService` is a narrow GUI-side host-process bridge. It parses the
 fixed `/bin/ps` process listing to associate an AVD with a standalone window,
