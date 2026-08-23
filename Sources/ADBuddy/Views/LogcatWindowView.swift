@@ -32,20 +32,12 @@ struct LogcatWindowView: View {
         @Bindable var logcatStore = logcatStore
 
         VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(deviceName)
-                    .font(.headline)
-
-                Text(windowID.serial)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-
-            LogcatStateBanner(streamState: logcatStore.displayedStreamState)
+            LogcatContextBar(
+                deviceName: deviceName,
+                serial: windowID.serial,
+                streamState: logcatStore.displayedStreamState,
+                entryCount: logcatStore.displayedEntryCount
+            )
 
             Divider()
 
@@ -86,26 +78,30 @@ struct LogcatWindowView: View {
         }
         .toolbar {
             ToolbarItem(placement: .principal) {
-                ApplicationIDPicker(
-                    applicationID: logcatStore.applicationID,
-                    suggestions: logcatStore.runningApplicationIDs,
-                    onCommit: logcatStore.selectApplicationID
-                )
-                .frame(width: 220)
-            }
+                HStack(spacing: 8) {
+                    ApplicationIDPicker(
+                        applicationID: logcatStore.applicationID,
+                        suggestions: logcatStore.runningApplicationIDs,
+                        onCommit: logcatStore.selectApplicationID
+                    )
+                    .frame(width: 220)
 
-            ToolbarItem(placement: .principal) {
-                Picker("Minimum Log Level", selection: $logcatStore.minimumPriority) {
-                    ForEach(LogcatPriority.allCases, id: \.self) { priority in
-                        Text(priority.rawValue)
-                            .tag(priority)
-                            .accessibilityLabel(priority.displayName)
+                    Divider()
+                        .frame(height: 18)
+
+                    Picker("Minimum Log Level", selection: $logcatStore.minimumPriority) {
+                        ForEach(LogcatPriority.allCases, id: \.self) { priority in
+                            Text(priority.rawValue)
+                                .tag(priority)
+                                .accessibilityLabel(priority.displayName)
+                        }
                     }
+                    .pickerStyle(.segmented)
+                    .frame(width: 190)
+                    .accessibilityLabel("Minimum Log Level")
+                    .help("Minimum Log Level")
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 190)
-                .accessibilityLabel("Minimum Log Level")
-                .help("Minimum Log Level")
+                .controlSize(.small)
             }
 
             ToolbarItemGroup(placement: .automatic) {
@@ -159,20 +155,52 @@ struct LogcatWindowView: View {
     }
 }
 
-private struct LogcatStateBanner: View {
+private struct LogcatContextBar: View {
+    let deviceName: String
+    let serial: String
+    let streamState: LogcatStreamState
+    let entryCount: Int
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Label(deviceName, systemImage: "iphone")
+                .font(.callout.weight(.semibold))
+                .lineLimit(1)
+
+            Text(serial)
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .lineLimit(1)
+
+            Spacer(minLength: 12)
+
+            LogcatStreamStatus(streamState: streamState)
+
+            if entryCount > 0 {
+                Text("\(entryCount.formatted()) entries")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(.tertiary)
+                    .accessibilityLabel("Visible Logcat entries")
+                    .accessibilityValue(entryCount.formatted())
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+    }
+}
+
+private struct LogcatStreamStatus: View {
     let streamState: LogcatStreamState
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: symbolName)
-                .foregroundStyle(tint)
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        Label(message, systemImage: symbolName)
+            .font(.caption)
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .accessibilityLabel("Logcat status")
+            .accessibilityValue(message)
+            .help(message)
     }
 
     private var symbolName: String {
