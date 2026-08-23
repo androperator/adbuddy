@@ -15,11 +15,16 @@ APP_MACOS="$APP_CONTENTS/MacOS"
 APP_BINARY="$APP_MACOS/$APP_NAME"
 MCP_BINARY="$APP_MACOS/adbuddy-mcp"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
+LOGCAT_ICON="$ROOT_DIR/Assets/AndroidStudio/Logcat@20x20.svg"
 
 cd "$ROOT_DIR"
 
 [[ -f "$VERSION_FILE" ]] || {
   echo "error: release version file is missing: $VERSION_FILE" >&2
+  exit 1
+}
+[[ -f "$LOGCAT_ICON" ]] || {
+  echo "error: Android Studio Logcat icon is missing: $LOGCAT_ICON" >&2
   exit 1
 }
 VERSION="$(<"$VERSION_FILE")"
@@ -32,11 +37,12 @@ BUILD_BINARY="$BUILD_DIRECTORY/$APP_NAME"
 BUILD_MCP_BINARY="$BUILD_DIRECTORY/adbuddy-mcp"
 
 rm -rf "$APP_BUNDLE"
-mkdir -p "$APP_MACOS"
+mkdir -p "$APP_MACOS" "$APP_CONTENTS/Resources"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
 cp "$BUILD_MCP_BINARY" "$MCP_BINARY"
 chmod +x "$MCP_BINARY"
+cp "$LOGCAT_ICON" "$APP_CONTENTS/Resources/Logcat@20x20.svg"
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

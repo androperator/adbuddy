@@ -39,8 +39,7 @@ struct DeviceActionControls: View {
                 .frame(height: 20)
 
             Button(action: openLogcat) {
-                Label("Open Logcat", systemImage: "text.alignleft")
-                    .labelStyle(.iconOnly)
+                AndroidStudioLogcatGlyph()
             }
             .buttonStyle(.bordered)
             .accessibilityLabel("Open Logcat")
