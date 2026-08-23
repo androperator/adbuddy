@@ -53,7 +53,7 @@ struct MenuBarContentView: View {
 
         Divider()
 
-        Button("Quit ADBuddy") {
+        Button("Quit") {
             AppLogger.menuBar.info("Quit selected")
             NSApplication.shared.terminate(nil)
         }
