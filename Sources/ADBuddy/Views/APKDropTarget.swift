@@ -23,7 +23,7 @@ private struct APKDropTarget: ViewModifier {
                     return false
                 }
 
-                provider.loadObject(ofClass: URL.self) { fileURL, _ in
+                _ = provider.loadObject(ofClass: URL.self) { fileURL, _ in
                     guard let fileURL, fileURL.isFileURL else {
                         return
                     }
