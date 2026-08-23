@@ -11,6 +11,7 @@ The project includes:
 
 ```text
 scripts/build_and_run.sh
+scripts/package_release.sh
 .codex/environments/environment.toml
 ```
 
@@ -19,6 +20,10 @@ packages and ad-hoc signs the `.app`, launches it, and reports the app location
 or failure. The local signature binds the bundle identity for services such as
 macOS user notifications; it is not a substitute for the Developer ID signing
 required for release.
+
+`scripts/package_release.sh` is a separate release-only command. It builds
+universal release binaries, signs them with the configured Developer ID
+identity, and notarizes a versioned ZIP archive. It never launches the app.
 
 ## Local prerequisites
 

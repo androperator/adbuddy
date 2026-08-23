@@ -32,6 +32,30 @@ Do not treat an ad-hoc signed developer build as a public release. Public
 artifacts require a Developer ID Application identity, Hardened Runtime,
 notarization, and stapling.
 
+## Packaging command
+
+`scripts/package_release.sh` creates the universal application bundle and
+versioned ZIP archive. It defaults to the Action Launcher Developer ID identity
+and accepts an override through `AD_BUDDY_SIGNING_IDENTITY` when necessary.
+
+Before using the command for a public artifact, configure a notarization
+credential as a Keychain profile outside the repository. Do not place
+credentials or App Store Connect keys in environment files, scripts, or shell
+history. Then run:
+
+```sh
+AD_BUDDY_NOTARY_PROFILE="ADBuddy Notarization" \
+  scripts/package_release.sh 0.1.0
+```
+
+For local signing validation only, the command can omit notarization:
+
+```sh
+scripts/package_release.sh 0.1.0 --skip-notarization
+```
+
+An archive created with `--skip-notarization` is not a public release artifact.
+
 ## Initial release flow
 
 1. Update the app version and user-facing changelog.
@@ -93,5 +117,5 @@ for Homebrew installations so users do not receive conflicting update paths.
 
 Developer ID signing certificates, notarization credentials, and App Store
 Connect API keys are release secrets. Keep them out of the repository, app
-bundle, logs, shell history, and issue trackers. Add release automation only
-after the local signed-and-notarized flow has been proven.
+bundle, logs, shell history, and issue trackers. Do not add publishing
+automation until the local signed-and-notarized flow has been proven.
