@@ -96,6 +96,8 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Offer a contextual menu for each connected device that copies its ADB device
   ID. For a connected emulator matched to an AVD, also offer **Reveal in
   Finder** for its local AVD data directory.
+- Offer **Reveal in Finder** from the contextual menu of every displayed
+  installed AVD, including stopped and transitional emulators.
 - Show every installed AVD and whether it is stopped, starting, running, or
   stopping. To avoid duplicate rows, a running AVD is represented by its
   connected Android device row; the installed-emulators section keeps stopped

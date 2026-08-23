@@ -280,6 +280,8 @@ private struct VirtualDeviceRow: View {
     let start: (AndroidEmulatorStartMode) -> Void
     let requestWipeDataAndStart: () -> Void
 
+    private let virtualDeviceFinderRevealer = AndroidVirtualDeviceFinderRevealService()
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "laptopcomputer")
@@ -298,6 +300,11 @@ private struct VirtualDeviceRow: View {
             lifecycleControls
         }
         .padding(.vertical, 2)
+        .contextMenu {
+            Button("Reveal in Finder") {
+                virtualDeviceFinderRevealer.revealVirtualDevice(named: virtualDevice.name)
+            }
+        }
     }
 
     private var statusDetail: String {

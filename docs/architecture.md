@@ -152,10 +152,11 @@ connected emulator reveals its standalone Emulator process or the running
 Android Studio host application. The SwiftUI view reads the resulting
 presentation state without inspecting processes itself.
 
-The connected-device contextual menu uses narrow GUI-side services to copy a
-device serial as plain text or reveal a matched emulator's local AVD directory
-in Finder. The directory resolver follows the Android Emulator's AVD search
-order: `ANDROID_AVD_HOME`, `ANDROID_USER_HOME/avd`, then `~/.android/avd`.
+The device-row contextual menus use narrow GUI-side services to copy a
+connected device serial as plain text or reveal a matched or installed
+emulator's local AVD directory in Finder. The directory resolver follows the
+Android Emulator's AVD search order: `ANDROID_AVD_HOME`, `ANDROID_USER_HOME/avd`,
+then `~/.android/avd`.
 
 `AndroidEmulatorService` asks the SDK's `emulator` executable for
 `-list-avds`, then starts a selected AVD through a short-lived foreground
