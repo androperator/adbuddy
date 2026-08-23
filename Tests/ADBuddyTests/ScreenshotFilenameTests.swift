@@ -60,4 +60,29 @@ final class ScreenshotFilenameTests: XCTestCase {
         XCTAssertEqual(fileURLs.original.lastPathComponent, "\(expectedBaseName)-2.mp4")
         XCTAssertEqual(fileURLs.framed.lastPathComponent, "\(expectedBaseName)-2_framed.mp4")
     }
+
+    func testGeneratesCollisionFreeFramedScreenshotAndFiftyPercentCopyNames() {
+        let directory = URL(fileURLWithPath: "/tmp/screenshots", isDirectory: true)
+        let expectedBaseName = "Pixel-9-Pro_1970-01-01_000000_000"
+        let fileURLs = ScreenshotFilename.uniqueScreenshotURLs(
+            in: directory,
+            deviceName: "Pixel 9 Pro",
+            date: Date(timeIntervalSince1970: 0),
+            primarySuffix: "_framed",
+            alsoSavesOriginal: true,
+            alsoSavesFiftyPercentCopy: true,
+            timeZone: TimeZone(secondsFromGMT: 0)!,
+            fileExists: { url in
+                [
+                    "\(expectedBaseName).png",
+                    "\(expectedBaseName)_framed.png",
+                    "\(expectedBaseName)_framed_50.png",
+                ].contains(url.lastPathComponent)
+            }
+        )
+
+        XCTAssertEqual(fileURLs.originalFileURL?.lastPathComponent, "\(expectedBaseName)-2.png")
+        XCTAssertEqual(fileURLs.primaryFileURL.lastPathComponent, "\(expectedBaseName)-2_framed.png")
+        XCTAssertEqual(fileURLs.fiftyPercentFileURL?.lastPathComponent, "\(expectedBaseName)-2_framed_50.png")
+    }
 }

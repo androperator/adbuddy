@@ -56,6 +56,19 @@ final class ADBuddySharedPreferencesTests: XCTestCase {
         )
     }
 
+    func testScreenshotOutputOptionsUseSharedSavedValue() {
+        let userDefaults = makeUserDefaults()
+        userDefaults.set(
+            true,
+            forKey: ADBuddySharedPreferences.screenshotAlsoSavesFiftyPercentCopyKey
+        )
+
+        XCTAssertEqual(
+            ADBuddySharedPreferences.screenshotOutputOptions(userDefaults: userDefaults),
+            ScreenshotOutputOptions(alsoSavesFiftyPercentCopy: true)
+        )
+    }
+
     func testScreenRecordingFramingOptionsUseSharedSavedValue() {
         let userDefaults = makeUserDefaults()
         userDefaults.set(true, forKey: ADBuddySharedPreferences.screenRecordingAddsFrameKey)

@@ -222,9 +222,10 @@ Emulator console for the running AVD path, reads its `config.ini`, and matches
 the configured SDK skin against a cached index built from `<sdk>/skins/*/layout`.
 It uses the skin's declared display rectangle and frame layers instead of a
 bundled device-to-resolution map. A missing, custom, incompatible, or
-ambiguous SDK skin falls back to a generic black device frame. The screenshot
-pixels are not rescaled; only frame assets are scaled to the compatible display
-size.
+ambiguous SDK skin falls back to a generic black device frame. When the
+50%-size copy preference is enabled, the service resizes the final primary PNG
+locally after its optional frame and device-details label are applied. It does
+not take a second device screenshot.
 
 When the device-details overlay preference is enabled, `ScreenshotService` and
 the recording framer use fixed ADB `getprop` arguments to read

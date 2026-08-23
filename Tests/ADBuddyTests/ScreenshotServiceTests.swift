@@ -257,6 +257,37 @@ final class ScreenshotServiceTests: XCTestCase {
         )
     }
 
+    func testSavesAFiftyPercentCopyOfTheFinalFramedScreenshot() async throws {
+        let screenshotData = try ScreenshotFrameFixture.verticallySplitPNGData(width: 100, height: 200)
+        let fileManager = RecordingScreenshotFileManager()
+        let result = await ScreenshotService(
+            adbPath: "/SDK/platform-tools/adb",
+            processRunner: StubScreenshotProcessRunner(
+                result: successfulProcessResult(standardOutput: screenshotData)
+            ),
+            fileManager: fileManager
+        ).capture(
+            device: connectedDevice,
+            destination: URL(fileURLWithPath: "/tmp/screenshots", isDirectory: true),
+            framing: ScreenshotFramingOptions(addsFrame: true, alsoSavesOriginal: false),
+            output: ScreenshotOutputOptions(alsoSavesFiftyPercentCopy: true),
+            date: Date(timeIntervalSince1970: 0)
+        )
+
+        guard case .success(let output) = result,
+              let fiftyPercentFileURL = output.fiftyPercentFileURL,
+              let primaryData = fileManager.writtenFiles[output.primaryFileURL],
+              let fiftyPercentData = fileManager.writtenFiles[fiftyPercentFileURL] else {
+            return XCTFail("Expected a primary screenshot and its 50% size copy")
+        }
+
+        XCTAssertTrue(output.primaryFileURL.lastPathComponent.hasSuffix("_framed.png"))
+        XCTAssertTrue(fiftyPercentFileURL.lastPathComponent.hasSuffix("_framed_50.png"))
+        XCTAssertEqual(try XCTUnwrap(imageSize(in: primaryData)), CGSize(width: 140, height: 240))
+        XCTAssertEqual(try XCTUnwrap(imageSize(in: fiftyPercentData)), CGSize(width: 70, height: 120))
+        XCTAssertEqual(output.savedFileURLs, [output.primaryFileURL, fiftyPercentFileURL])
+    }
+
     func testUsesGenericFrameWhenTheCaptureIsNotFromAMatchedEmulatorSkin() async throws {
         let fixture = try ScreenshotFrameFixture.make()
         let screenshotData = try ScreenshotFrameFixture.verticallySplitPNGData(width: 100, height: 200)

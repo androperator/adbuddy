@@ -99,6 +99,17 @@ private struct ScreenshotSettingsView: View {
 
             Section {
                 Toggle(
+                    "Also save a 50% size copy",
+                    isOn: $preferences.screenshotAlsoSavesFiftyPercentCopy
+                )
+            } header: {
+                Text("Screenshot Output")
+            } footer: {
+                Text("Creates an additional PNG at half the dimensions of the final screenshot, including an optional frame and device details.")
+            }
+
+            Section {
+                Toggle(
                     "Add a device frame to screenshots",
                     isOn: $preferences.screenshotAddsFrame
                 )

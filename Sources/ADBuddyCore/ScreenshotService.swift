@@ -11,6 +11,7 @@ public enum ScreenshotCaptureError: Equatable, Sendable {
     case invalidPNG
     case unableToAddDeviceDetails
     case unableToAddFrame
+    case unableToCreateFiftyPercentCopy
     case unableToSave(String)
 
     public var message: String {
@@ -25,6 +26,8 @@ public enum ScreenshotCaptureError: Equatable, Sendable {
             "Could not add the Android version and API level to the screenshot."
         case .unableToAddFrame:
             "Could not add a frame to the screenshot."
+        case .unableToCreateFiftyPercentCopy:
+            "Could not create a 50% size copy of the screenshot."
         case .unableToSave(let message):
             "Could not save the screenshot: \(message)"
         }
@@ -78,6 +81,7 @@ public struct ScreenshotService: Sendable {
         device: AndroidDevice,
         destination: URL,
         framing: ScreenshotFramingOptions = .disabled,
+        output: ScreenshotOutputOptions = .standard,
         date: Date = Date()
     ) async -> ScreenshotCaptureResult {
         guard device.isUsable else {
@@ -148,49 +152,44 @@ public struct ScreenshotService: Sendable {
             framingData = nil
         }
 
+        let primaryScreenshotData = framingData ?? annotatedScreenshotData
+        let fiftyPercentScreenshotData: Data?
+        if output.alsoSavesFiftyPercentCopy {
+            guard let resizedScreenshotData = ScreenshotImageResizer.fiftyPercentPNG(
+                from: primaryScreenshotData
+            ) else {
+                return .failure(.unableToCreateFiftyPercentCopy)
+            }
+            fiftyPercentScreenshotData = resizedScreenshotData
+        } else {
+            fiftyPercentScreenshotData = nil
+        }
+
+        let isFramed = framingData != nil
+        let fileURLs = ScreenshotFilename.uniqueScreenshotURLs(
+            in: destination,
+            deviceName: device.displayName,
+            date: date,
+            primarySuffix: isFramed ? "_framed" : "",
+            alsoSavesOriginal: isFramed && framing.alsoSavesOriginal,
+            alsoSavesFiftyPercentCopy: output.alsoSavesFiftyPercentCopy,
+            fileExists: fileManager.fileExists(at:)
+        )
+
         do {
             try fileManager.ensureDirectoryExists(at: destination)
-
-            if let framingData {
-                if framing.alsoSavesOriginal {
-                    let fileURLs = ScreenshotFilename.uniqueOriginalAndFramedURLs(
-                        in: destination,
-                        deviceName: device.displayName,
-                        date: date,
-                        fileExists: fileManager.fileExists(at:)
-                    )
-                    try fileManager.write(annotatedScreenshotData, to: fileURLs.original)
-                    try fileManager.write(framingData, to: fileURLs.framed)
-                    return .success(ScreenshotCaptureOutput(
-                        primaryFileURL: fileURLs.framed,
-                        originalFileURL: fileURLs.original
-                    ))
-                }
-
-                let framedURL = ScreenshotFilename.uniqueURL(
-                    in: destination,
-                    deviceName: device.displayName,
-                    date: date,
-                    suffix: "_framed",
-                    fileExists: fileManager.fileExists(at:)
-                )
-                try fileManager.write(framingData, to: framedURL)
-                return .success(ScreenshotCaptureOutput(
-                    primaryFileURL: framedURL,
-                    originalFileURL: nil
-                ))
+            if let originalFileURL = fileURLs.originalFileURL {
+                try fileManager.write(annotatedScreenshotData, to: originalFileURL)
             }
-
-            let fileURL = ScreenshotFilename.uniqueURL(
-                in: destination,
-                deviceName: device.displayName,
-                date: date,
-                fileExists: fileManager.fileExists(at:)
-            )
-            try fileManager.write(annotatedScreenshotData, to: fileURL)
+            try fileManager.write(primaryScreenshotData, to: fileURLs.primaryFileURL)
+            if let fiftyPercentFileURL = fileURLs.fiftyPercentFileURL,
+               let fiftyPercentScreenshotData {
+                try fileManager.write(fiftyPercentScreenshotData, to: fiftyPercentFileURL)
+            }
             return .success(ScreenshotCaptureOutput(
-                primaryFileURL: fileURL,
-                originalFileURL: nil
+                primaryFileURL: fileURLs.primaryFileURL,
+                originalFileURL: fileURLs.originalFileURL,
+                fiftyPercentFileURL: fileURLs.fiftyPercentFileURL
             ))
         } catch {
             return .failure(.unableToSave(error.localizedDescription))

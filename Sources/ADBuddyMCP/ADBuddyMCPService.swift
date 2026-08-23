@@ -157,7 +157,8 @@ actor ADBuddyMCPService {
         ).capture(
             device: device,
             destination: destination,
-            framing: ADBuddySharedPreferences.screenshotFramingOptions()
+            framing: ADBuddySharedPreferences.screenshotFramingOptions(),
+            output: ADBuddySharedPreferences.screenshotOutputOptions()
         )
 
         switch result {
@@ -170,6 +171,9 @@ actor ADBuddyMCPService {
             ]
             if let originalFileURL = output.originalFileURL {
                 payload["originalPath"] = originalFileURL.path
+            }
+            if let fiftyPercentFileURL = output.fiftyPercentFileURL {
+                payload["fiftyPercentPath"] = fiftyPercentFileURL.path
             }
             return try encodedPayload(payload)
         case .failure(let error):

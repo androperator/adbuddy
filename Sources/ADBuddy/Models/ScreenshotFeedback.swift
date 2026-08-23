@@ -26,10 +26,14 @@ enum ScreenshotFeedback: Equatable {
             let primaryDetail = copiedToClipboard
                 ? "\(output.primaryFileURL.lastPathComponent) copied to the clipboard."
                 : output.primaryFileURL.lastPathComponent
-            guard let originalFileURL = output.originalFileURL else {
+            let additionalFileNames = [
+                output.originalFileURL?.lastPathComponent,
+                output.fiftyPercentFileURL?.lastPathComponent,
+            ].compactMap { $0 }
+            guard !additionalFileNames.isEmpty else {
                 return primaryDetail
             }
-            return "\(primaryDetail) Also saved \(originalFileURL.lastPathComponent)."
+            return "\(primaryDetail) Also saved \(additionalFileNames.joined(separator: " and "))."
         case .failure(let message):
             return message
         }

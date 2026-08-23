@@ -48,6 +48,9 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Offer an opt-in Settings preference to overlay the captured device's Android
   version and API level in the top-left corner of saved screenshots and framed
   recordings.
+- Offer an opt-in Settings preference to also save a 50%-size PNG copy of the
+  final screenshot. It must use the same one-device capture and preserve any
+  optional frame and device-details label.
 - Report a concise native success state and a useful failure if capture fails.
 - Deliver a native system notification for a successful capture, including a
   preview of the saved PNG and a **Reveal in Finder** action.

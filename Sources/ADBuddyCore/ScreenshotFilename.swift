@@ -1,6 +1,45 @@
 import Foundation
 
 enum ScreenshotFilename {
+    static func uniqueScreenshotURLs(
+        in directoryURL: URL,
+        deviceName: String,
+        date: Date,
+        primarySuffix: String,
+        alsoSavesOriginal: Bool,
+        alsoSavesFiftyPercentCopy: Bool,
+        fileExtension: String = "png",
+        timeZone: TimeZone = .current,
+        fileExists: (URL) -> Bool
+    ) -> ScreenshotSaveFileURLs {
+        let timestamp = formattedTimestamp(for: date, timeZone: timeZone)
+        let baseName = "\(sanitizedDeviceName(deviceName))_\(timestamp)"
+
+        var attempt = 1
+        while true {
+            let collisionSuffix = attempt == 1 ? "" : "-\(attempt)"
+            let name = baseName + collisionSuffix
+            let originalFileURL = alsoSavesOriginal
+                ? directoryURL.appendingPathComponent("\(name).\(fileExtension)")
+                : nil
+            let primaryFileURL = directoryURL.appendingPathComponent(
+                "\(name)\(primarySuffix).\(fileExtension)"
+            )
+            let fiftyPercentFileURL = alsoSavesFiftyPercentCopy
+                ? directoryURL.appendingPathComponent("\(name)\(primarySuffix)_50.\(fileExtension)")
+                : nil
+            let requestedFileURLs = [originalFileURL, primaryFileURL, fiftyPercentFileURL].compactMap { $0 }
+            if requestedFileURLs.allSatisfy({ !fileExists($0) }) {
+                return ScreenshotSaveFileURLs(
+                    originalFileURL: originalFileURL,
+                    primaryFileURL: primaryFileURL,
+                    fiftyPercentFileURL: fiftyPercentFileURL
+                )
+            }
+            attempt += 1
+        }
+    }
+
     static func uniqueURL(
         in directoryURL: URL,
         deviceName: String,
@@ -69,4 +108,10 @@ enum ScreenshotFilename {
         formatter.dateFormat = "yyyy-MM-dd_HHmmss_SSS"
         return formatter.string(from: date)
     }
+}
+
+struct ScreenshotSaveFileURLs {
+    let originalFileURL: URL?
+    let primaryFileURL: URL
+    let fiftyPercentFileURL: URL?
 }

@@ -170,12 +170,16 @@ final class DeviceStore {
             alsoSavesOriginal: preferences.screenshotAlsoSavesOriginal,
             overlaysDeviceDetails: preferences.screenshotOverlaysDeviceDetails
         )
+        let output = ScreenshotOutputOptions(
+            alsoSavesFiftyPercentCopy: preferences.screenshotAlsoSavesFiftyPercentCopy
+        )
 
         Task { [weak self] in
             let result = await screenshotService.capture(
                 device: device,
                 destination: destination,
-                framing: framing
+                framing: framing,
+                output: output
             )
             guard let self, !Task.isCancelled else {
                 return

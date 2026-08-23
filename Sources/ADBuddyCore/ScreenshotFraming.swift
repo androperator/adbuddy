@@ -26,6 +26,16 @@ public struct ScreenshotFramingOptions: Equatable, Sendable {
     }
 }
 
+public struct ScreenshotOutputOptions: Equatable, Sendable {
+    public static let standard = ScreenshotOutputOptions(alsoSavesFiftyPercentCopy: false)
+
+    public let alsoSavesFiftyPercentCopy: Bool
+
+    public init(alsoSavesFiftyPercentCopy: Bool) {
+        self.alsoSavesFiftyPercentCopy = alsoSavesFiftyPercentCopy
+    }
+}
+
 struct ScreenshotDeviceDetailsOverlayRenderer {
     static func overlay(
         deviceDetails: AndroidDeviceDetails,
@@ -81,21 +91,44 @@ struct ScreenshotDeviceDetailsOverlayRenderer {
     }
 }
 
+struct ScreenshotImageResizer {
+    static func fiftyPercentPNG(from screenshotData: Data) -> Data? {
+        guard let screenshot = PNGImageCodec.image(from: screenshotData) else {
+            return nil
+        }
+
+        let outputWidth = max(1, screenshot.width / 2)
+        let outputHeight = max(1, screenshot.height / 2)
+        guard let context = ImageCanvas.makeContext(width: outputWidth, height: outputHeight) else {
+            return nil
+        }
+
+        context.interpolationQuality = .high
+        context.draw(screenshot, in: CGRect(x: 0, y: 0, width: outputWidth, height: outputHeight))
+        guard let output = context.makeImage() else {
+            return nil
+        }
+        return PNGImageCodec.data(from: output)
+    }
+}
+
 public struct ScreenshotCaptureOutput: Equatable, Sendable {
     public let primaryFileURL: URL
     public let originalFileURL: URL?
+    public let fiftyPercentFileURL: URL?
 
-    public init(primaryFileURL: URL, originalFileURL: URL?) {
+    public init(
+        primaryFileURL: URL,
+        originalFileURL: URL?,
+        fiftyPercentFileURL: URL? = nil
+    ) {
         self.primaryFileURL = primaryFileURL
         self.originalFileURL = originalFileURL
+        self.fiftyPercentFileURL = fiftyPercentFileURL
     }
 
     public var savedFileURLs: [URL] {
-        if let originalFileURL {
-            [originalFileURL, primaryFileURL]
-        } else {
-            [primaryFileURL]
-        }
+        [originalFileURL, primaryFileURL, fiftyPercentFileURL].compactMap { $0 }
     }
 }
 

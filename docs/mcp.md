@@ -26,10 +26,11 @@ Android target is connected.
 
 MCP screenshots and recordings use the same folder and saved recording defaults
 as the ADBuddy app. The server reads the shared `com.clawperator.adbuddy`
-preferences domain, so a folder selected in ADBuddy Settings applies to agent
-captures as well.
+preferences domain, so screenshot framing, device-details, and the optional
+50%-size copy apply to agent captures as well.
 
-Tool results provide the local absolute media path. MCP captures do not post
+Tool results provide the local absolute media path. A screenshot result includes
+`fiftyPercentPath` when that optional copy is enabled. MCP captures do not post
 macOS notifications and do not copy images to the clipboard because the agent
 already receives the resulting path directly.
 
