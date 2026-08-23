@@ -16,7 +16,7 @@ struct SettingsView: View {
                     Label("Theme", systemImage: "paintpalette")
                 }
         }
-        .frame(width: 580, height: 592)
+        .frame(width: 580, height: 420)
         .background {
             SettingsWindowTitle(title: "ADBuddy Settings")
                 .frame(width: 0, height: 0)
