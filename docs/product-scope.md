@@ -43,7 +43,8 @@ The first implementation is a complete vertical slice, not a visual mockup.
   is available; otherwise use a generic black frame. The preference can also
   retain the original screenshot alongside its `_framed.png` version.
 - Offer an opt-in Settings preference to overlay the captured device's Android
-  version and API level in the top-left corner of saved screenshots.
+  version and API level in the top-left corner of saved screenshots and framed
+  recordings.
 - Report a concise native success state and a useful failure if capture fails.
 - Deliver a native system notification for a successful capture, including a
   preview of the saved PNG and a **Reveal in Finder** action.

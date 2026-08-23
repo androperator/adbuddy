@@ -215,7 +215,8 @@ public struct ScreenRecordingService: Sendable {
         switch await recordingFramer.frame(
             recordingAt: destinationURLs.originalURL,
             outputURL: framedURL,
-            device: session.device
+            device: session.device,
+            overlaysDeviceDetails: framing.overlaysDeviceDetails
         ) {
         case .success:
             return .success(

@@ -59,10 +59,11 @@ final class ADBuddySharedPreferencesTests: XCTestCase {
     func testScreenRecordingFramingOptionsUseSharedSavedValue() {
         let userDefaults = makeUserDefaults()
         userDefaults.set(true, forKey: ADBuddySharedPreferences.screenRecordingAddsFrameKey)
+        userDefaults.set(true, forKey: ADBuddySharedPreferences.screenshotOverlaysDeviceDetailsKey)
 
         XCTAssertEqual(
             ADBuddySharedPreferences.screenRecordingFramingOptions(userDefaults: userDefaults),
-            ScreenRecordingFramingOptions(addsFrame: true)
+            ScreenRecordingFramingOptions(addsFrame: true, overlaysDeviceDetails: true)
         )
     }
 

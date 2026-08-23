@@ -200,9 +200,39 @@ final class ScreenRecordingTests: XCTestCase {
             [ScreenRecordingFramingRequest(
                 inputURL: originalURL,
                 outputURL: output.primaryFileURL,
-                device: connectedDevice
+                device: connectedDevice,
+                overlaysDeviceDetails: false
             )]
         )
+    }
+
+    func testPassesTheDeviceDetailsOverlayPreferenceToTheFramer() async {
+        let processRunner = ScriptedScreenRecordingProcessRunner(results: [
+            successfulResult(),
+            successfulResult(),
+            successfulResult(),
+        ])
+        let framer = ScriptedScreenRecordingFramer(result: .success)
+        let service = ScreenRecordingService(
+            adbPath: "/SDK/platform-tools/adb",
+            processRunner: processRunner,
+            fileManager: RecordingScreenFileManager(),
+            recordingFramer: framer
+        )
+
+        _ = await service.record(
+            session: ScreenRecordingSession(device: connectedDevice),
+            options: .default,
+            destination: URL(fileURLWithPath: "/tmp/media", isDirectory: true),
+            framing: ScreenRecordingFramingOptions(
+                addsFrame: true,
+                overlaysDeviceDetails: true
+            ),
+            onScreenRecorderStarted: {}
+        )
+
+        let requests = await framer.requests()
+        XCTAssertEqual(requests.first?.overlaysDeviceDetails, true)
     }
 
     func testKeepsTheOriginalRecordingWhenFramingFails() async {
@@ -341,7 +371,8 @@ final class ScreenRecordingTests: XCTestCase {
         let result = await framer.frame(
             recordingAt: inputURL,
             outputURL: outputURL,
-            device: connectedDevice
+            device: connectedDevice,
+            overlaysDeviceDetails: false
         )
 
         XCTAssertEqual(result, .success)
@@ -507,6 +538,7 @@ private struct ScreenRecordingFramingRequest: Equatable {
     let inputURL: URL
     let outputURL: URL
     let device: AndroidDevice
+    let overlaysDeviceDetails: Bool
 }
 
 private actor ScriptedScreenRecordingFramer: ScreenRecordingFraming {
@@ -520,12 +552,14 @@ private actor ScriptedScreenRecordingFramer: ScreenRecordingFraming {
     func frame(
         recordingAt inputURL: URL,
         outputURL: URL,
-        device: AndroidDevice
+        device: AndroidDevice,
+        overlaysDeviceDetails: Bool
     ) async -> ScreenRecordingFramingResult {
         recordedRequests.append(ScreenRecordingFramingRequest(
             inputURL: inputURL,
             outputURL: outputURL,
-            device: device
+            device: device,
+            overlaysDeviceDetails: overlaysDeviceDetails
         ))
         return result
     }

@@ -1,15 +1,21 @@
 @preconcurrency import AVFoundation
 import CoreGraphics
+import CoreText
 import Foundation
 @preconcurrency import QuartzCore
 
 public struct ScreenRecordingFramingOptions: Equatable, Sendable {
-    public static let disabled = ScreenRecordingFramingOptions(addsFrame: false)
+    public static let disabled = ScreenRecordingFramingOptions(
+        addsFrame: false,
+        overlaysDeviceDetails: false
+    )
 
     public let addsFrame: Bool
+    public let overlaysDeviceDetails: Bool
 
-    public init(addsFrame: Bool) {
+    public init(addsFrame: Bool, overlaysDeviceDetails: Bool = false) {
         self.addsFrame = addsFrame
+        self.overlaysDeviceDetails = overlaysDeviceDetails
     }
 }
 
@@ -23,7 +29,8 @@ public protocol ScreenRecordingFraming: Sendable {
     func frame(
         recordingAt inputURL: URL,
         outputURL: URL,
-        device: AndroidDevice
+        device: AndroidDevice,
+        overlaysDeviceDetails: Bool
     ) async -> ScreenRecordingFramingResult
 }
 
@@ -185,7 +192,8 @@ public struct AVFoundationScreenRecordingFramer: ScreenRecordingFraming, @unchec
     public func frame(
         recordingAt inputURL: URL,
         outputURL: URL,
-        device: AndroidDevice
+        device: AndroidDevice,
+        overlaysDeviceDetails: Bool
     ) async -> ScreenRecordingFramingResult {
         guard !Task.isCancelled else {
             return .cancelled
@@ -196,6 +204,19 @@ public struct AVFoundationScreenRecordingFramer: ScreenRecordingFraming, @unchec
 
         let asset = AVURLAsset(url: inputURL)
         do {
+            let deviceDetails: AndroidDeviceDetails?
+            if overlaysDeviceDetails {
+                guard let resolvedDeviceDetails = await AndroidDeviceDetailsService(
+                    adbPath: adbPath,
+                    processRunner: processRunner
+                ).details(for: device) else {
+                    return .failure("Could not read the Android version and API level for the overlay.")
+                }
+                deviceDetails = resolvedDeviceDetails
+            } else {
+                deviceDetails = nil
+            }
+
             let videoTracks = try await asset.loadTracks(withMediaType: .video)
             guard let videoTrack = videoTracks.first else {
                 return .failure("The saved recording does not contain a video track.")
@@ -226,14 +247,16 @@ public struct AVFoundationScreenRecordingFramer: ScreenRecordingFraming, @unchec
                 naturalVideoSize: naturalSize,
                 preferredTransform: preferredTransform,
                 nominalFrameRate: nominalFrameRate,
-                frameDescriptor: selectedFrameDescriptor
+                frameDescriptor: selectedFrameDescriptor,
+                deviceDetails: deviceDetails
             ) ?? genericCompositionSetup(
                 videoTrack: videoTrack,
                 duration: duration,
                 naturalVideoSize: naturalSize,
                 preferredTransform: preferredTransform,
                 nominalFrameRate: nominalFrameRate,
-                videoSize: videoSize
+                videoSize: videoSize,
+                deviceDetails: deviceDetails
             )
             guard let compositionSetup else {
                 return .failure("Could not prepare a device frame for the saved recording.")
@@ -301,7 +324,8 @@ public struct AVFoundationScreenRecordingFramer: ScreenRecordingFraming, @unchec
         videoTrack: AVAssetTrack,
         duration: CMTime,
         configuration: ScreenRecordingVideoCompositionConfiguration,
-        frameDescriptor: RecordingFrameDescriptor
+        frameDescriptor: RecordingFrameDescriptor,
+        deviceDetails: AndroidDeviceDetails?
     ) -> AVMutableVideoComposition? {
         let instruction = AVMutableVideoCompositionInstruction()
         instruction.timeRange = CMTimeRange(start: .zero, duration: duration)
@@ -366,6 +390,16 @@ public struct AVFoundationScreenRecordingFramer: ScreenRecordingFraming, @unchec
             parentLayer.addSublayer(overlayLayer)
         }
 
+        if let deviceDetails {
+            guard let overlayLayer = deviceDetailsOverlayLayer(
+                for: deviceDetails,
+                canvasSize: configuration.renderSize
+            ) else {
+                return nil
+            }
+            parentLayer.addSublayer(overlayLayer)
+        }
+
         composition.animationTool = AVVideoCompositionCoreAnimationTool(
             postProcessingAsVideoLayer: videoLayer,
             in: parentLayer
@@ -379,7 +413,8 @@ public struct AVFoundationScreenRecordingFramer: ScreenRecordingFraming, @unchec
         naturalVideoSize: CGSize,
         preferredTransform: CGAffineTransform,
         nominalFrameRate: Float,
-        frameDescriptor: RecordingFrameDescriptor
+        frameDescriptor: RecordingFrameDescriptor,
+        deviceDetails: AndroidDeviceDetails?
     ) -> AVMutableVideoComposition? {
         guard let configuration = ScreenRecordingVideoCompositionConfiguration(
             naturalVideoSize: naturalVideoSize,
@@ -393,7 +428,8 @@ public struct AVFoundationScreenRecordingFramer: ScreenRecordingFraming, @unchec
             videoTrack: videoTrack,
             duration: duration,
             configuration: configuration,
-            frameDescriptor: frameDescriptor
+            frameDescriptor: frameDescriptor,
+            deviceDetails: deviceDetails
         )
     }
 
@@ -403,7 +439,8 @@ public struct AVFoundationScreenRecordingFramer: ScreenRecordingFraming, @unchec
         naturalVideoSize: CGSize,
         preferredTransform: CGAffineTransform,
         nominalFrameRate: Float,
-        videoSize: CGSize
+        videoSize: CGSize,
+        deviceDetails: AndroidDeviceDetails?
     ) -> AVMutableVideoComposition? {
         guard let geometry = ScreenRecordingFrameGeometry.generic(for: videoSize) else {
             return nil
@@ -414,8 +451,63 @@ public struct AVFoundationScreenRecordingFramer: ScreenRecordingFraming, @unchec
             naturalVideoSize: naturalVideoSize,
             preferredTransform: preferredTransform,
             nominalFrameRate: nominalFrameRate,
-            frameDescriptor: RecordingFrameDescriptor(geometry: geometry, style: .generic)
+            frameDescriptor: RecordingFrameDescriptor(geometry: geometry, style: .generic),
+            deviceDetails: deviceDetails
         )
+    }
+
+    private func deviceDetailsOverlayLayer(
+        for deviceDetails: AndroidDeviceDetails,
+        canvasSize: CGSize
+    ) -> CALayer? {
+        let canvasWidth = Int(canvasSize.width.rounded())
+        let canvasHeight = Int(canvasSize.height.rounded())
+        guard let context = ImageCanvas.makeContext(width: canvasWidth, height: canvasHeight) else {
+            return nil
+        }
+
+        let shortestSide = min(canvasSize.width, canvasSize.height)
+        let outerMargin: CGFloat = 4
+        let labelPadding = max(10, shortestSide * 0.012)
+        let fontSize = max(20, shortestSide * 0.032)
+        let font = CTFontCreateUIFontForLanguage(.system, fontSize, nil)
+            ?? CTFontCreateWithName("HelveticaNeue-Medium" as CFString, fontSize, nil)
+        let text = deviceDetails.screenshotOverlayText
+        let attributedText = NSAttributedString(
+            string: text,
+            attributes: [
+                kCTFontAttributeName as NSAttributedString.Key: font,
+                kCTForegroundColorAttributeName as NSAttributedString.Key: CGColor(gray: 1, alpha: 1),
+            ]
+        )
+        let line = CTLineCreateWithAttributedString(attributedText)
+        let textBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        let labelRect = CGRect(
+            x: outerMargin,
+            y: canvasSize.height - outerMargin - textBounds.height - labelPadding * 2,
+            width: textBounds.width + labelPadding * 2,
+            height: textBounds.height + labelPadding * 2
+        )
+
+        context.setFillColor(CGColor(gray: 0, alpha: 0.7))
+        context.addPath(CGPath(
+            roundedRect: labelRect,
+            cornerWidth: labelPadding,
+            cornerHeight: labelPadding,
+            transform: nil
+        ))
+        context.fillPath()
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
+        context.textPosition = CGPoint(
+            x: labelRect.minX + labelPadding - textBounds.origin.x,
+            y: labelRect.minY + labelPadding - textBounds.origin.y
+        )
+        CTLineDraw(line, context)
+
+        let overlayLayer = CALayer()
+        overlayLayer.frame = CGRect(origin: .zero, size: canvasSize)
+        overlayLayer.contents = context.makeImage()
+        return overlayLayer
     }
 
     private func displayMaskLayer(

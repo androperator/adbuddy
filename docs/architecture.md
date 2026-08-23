@@ -72,7 +72,7 @@ SwiftUI scene
 AndroidSDKLocator -> resolved adb path -> ADBClient
 AppPreferences -> screenshot destination -> ScreenshotService
 AppPreferences -> screenshot framing options -> ScreenshotService -> Android SDK skins
-AppPreferences -> screenshot device-details overlay -> ScreenshotService -> Android device properties
+AppPreferences -> device-details overlay -> ScreenshotService and ScreenRecordingService -> Android device properties
 AppPreferences -> clipboard preference -> MediaClipboardService
 AppPreferences -> Finder reveal preference -> MediaFinderRevealService
 DeviceStore -> MediaNotificationService -> macOS notification center
@@ -200,12 +200,12 @@ ambiguous SDK skin falls back to a generic black device frame. The screenshot
 pixels are not rescaled; only frame assets are scaled to the compatible display
 size.
 
-When the device-details overlay preference is enabled, `ScreenshotService`
-uses fixed ADB `getprop` arguments to read `ro.build.version.release` and
-`ro.build.version.sdk`. It writes the resulting `Android 16 / API 36` label
-into the top-left of each saved image. A framed screenshot receives its label
-after the device frame is composed, so it appears over the frame rather than
-inside the device display.
+When the device-details overlay preference is enabled, `ScreenshotService` and
+the recording framer use fixed ADB `getprop` arguments to read
+`ro.build.version.release` and `ro.build.version.sdk`. They write the resulting
+`Android 16 / API 36` label into the top-left of saved screenshots and framed
+recordings. A framed result receives its label after the device frame is
+composed, so it appears over the frame rather than inside the device display.
 
 Screenshot filenames must be sanitized, timestamped, and collision-resistant.
 The service must not silently replace an existing file. A framed capture uses
@@ -280,10 +280,11 @@ AVFoundation and Core Animation to export the framed sibling without external
 executables. It preserves the video timing, preferred orientation, and source
 audio tracks. An emulator recording uses the same locally discovered SDK skin
 layout as screenshots; an unavailable, incompatible, or ambiguous skin uses
-the generic black frame. Export work writes to a temporary MP4, supports task
-cancellation, and only moves the completed export into its reserved final name.
-If framing fails, the original recording remains and the user receives a
-warning.
+the generic black frame. When the device-details preference is enabled, the
+same Android-version and API-level label is rendered above the frame. Export
+work writes to a temporary MP4, supports task cancellation, and only moves the
+completed export into its reserved final name. If framing fails, the original
+recording remains and the user receives a warning.
 
 Show taps is implemented through Android's `show_touches` system setting. The
 service reads the prior setting, enables it for the recording, and restores the

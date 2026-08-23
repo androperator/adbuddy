@@ -807,7 +807,7 @@ private enum PNGImageCodec {
     }
 }
 
-private enum ImageCanvas {
+enum ImageCanvas {
     static func makeContext(width: Int, height: Int) -> CGContext? {
         guard width > 0, height > 0 else {
             return nil

@@ -240,7 +240,8 @@ final class DeviceStore {
         )
         let destination = preferences.screenshotDirectory
         let framing = ScreenRecordingFramingOptions(
-            addsFrame: preferences.screenRecordingAddsFrame
+            addsFrame: preferences.screenRecordingAddsFrame,
+            overlaysDeviceDetails: preferences.screenshotOverlaysDeviceDetails
         )
 
         Task { [weak self] in

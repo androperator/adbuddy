@@ -69,7 +69,8 @@ public enum ADBuddySharedPreferences {
         userDefaults: UserDefaults = userDefaults()
     ) -> ScreenRecordingFramingOptions {
         ScreenRecordingFramingOptions(
-            addsFrame: userDefaults.object(forKey: screenRecordingAddsFrameKey) as? Bool ?? false
+            addsFrame: userDefaults.object(forKey: screenRecordingAddsFrameKey) as? Bool ?? false,
+            overlaysDeviceDetails: userDefaults.object(forKey: screenshotOverlaysDeviceDetailsKey) as? Bool ?? false
         )
     }
 }
