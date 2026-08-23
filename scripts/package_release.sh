@@ -119,6 +119,8 @@ cat >"$INFO_PLIST" <<PLIST
   <string>$VERSION</string>
   <key>CFBundleVersion</key>
   <string>$VERSION</string>
+  <key>NSHumanReadableCopyright</key>
+  <string>Copyright © Action Launcher Pty Ltd</string>
   <key>LSMinimumSystemVersion</key>
   <string>$MINIMUM_SYSTEM_VERSION</string>
   <key>NSPrincipalClass</key>

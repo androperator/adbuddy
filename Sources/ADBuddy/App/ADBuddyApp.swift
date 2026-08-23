@@ -46,6 +46,13 @@ struct ADBuddyApp: App {
             height: DeviceListLayout.unavailableContentHeight
         )
         .windowResizability(.contentMinSize)
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About ADBuddy") {
+                    ADBuddyAboutPanel.present()
+                }
+            }
+        }
 
         Settings {
             SettingsView(preferences: preferences)
