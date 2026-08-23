@@ -479,6 +479,8 @@ HH:MM:SS.SSS | level | tag | message
 - Application ID resolves from the current process list and is blank for processes that do not
   identify as Android applications.
 - Long messages remain on one line by default and can scroll horizontally.
+- Double-clicking a visible column divider sizes that column to its widest
+  current header or retained entry.
 - Rows support selection and standard macOS copy behavior with `Command-C`.
   Live updates preserve selected entries while they remain visible.
 - Selected rows use the system selected-text color, including level badges and

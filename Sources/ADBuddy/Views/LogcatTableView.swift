@@ -27,6 +27,14 @@ struct LogcatTableView: NSViewRepresentable {
         for definition in LogcatTableColumn.allCases {
             tableView.addTableColumn(column(definition, isHidden: !visibleColumns.contains(definition)))
         }
+
+        let headerView = LogcatTableHeaderView()
+        let coordinator = context.coordinator
+        headerView.columnDividerDoubleClicked = { [weak coordinator] columnIndex in
+            coordinator?.resizeColumnToFitContent(at: columnIndex)
+        }
+        tableView.headerView = headerView
+
         tableView.columnAutoresizingStyle = .noColumnAutoresizing
         tableView.rowHeight = 18
         tableView.intercellSpacing = .zero
@@ -71,7 +79,7 @@ struct LogcatTableView: NSViewRepresentable {
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(definition.identifier))
         column.title = definition.title
         column.width = definition.width
-        column.minWidth = definition.width
+        column.minWidth = 40
         column.resizingMask = .userResizingMask
         column.isHidden = isHidden
         return column
@@ -96,6 +104,7 @@ struct LogcatTableView: NSViewRepresentable {
         private var priorityColors = LogcatPriority.defaultColors
         private var previouslySelectedRows = IndexSet()
         private var selectionReloadScheduler = LogcatTableSelectionReloadScheduler()
+        private let textFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
 
         init(onUserScrollAwayFromLatest: @escaping () -> Void) {
             self.onUserScrollAwayFromLatest = onUserScrollAwayFromLatest
@@ -241,6 +250,36 @@ struct LogcatTableView: NSViewRepresentable {
             restoreSelection(selections, in: tableView)
         }
 
+        fileprivate func resizeColumnToFitContent(at columnIndex: Int) {
+            guard let tableView,
+                  tableView.tableColumns.indices.contains(columnIndex) else {
+                return
+            }
+
+            let column = tableView.tableColumns[columnIndex]
+            guard !column.isHidden,
+                  let definition = LogcatTableColumn.allCases.first(
+                    where: { $0.identifier == column.identifier.rawValue }
+                  ) else {
+                return
+            }
+
+            var widthCalculator = LogcatTableColumnWidthCalculator(
+                headerWidth: column.headerCell.cellSize.width
+            )
+            for row in 0..<entryCount {
+                guard let entry = entryAt(row) else {
+                    continue
+                }
+                widthCalculator.include(width: width(of: value(for: definition, in: entry)))
+            }
+
+            column.width = widthCalculator.fittedWidth(
+                minimumWidth: column.minWidth,
+                horizontalInsets: 8
+            )
+        }
+
         func numberOfRows(in tableView: NSTableView) -> Int {
             entryCount
         }
@@ -322,10 +361,35 @@ struct LogcatTableView: NSViewRepresentable {
         private func makeTextField(identifier: NSUserInterfaceItemIdentifier) -> NSTextField {
             let textField = NSTextField(labelWithString: "")
             textField.identifier = identifier
-            textField.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
+            textField.font = textFont
             textField.lineBreakMode = .byClipping
             textField.maximumNumberOfLines = 1
             return textField
+        }
+
+        private func value(for column: LogcatTableColumn, in entry: LogcatEntry) -> String {
+            switch column {
+            case .time:
+                LogcatTimestampFormatter.string(from: entry.timestamp)
+            case .processID:
+                String(entry.processID)
+            case .threadID:
+                String(entry.threadID)
+            case .applicationID:
+                applicationIDForProcessID(entry.processID) ?? ""
+            case .level:
+                entry.priority.rawValue
+            case .tag:
+                entry.tag
+            case .message:
+                entry.message
+            }
+        }
+
+        private func width(of value: String) -> CGFloat {
+            (value as NSString).size(
+                withAttributes: [.font: textFont]
+            ).width
         }
 
         private func color(for priority: LogcatPriority) -> NSColor {
@@ -414,6 +478,40 @@ struct LogcatTableView: NSViewRepresentable {
                 onUserScrollAwayFromLatest()
             }
         }
+    }
+}
+
+private final class LogcatTableHeaderView: NSTableHeaderView {
+    var columnDividerDoubleClicked: ((Int) -> Void)?
+
+    override func mouseDown(with event: NSEvent) {
+        let location = convert(event.locationInWindow, from: nil)
+        if event.clickCount == 2,
+           let columnIndex = columnIndex(forDividerAt: location) {
+            columnDividerDoubleClicked?(columnIndex)
+            return
+        }
+
+        super.mouseDown(with: event)
+    }
+
+    private func columnIndex(forDividerAt location: NSPoint) -> Int? {
+        guard bounds.contains(location), let tableView else {
+            return nil
+        }
+
+        for columnIndex in tableView.tableColumns.indices {
+            let column = tableView.tableColumns[columnIndex]
+            guard !column.isHidden else {
+                continue
+            }
+
+            if abs(headerRect(ofColumn: columnIndex).maxX - location.x) <= 3 {
+                return columnIndex
+            }
+        }
+
+        return nil
     }
 }
 

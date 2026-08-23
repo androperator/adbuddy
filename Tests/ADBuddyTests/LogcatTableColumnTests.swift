@@ -3,6 +3,26 @@ import XCTest
 @testable import ADBuddyCore
 
 final class LogcatTableColumnTests: XCTestCase {
+    func testColumnWidthFitsTheWidestCell() {
+        var calculator = LogcatTableColumnWidthCalculator(headerWidth: 44)
+        calculator.include(width: 92.25)
+        calculator.include(width: 68)
+
+        XCTAssertEqual(
+            calculator.fittedWidth(minimumWidth: 40, horizontalInsets: 8),
+            101
+        )
+    }
+
+    func testColumnWidthDoesNotFallBelowTheMinimum() {
+        let calculator = LogcatTableColumnWidthCalculator(headerWidth: 21)
+
+        XCTAssertEqual(
+            calculator.fittedWidth(minimumWidth: 40, horizontalInsets: 8),
+            40
+        )
+    }
+
     func testOptionalColumnsAreHiddenByDefault() {
         XCTAssertEqual(LogcatTableColumn.visibleColumns(), [.time, .level, .tag, .message])
     }
