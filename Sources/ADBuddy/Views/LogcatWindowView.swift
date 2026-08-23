@@ -167,7 +167,7 @@ private struct MinimumLogLevelMenu: View {
                 }
             }
         } label: {
-            Text("Minimum: \(priority.displayName)")
+            Text("Level: \(priority.displayName)")
         }
         .menuStyle(.borderedButton)
         .accessibilityLabel("Minimum Log Level")
