@@ -26,9 +26,11 @@ struct DeviceActionControls: View {
                 if isCapturing {
                     ProgressView()
                         .controlSize(.small)
+                        .frame(width: DeviceListLayout.actionButtonLabelWidth)
                 } else {
                     Label("Take Screenshot", systemImage: "camera")
                         .labelStyle(.iconOnly)
+                        .frame(width: DeviceListLayout.actionButtonLabelWidth)
                 }
             }
             .frame(width: DeviceListLayout.actionControlWidth)
@@ -41,6 +43,7 @@ struct DeviceActionControls: View {
 
             Button(action: openLogcat) {
                 AndroidStudioLogcatGlyph()
+                    .frame(width: DeviceListLayout.actionButtonLabelWidth)
             }
             .frame(width: DeviceListLayout.actionControlWidth)
             .buttonStyle(.bordered)
@@ -81,6 +84,7 @@ struct DeviceActionControls: View {
         } label: {
             Label("Foreground App Actions", systemImage: "app.badge")
                 .labelStyle(.iconOnly)
+                .frame(width: DeviceListLayout.actionMenuLabelWidth)
         }
         .frame(width: DeviceListLayout.actionControlWidth)
         .menuStyle(.borderedButton)
@@ -95,6 +99,7 @@ struct DeviceActionControls: View {
         } label: {
             Label("Device Settings", systemImage: "slider.horizontal.3")
                 .labelStyle(.iconOnly)
+                .frame(width: DeviceListLayout.actionMenuLabelWidth)
         }
         .frame(width: DeviceListLayout.actionControlWidth)
         .menuStyle(.borderedButton)
@@ -114,6 +119,7 @@ struct DeviceActionControls: View {
             Button(action: stopScreenRecording) {
                 Label("Stop Recording", systemImage: "stop.fill")
                     .labelStyle(.iconOnly)
+                    .frame(width: DeviceListLayout.actionButtonLabelWidth)
             }
             .frame(width: DeviceListLayout.actionControlWidth)
             .buttonStyle(.bordered)
@@ -127,6 +133,7 @@ struct DeviceActionControls: View {
             Button(action: showScreenRecordingOptions) {
                 Label("Record Screen", systemImage: "record.circle")
                     .labelStyle(.iconOnly)
+                    .frame(width: DeviceListLayout.actionButtonLabelWidth)
             }
             .frame(width: DeviceListLayout.actionControlWidth)
             .buttonStyle(.borderedProminent)

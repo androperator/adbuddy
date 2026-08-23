@@ -165,6 +165,7 @@ private struct ConnectedDeviceRow: View {
                     Button(action: stopEmulator) {
                         Label("Stop Emulator", systemImage: "stop.fill")
                             .labelStyle(.iconOnly)
+                            .frame(width: DeviceListLayout.actionButtonLabelWidth)
                     }
                     .frame(width: DeviceListLayout.actionControlWidth)
                     .buttonStyle(.bordered)
@@ -287,6 +288,7 @@ private struct VirtualDeviceRow: View {
             } label: {
                 Label("Start Emulator", systemImage: "play.fill")
                     .labelStyle(.iconOnly)
+                    .frame(width: DeviceListLayout.actionButtonLabelWidth)
             }
             .frame(width: DeviceListLayout.actionControlWidth)
             .buttonStyle(.borderedProminent)
@@ -301,6 +303,7 @@ private struct VirtualDeviceRow: View {
             Button(action: stop) {
                 Label("Stop Emulator", systemImage: "stop.fill")
                     .labelStyle(.iconOnly)
+                    .frame(width: DeviceListLayout.actionButtonLabelWidth)
             }
             .frame(width: DeviceListLayout.actionControlWidth)
             .buttonStyle(.bordered)
@@ -349,6 +352,7 @@ private struct VirtualDeviceRow: View {
         } label: {
             Label("Emulator Actions", systemImage: "ellipsis.circle")
                 .labelStyle(.iconOnly)
+                .frame(width: DeviceListLayout.actionMenuLabelWidth)
         }
         .frame(width: DeviceListLayout.actionControlWidth)
         .menuStyle(.borderedButton)
