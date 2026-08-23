@@ -34,6 +34,10 @@ notarization, and stapling.
 
 ## Packaging command
 
+`VERSION` is the source of truth for the release version. Update it before a
+release, then commit that change with the release notes. The initial version is
+`0.1.0`.
+
 `scripts/package_release.sh` creates the universal application bundle and
 versioned ZIP archive. It defaults to the Action Launcher Developer ID identity
 and accepts an override through `AD_BUDDY_SIGNING_IDENTITY` when necessary.
@@ -44,14 +48,14 @@ credentials or App Store Connect keys in environment files, scripts, or shell
 history. Then run:
 
 ```sh
-AD_BUDDY_NOTARY_PROFILE="ADBuddy Notarization" \
-  scripts/package_release.sh 0.1.0
+ADBUDDY_NOTARY_PROFILE="Action Launcher Notarization" \
+  scripts/package_release.sh
 ```
 
 For local signing validation only, the command can omit notarization:
 
 ```sh
-scripts/package_release.sh 0.1.0 --skip-notarization
+scripts/package_release.sh --skip-notarization
 ```
 
 An archive created with `--skip-notarization` is not a public release artifact.

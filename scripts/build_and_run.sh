@@ -8,6 +8,7 @@ MIN_SYSTEM_VERSION="14.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
+VERSION_FILE="$ROOT_DIR/VERSION"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
@@ -16,6 +17,12 @@ MCP_BINARY="$APP_MACOS/adbuddy-mcp"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 
 cd "$ROOT_DIR"
+
+[[ -f "$VERSION_FILE" ]] || {
+  echo "error: release version file is missing: $VERSION_FILE" >&2
+  exit 1
+}
+VERSION="$(<"$VERSION_FILE")"
 
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
@@ -44,6 +51,10 @@ cat >"$INFO_PLIST" <<PLIST
   <string>$APP_NAME</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>$VERSION</string>
+  <key>CFBundleVersion</key>
+  <string>$VERSION</string>
   <key>LSMinimumSystemVersion</key>
   <string>$MIN_SYSTEM_VERSION</string>
   <key>NSPrincipalClass</key>

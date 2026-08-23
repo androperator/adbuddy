@@ -17,16 +17,18 @@ INFO_PLIST="$APP_CONTENTS/Info.plist"
 
 usage() {
   cat >&2 <<'USAGE'
-usage: scripts/package_release.sh <version> [--skip-notarization]
+usage: scripts/package_release.sh [--skip-notarization]
 
 Builds a universal, Developer ID-signed release archive. By default, the
 archive is submitted to Apple's notary service using the Keychain profile named
-by AD_BUDDY_NOTARY_PROFILE, stapled, and verified.
+by ADBUDDY_NOTARY_PROFILE, stapled, and verified. The release version is read
+from the repository's VERSION file.
 
 Environment variables:
   AD_BUDDY_SIGNING_IDENTITY  Developer ID identity to use for signing.
                             Defaults to the Action Launcher identity.
-  AD_BUDDY_NOTARY_PROFILE    Required unless --skip-notarization is supplied.
+  ADBUDDY_NOTARY_PROFILE     Required unless --skip-notarization is supplied.
+  AD_BUDDY_NOTARY_PROFILE    Deprecated alias for ADBUDDY_NOTARY_PROFILE.
 USAGE
   exit 2
 }
@@ -36,7 +38,6 @@ fail() {
   exit 1
 }
 
-VERSION=""
 SKIP_NOTARIZATION=false
 
 for argument in "$@"; do
@@ -47,25 +48,23 @@ for argument in "$@"; do
     --help|-h)
       usage
       ;;
-    -*|*)
-      if [[ -z "$VERSION" ]]; then
-        VERSION="$argument"
-      else
-        usage
-      fi
+    *)
+      usage
       ;;
   esac
 done
 
-[[ -n "$VERSION" ]] || usage
+VERSION_FILE="$ROOT_DIR/VERSION"
+[[ -f "$VERSION_FILE" ]] || fail "release version file is missing: $VERSION_FILE"
+VERSION="$(<"$VERSION_FILE")"
 [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}([.-][0-9A-Za-z]+)*$ ]] || \
-  fail "version must look like 0.1.0"
+  fail "release version in $VERSION_FILE must look like 0.1.0"
 
 SIGNING_IDENTITY="${AD_BUDDY_SIGNING_IDENTITY:-$DEFAULT_SIGNING_IDENTITY}"
-NOTARY_PROFILE="${AD_BUDDY_NOTARY_PROFILE:-}"
+NOTARY_PROFILE="${ADBUDDY_NOTARY_PROFILE:-${AD_BUDDY_NOTARY_PROFILE:-}}"
 
 if [[ "$SKIP_NOTARIZATION" == false && -z "$NOTARY_PROFILE" ]]; then
-  fail "set AD_BUDDY_NOTARY_PROFILE or pass --skip-notarization for local signing validation"
+  fail "set ADBUDDY_NOTARY_PROFILE or pass --skip-notarization for local signing validation"
 fi
 
 if ! /usr/bin/security find-identity -v -p codesigning | /usr/bin/grep -Fq "$SIGNING_IDENTITY"; then

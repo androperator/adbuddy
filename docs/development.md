@@ -12,6 +12,7 @@ The project includes:
 ```text
 scripts/build_and_run.sh
 scripts/package_release.sh
+VERSION
 .codex/environments/environment.toml
 ```
 
@@ -23,7 +24,11 @@ required for release.
 
 `scripts/package_release.sh` is a separate release-only command. It builds
 universal release binaries, signs them with the configured Developer ID
-identity, and notarizes a versioned ZIP archive. It never launches the app.
+identity, and notarizes a versioned ZIP archive. It reads the release version
+from the repository's `VERSION` file and never launches the app.
+
+Both packaging scripts use `VERSION` when writing the app bundle's version
+metadata, so local and release app bundles report the same version.
 
 ## Local prerequisites
 
