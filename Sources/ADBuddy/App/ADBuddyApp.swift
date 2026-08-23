@@ -4,7 +4,6 @@ import SwiftUI
 @main
 struct ADBuddyApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @AppStorage("hasAppliedSectionedWindowLayout") private var hasAppliedSectionedWindowLayout = false
     @FocusedValue(\.logcatSearchAction) private var logcatSearchAction
     @State private var deviceStore: DeviceStore
     @State private var emulatorStore: EmulatorStore
@@ -21,17 +20,10 @@ struct ADBuddyApp: App {
 
     var body: some Scene {
         let connectedDeviceCount = deviceStore.devices.count
-        let availableVirtualDeviceCount = emulatorStore.virtualDevices.filter {
-            if case .running = $0.status {
-                return false
-            }
-            return true
-        }.count
-        let initialWindowContentSize = DeviceListLayout.initialWindowContentSize(
+        let mainWindowContentSize = DeviceListLayout.mainWindowContentSize(
             for: deviceStore.status,
             connectedDeviceCount: connectedDeviceCount,
-            virtualDeviceCount: availableVirtualDeviceCount,
-            isEmulatorListReady: emulatorStore.status != .loading
+            virtualDeviceCount: displayedVirtualDeviceCount
         )
 
         WindowGroup("ADBuddy", id: "main") {
@@ -40,19 +32,19 @@ struct ADBuddyApp: App {
                 .environment(emulatorStore)
                 .environment(preferences)
                 .overlay(alignment: .topLeading) {
-                    InitialWindowSizer(
-                        targetContentSize: initialWindowContentSize,
-                        hasAppliedCompactLayout: $hasAppliedSectionedWindowLayout
-                    )
-                    .frame(width: 0, height: 0)
-                    .allowsHitTesting(false)
+                    MainWindowSizer(targetContentSize: mainWindowContentSize)
+                        .frame(width: 0, height: 0)
+                        .allowsHitTesting(false)
                 }
                 .task {
                     deviceStore.start()
                     emulatorStore.refreshVirtualDevices()
                 }
         }
-        .defaultSize(width: DeviceListLayout.windowWidth, height: 280)
+        .defaultSize(
+            width: DeviceListLayout.windowWidth,
+            height: DeviceListLayout.unavailableContentHeight
+        )
         .commands {
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
@@ -94,6 +86,18 @@ struct ADBuddyApp: App {
                 .environment(preferences)
         }
         .menuBarExtraStyle(.menu)
+    }
+
+    private var displayedVirtualDeviceCount: Int {
+        guard case .ready = emulatorStore.status else {
+            return 0
+        }
+        return emulatorStore.virtualDevices.filter {
+            if case .running = $0.status {
+                return false
+            }
+            return true
+        }.count
     }
 }
 

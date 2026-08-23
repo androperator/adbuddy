@@ -7,6 +7,7 @@ enum DeviceListLayout {
     static let maximumVisibleDeviceCount = 4
     static let sectionHeaderHeight: CGFloat = 24
     static let maximumVisibleSectionedRowCount = 6
+    static let unavailableContentHeight: CGFloat = 240
 
     static func deviceListHeight(for deviceCount: Int) -> CGFloat {
         let visibleDeviceCount = min(max(deviceCount, 1), maximumVisibleDeviceCount)
@@ -26,39 +27,30 @@ enum DeviceListLayout {
         CGSize(width: max(contentSize.width, windowWidth), height: contentSize.height)
     }
 
+    static func contentSizeRetainingCurrentWidth(
+        _ currentContentSize: CGSize,
+        updatingHeight height: CGFloat
+    ) -> CGSize {
+        contentSizeRespectingMinimumWidth(
+            CGSize(width: currentContentSize.width, height: height)
+        )
+    }
+
     static func minimumWindowFrameWidth(for currentFrameWidth: CGFloat) -> CGFloat {
         max(currentFrameWidth, windowWidth)
     }
 
-    static func initialWindowContentSize(
-        for status: DeviceDiscoveryStatus,
-        deviceCount: Int
-    ) -> CGSize? {
-        switch status {
-        case .loading:
-            nil
-        case .devicesAvailable:
-            CGSize(width: windowWidth, height: deviceListHeight(for: deviceCount))
-        case .sdkUnavailable, .adbFailure, .noDevices:
-            CGSize(width: windowWidth, height: 240)
-        }
-    }
-
-    static func initialWindowContentSize(
+    static func mainWindowContentSize(
         for status: DeviceDiscoveryStatus,
         connectedDeviceCount: Int,
-        virtualDeviceCount: Int,
-        isEmulatorListReady: Bool
-    ) -> CGSize? {
+        virtualDeviceCount: Int
+    ) -> CGSize {
         switch status {
         case .loading:
-            return nil
+            return CGSize(width: windowWidth, height: unavailableContentHeight)
         case .sdkUnavailable, .adbFailure:
-            return CGSize(width: windowWidth, height: 240)
+            return CGSize(width: windowWidth, height: unavailableContentHeight)
         case .noDevices, .devicesAvailable:
-            guard isEmulatorListReady else {
-                return nil
-            }
             return CGSize(
                 width: windowWidth,
                 height: sectionedListHeight(

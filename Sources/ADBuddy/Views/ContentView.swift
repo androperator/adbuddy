@@ -11,6 +11,7 @@ struct ContentView: View {
         @Bindable var deviceStore = deviceStore
 
         deviceContent
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .overlay(alignment: .bottom) {
             VStack(spacing: 8) {
                 if let feedback = deviceStore.screenshotFeedback {

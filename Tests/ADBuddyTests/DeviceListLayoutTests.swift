@@ -21,21 +21,38 @@ final class DeviceListLayoutTests: XCTestCase {
         )
     }
 
+    func testRetainsWindowWidthWhenUpdatingContentHeight() {
+        XCTAssertEqual(
+            DeviceListLayout.contentSizeRetainingCurrentWidth(
+                CGSize(width: 720, height: 500),
+                updatingHeight: 238
+            ),
+            CGSize(width: 720, height: 238)
+        )
+    }
+
     func testClampsWindowFrameToItsInitialWidth() {
         XCTAssertEqual(DeviceListLayout.minimumWindowFrameWidth(for: 240), 520)
         XCTAssertEqual(DeviceListLayout.minimumWindowFrameWidth(for: 640), 640)
     }
 
-    func testUsesCompactDeviceHeightAndLargerUnavailableState() {
+    func testUsesContentHeightForEachMainWindowState() {
         XCTAssertEqual(
-            DeviceListLayout.initialWindowContentSize(for: .devicesAvailable, deviceCount: 2),
-            CGSize(width: 520, height: 132)
-        )
-        XCTAssertEqual(
-            DeviceListLayout.initialWindowContentSize(for: .noDevices, deviceCount: 0),
+            DeviceListLayout.mainWindowContentSize(
+                for: .loading,
+                connectedDeviceCount: 0,
+                virtualDeviceCount: 0
+            ),
             CGSize(width: 520, height: 240)
         )
-        XCTAssertNil(DeviceListLayout.initialWindowContentSize(for: .loading, deviceCount: 0))
+        XCTAssertEqual(
+            DeviceListLayout.mainWindowContentSize(
+                for: .noDevices,
+                connectedDeviceCount: 0,
+                virtualDeviceCount: 0
+            ),
+            CGSize(width: 520, height: 180)
+        )
     }
 
     func testSectionedListReservesRowsForBothDeviceGroups() {
@@ -55,21 +72,20 @@ final class DeviceListLayoutTests: XCTestCase {
         )
     }
 
-    func testSectionedInitialWindowSizeWaitsForEmulatorDiscovery() {
-        XCTAssertNil(
-            DeviceListLayout.initialWindowContentSize(
-                for: .noDevices,
-                connectedDeviceCount: 0,
-                virtualDeviceCount: 0,
-                isEmulatorListReady: false
-            )
+    func testMainWindowHeightUpdatesAsVisibleRowsChange() {
+        XCTAssertEqual(
+            DeviceListLayout.mainWindowContentSize(
+                for: .devicesAvailable,
+                connectedDeviceCount: 3,
+                virtualDeviceCount: 1
+            ),
+            CGSize(width: 520, height: 296)
         )
         XCTAssertEqual(
-            DeviceListLayout.initialWindowContentSize(
+            DeviceListLayout.mainWindowContentSize(
                 for: .devicesAvailable,
-                connectedDeviceCount: 1,
-                virtualDeviceCount: 2,
-                isEmulatorListReady: true
+                connectedDeviceCount: 2,
+                virtualDeviceCount: 1
             ),
             CGSize(width: 520, height: 238)
         )
