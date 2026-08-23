@@ -79,7 +79,8 @@ struct ADBuddyApp: App {
 
         MenuBarExtra(
             "ADBuddy",
-            systemImage: deviceStore.hasActiveScreenRecording ? "stop.fill" : "camera"
+            systemImage: deviceStore.hasActiveScreenRecording ? "stop.fill" : "camera",
+            isInserted: $preferences.showInMenuBar
         ) {
             MenuBarContentView()
                 .environment(deviceStore)

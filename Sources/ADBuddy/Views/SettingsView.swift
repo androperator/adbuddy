@@ -6,6 +6,11 @@ struct SettingsView: View {
 
     var body: some View {
         TabView {
+            GeneralSettingsView(preferences: preferences)
+                .tabItem {
+                    Label("General", systemImage: "gearshape")
+                }
+
             ScreenshotSettingsView(preferences: preferences)
                 .tabItem {
                     Label("Screenshots", systemImage: "camera")
@@ -21,6 +26,26 @@ struct SettingsView: View {
             SettingsWindowTitle(title: "ADBuddy Settings")
                 .frame(width: 0, height: 0)
         }
+    }
+}
+
+private struct GeneralSettingsView: View {
+    let preferences: AppPreferences
+
+    var body: some View {
+        @Bindable var preferences = preferences
+
+        Form {
+            Section {
+                Toggle("Show in Menu Bar", isOn: $preferences.showInMenuBar)
+            } header: {
+                Text("Menu Bar")
+            } footer: {
+                Text("When hidden, you can show ADBuddy in the menu bar again from this setting.")
+            }
+        }
+        .formStyle(.grouped)
+        .scenePadding()
     }
 }
 

@@ -11,6 +11,7 @@ final class AppPreferences {
         static let automaticallyCopyMedia = "automaticallyCopyMedia"
         static let legacyAutomaticallyCopyScreenshots = "automaticallyCopyScreenshots"
         static let revealMediaInFinder = "revealMediaInFinder"
+        static let showInMenuBar = "showInMenuBar"
         static let screenRecordingBitRateMegabitsPerSecond = ADBuddySharedPreferences.screenRecordingBitRateMegabitsPerSecondKey
         static let screenRecordingResolutionPercentage = ADBuddySharedPreferences.screenRecordingResolutionPercentageKey
         static let screenRecordingShowsTaps = ADBuddySharedPreferences.screenRecordingShowsTapsKey
@@ -49,6 +50,12 @@ final class AppPreferences {
     var revealMediaInFinder: Bool {
         didSet {
             userDefaults.set(revealMediaInFinder, forKey: Key.revealMediaInFinder)
+        }
+    }
+
+    var showInMenuBar: Bool {
+        didSet {
+            userDefaults.set(showInMenuBar, forKey: Key.showInMenuBar)
         }
     }
 
@@ -121,6 +128,7 @@ final class AppPreferences {
         screenshotAddsFrame = userDefaults.object(forKey: Key.screenshotAddsFrame) as? Bool ?? false
         screenshotAlsoSavesOriginal = userDefaults.object(forKey: Key.screenshotAlsoSavesOriginal) as? Bool ?? false
         revealMediaInFinder = userDefaults.object(forKey: Key.revealMediaInFinder) as? Bool ?? false
+        showInMenuBar = userDefaults.object(forKey: Key.showInMenuBar) as? Bool ?? true
         screenRecordingBitRateMegabitsPerSecond = userDefaults.object(forKey: Key.screenRecordingBitRateMegabitsPerSecond) as? Int
             ?? ScreenRecordingOptions.default.bitRateMegabitsPerSecond
         screenRecordingResolutionPercentage = userDefaults.object(forKey: Key.screenRecordingResolutionPercentage) as? Int

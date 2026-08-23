@@ -7,6 +7,8 @@ struct MenuBarContentView: View {
     @Environment(AppPreferences.self) private var preferences
 
     var body: some View {
+        @Bindable var preferences = preferences
+
         if let recordingDevice = deviceStore.activeScreenRecordingDevice {
             Button("Stop Recording") {
                 AppLogger.menuBar.info("Stop recording selected from menu bar")
@@ -40,6 +42,8 @@ struct MenuBarContentView: View {
             Text("Settings…")
         }
         .keyboardShortcut(",", modifiers: .command)
+
+        Toggle("Show in Menu Bar", isOn: $preferences.showInMenuBar)
 
         Button("Open ADBuddy") {
             AppLogger.menuBar.info("Open main window selected")

@@ -24,8 +24,9 @@ MenuBarExtra
   Fast per-device screenshot and recording commands, installed-emulator launch,
   app navigation, and Settings
 
-Settings sheet (owned by the main window)
-  Shared media destination, media clipboard-copy, Finder reveal, and Logcat colors
+Settings window
+  General menu bar visibility, shared media destination, media clipboard-copy,
+  Finder reveal, screenshot framing, and Logcat colors
 
 Logcat WindowGroup (one window per device serial)
   Dedicated streaming viewer with window-scoped filters, follow state, and retention
@@ -227,8 +228,9 @@ whether media is automatically revealed in Finder, and stores a recording bit
 rate, resolution percentage, and Show taps value for the next recording. The
 directory defaults to the current user's `~/Screenshots` directory, automatic
 copying defaults to enabled, screenshot framing defaults to disabled, and
-automatic Finder reveal defaults to disabled. The service layer receives values
-from the preferences store rather than accessing `UserDefaults` itself.
+automatic Finder reveal defaults to disabled. It also persists whether ADBuddy
+is shown in the menu bar, which defaults to enabled. The service layer receives
+values from the preferences store rather than accessing `UserDefaults` itself.
 
 The same store persists six serializable sRGB component values for global
 Logcat severity colors. Settings changes update every open Logcat window
@@ -239,10 +241,9 @@ Because the app is non-sandboxed, store a regular absolute path. If future
 distribution requires sandboxing, replace this storage with a security-scoped
 bookmark through a deliberate migration.
 
-The main window presents a compact SwiftUI Settings sheet rather than opening
-a persistent Settings window. The sheet receives the existing `AppPreferences`
-instance, and uses a native folder importer to update the shared media
-destination.
+The app presents a dedicated SwiftUI Settings window. It receives the existing
+`AppPreferences` instance and uses a native folder importer to update the
+shared media destination.
 
 The app writes shared media and recording settings through its standard
 `com.clawperator.adbuddy` application defaults domain. The bundled MCP helper
