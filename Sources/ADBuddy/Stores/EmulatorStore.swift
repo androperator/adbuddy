@@ -218,10 +218,15 @@ final class EmulatorStore {
         switch result {
         case .success(let virtualDevices):
             let currentDevices = Dictionary(uniqueKeysWithValues: self.virtualDevices.map { ($0.id, $0) })
+            let deviceDetailsService = resolvedSDK.map {
+                AndroidVirtualDeviceDetailsService(sdkRootPath: $0.rootPath)
+            }
             let updatedDevices = virtualDevices.map { virtualDevice in
                 AndroidVirtualDevice(
                     name: virtualDevice.name,
-                    status: currentDevices[virtualDevice.id]?.status ?? .stopped
+                    status: currentDevices[virtualDevice.id]?.status ?? .stopped,
+                    deviceDetails: deviceDetailsService?.details(for: virtualDevice)
+                        ?? currentDevices[virtualDevice.id]?.deviceDetails
                 )
             }
             if self.virtualDevices != updatedDevices {

@@ -9,8 +9,12 @@ public struct AndroidDeviceDetails: Equatable, Sendable {
         self.apiLevel = apiLevel
     }
 
+    public var displayText: String {
+        "Android \(androidVersion) / API Level \(apiLevel)"
+    }
+
     public var screenshotOverlayText: String {
-        "Android \(androidVersion) / API \(apiLevel)"
+        displayText
     }
 }
 

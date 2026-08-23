@@ -87,6 +87,8 @@ DeviceStore -> AndroidDeepLinkService -> adb activity manager ACTION_VIEW intent
 DeviceStore -> AndroidDeviceSettingsService -> adb system settings and properties
 DeviceStore devices -> APKInstallationStore -> APKInstallationService -> adb install
 APKInstallationService -> Android SDK aapt2 -> APK package and launcher metadata
+DeviceStore devices -> AndroidDeviceDetailsService -> adb system properties
+EmulatorStore virtual devices -> AndroidVirtualDeviceDetailsService -> AVD and SDK metadata
 LogcatStore -> LogcatService -> StreamingProcessRunner -> adb logcat
 ADBuddyMCP stdio transport -> ADBuddyCore -> Android SDK services -> adb and Emulator executable
 ```

@@ -17,7 +17,7 @@ final class AndroidDeviceDetailsServiceTests: XCTestCase {
         let requests = await processRunner.requests()
 
         XCTAssertEqual(details, AndroidDeviceDetails(androidVersion: "16", apiLevel: "36"))
-        XCTAssertEqual(details?.screenshotOverlayText, "Android 16 / API 36")
+        XCTAssertEqual(details?.screenshotOverlayText, "Android 16 / API Level 36")
         XCTAssertEqual(requests, [
             ["-s", "device-serial", "shell", "getprop", "ro.build.version.release"],
             ["-s", "device-serial", "shell", "getprop", "ro.build.version.sdk"],

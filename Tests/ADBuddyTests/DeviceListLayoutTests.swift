@@ -5,9 +5,9 @@ import XCTest
 
 final class DeviceListLayoutTests: XCTestCase {
     func testBoundsDeviceListToFourVisibleRows() {
-        XCTAssertEqual(DeviceListLayout.deviceListHeight(for: 1), 74)
-        XCTAssertEqual(DeviceListLayout.deviceListHeight(for: 2), 132)
-        XCTAssertEqual(DeviceListLayout.deviceListHeight(for: 10), 248)
+        XCTAssertEqual(DeviceListLayout.deviceListHeight(for: 1), 88)
+        XCTAssertEqual(DeviceListLayout.deviceListHeight(for: 2), 160)
+        XCTAssertEqual(DeviceListLayout.deviceListHeight(for: 10), 304)
     }
 
     func testClampsWindowContentToTheDeviceListWidth() {
@@ -60,7 +60,7 @@ final class DeviceListLayoutTests: XCTestCase {
                 connectedDeviceCount: 0,
                 virtualDeviceCount: 0
             ),
-            CGSize(width: 720, height: 180)
+            CGSize(width: 720, height: 208)
         )
     }
 
@@ -70,14 +70,14 @@ final class DeviceListLayoutTests: XCTestCase {
                 connectedDeviceCount: 0,
                 virtualDeviceCount: 3
             ),
-            296
+            352
         )
         XCTAssertEqual(
             DeviceListLayout.sectionedListHeight(
                 connectedDeviceCount: 4,
                 virtualDeviceCount: 5
             ),
-            412
+            496
         )
     }
 
@@ -88,7 +88,7 @@ final class DeviceListLayoutTests: XCTestCase {
                 connectedDeviceCount: 3,
                 virtualDeviceCount: 1
             ),
-            CGSize(width: 720, height: 296)
+            CGSize(width: 720, height: 352)
         )
         XCTAssertEqual(
             DeviceListLayout.mainWindowContentSize(
@@ -96,7 +96,7 @@ final class DeviceListLayoutTests: XCTestCase {
                 connectedDeviceCount: 2,
                 virtualDeviceCount: 1
             ),
-            CGSize(width: 720, height: 238)
+            CGSize(width: 720, height: 280)
         )
     }
 }

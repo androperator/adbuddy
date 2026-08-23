@@ -22,6 +22,9 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Refresh connected devices automatically once per second.
 - Represent device serial, display name, connection state, and physical or
   emulator kind as typed data.
+- Display each available device's Android version and API level as
+  `Android {version} / API Level {apiLevel}`. Read connected-device values from
+  the device and stopped AVD values from their configured system images.
 - Show clear UI states for a missing SDK, missing ADB, no devices,
   unauthorized devices, offline devices, and usable devices.
 

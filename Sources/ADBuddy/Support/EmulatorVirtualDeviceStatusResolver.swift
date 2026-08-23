@@ -23,14 +23,22 @@ enum EmulatorVirtualDeviceStatusResolver {
                 if case .stopping = virtualDevice.status {
                     return virtualDevice
                 }
-                return AndroidVirtualDevice(name: virtualDevice.name, status: .running(device))
+                return AndroidVirtualDevice(
+                    name: virtualDevice.name,
+                    status: .running(device),
+                    deviceDetails: virtualDevice.deviceDetails
+                )
             }
 
             switch virtualDevice.status {
             case .starting:
                 return virtualDevice
             case .stopped, .running, .stopping:
-                return AndroidVirtualDevice(name: virtualDevice.name, status: .stopped)
+                return AndroidVirtualDevice(
+                    name: virtualDevice.name,
+                    status: .stopped,
+                    deviceDetails: virtualDevice.deviceDetails
+                )
             }
         }
     }

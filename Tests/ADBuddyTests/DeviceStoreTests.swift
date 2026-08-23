@@ -38,6 +38,35 @@ final class DeviceStoreTests: XCTestCase {
         await fulfillment(of: [changeExpectation], timeout: 0.1)
     }
 
+    func testLoadsDisplayDetailsForAUsableDevice() async throws {
+        let runner = ScriptedDeviceStoreProcessRunner(results: [
+            successfulResult(standardOutput: "List of devices attached\nserial\tdevice model:Pixel_9\n"),
+            successfulResult(standardOutput: "16\n"),
+            successfulResult(standardOutput: "36\n"),
+        ])
+        let store = makeDeviceStore(processRunner: runner)
+        store.refreshFromPolling()
+        await waitForDeviceRefresh()
+        let device = try XCTUnwrap(store.devices.first)
+
+        store.loadDeviceDetails(for: device)
+        await waitForDeviceDetails(in: store, for: device)
+
+        XCTAssertEqual(
+            store.deviceDetails(for: device),
+            AndroidDeviceDetails(androidVersion: "16", apiLevel: "36")
+        )
+        let invocations = await runner.invocations
+        XCTAssertEqual(
+            invocations,
+            [
+                ["devices", "-l"],
+                ["-s", "serial", "shell", "getprop", "ro.build.version.release"],
+                ["-s", "serial", "shell", "getprop", "ro.build.version.sdk"],
+            ]
+        )
+    }
+
     func testRunsForegroundAppActionAndReportsTheResolvedPackage() async throws {
         let runner = ScriptedDeviceStoreProcessRunner(results: [
             successfulResult(standardOutput: "List of devices attached\nserial\tdevice model:Pixel_9\n"),
@@ -280,6 +309,16 @@ final class DeviceStoreTests: XCTestCase {
         for _ in 0..<10 {
             await Task.yield()
         }
+    }
+
+    private func waitForDeviceDetails(in store: DeviceStore, for device: AndroidDevice) async {
+        for _ in 0..<100 {
+            if store.deviceDetails(for: device) != nil {
+                return
+            }
+            await Task.yield()
+        }
+        XCTFail("Timed out waiting for Android device details.")
     }
 
     private func waitForAppActionFeedback(in store: DeviceStore) async {

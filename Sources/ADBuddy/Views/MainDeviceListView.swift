@@ -21,6 +21,7 @@ struct MainDeviceListView: View {
                     ForEach(connectedDevices) { device in
                         ConnectedDeviceRow(
                             device: device,
+                            deviceDetails: deviceStore.deviceDetails(for: device),
                             virtualDevice: runningVirtualDevice(for: device),
                             emulatorWindowPresentation: runningVirtualDevice(for: device).map {
                                 emulatorStore.windowPresentation(for: $0)
@@ -134,6 +135,7 @@ struct MainDeviceListView: View {
 
 private struct ConnectedDeviceRow: View {
     let device: AndroidDevice
+    let deviceDetails: AndroidDeviceDetails?
     let virtualDevice: AndroidVirtualDevice?
     let emulatorWindowPresentation: EmulatorWindowPresentation?
     let deviceStore: DeviceStore
@@ -200,6 +202,9 @@ private struct ConnectedDeviceRow: View {
             }
         }
         .padding(.vertical, 2)
+        .task(id: device) {
+            deviceStore.loadDeviceDetails(for: device)
+        }
         .apkDropTarget(isEnabled: device.isUsable) { fileURL in
             apkInstallationStore.presentInstaller(for: fileURL, preferredDevice: device)
         }
@@ -218,16 +223,23 @@ private struct ConnectedDeviceRow: View {
 
     @ViewBuilder
     private var deviceDetail: some View {
-        HStack(spacing: 4) {
-            Text(device.serial)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 3) {
+            if let deviceDetails {
+                Text(deviceDetails.displayText)
+                    .foregroundStyle(.secondary)
+            }
 
-            if let emulatorWindowPresentation {
-                Text("·")
+            HStack(spacing: 4) {
+                Text(device.serial)
                     .foregroundStyle(.secondary)
 
-                Text(emulatorWindowPresentation.detail)
-                    .foregroundStyle(.secondary)
+                if let emulatorWindowPresentation {
+                    Text("·")
+                        .foregroundStyle(.secondary)
+
+                    Text(emulatorWindowPresentation.detail)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .font(.caption)
@@ -277,6 +289,7 @@ private struct VirtualDeviceRow: View {
             DeviceIdentityView(
                 name: virtualDevice.name,
                 detail: statusDetail,
+                deviceDetails: virtualDevice.deviceDetails,
                 detailTint: statusTint
             )
 
@@ -369,6 +382,7 @@ private struct EmptyDeviceSectionRow: View {
 private struct DeviceIdentityView: View {
     let name: String
     let detail: String
+    var deviceDetails: AndroidDeviceDetails?
     var detailTint: Color = .secondary
 
     var body: some View {
@@ -377,6 +391,13 @@ private struct DeviceIdentityView: View {
                 .fontWeight(.medium)
                 .lineLimit(1)
                 .truncationMode(.tail)
+            if let deviceDetails {
+                Text(deviceDetails.displayText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
             Text(detail)
                 .font(.caption)
                 .foregroundStyle(detailTint)

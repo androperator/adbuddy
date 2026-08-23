@@ -20,8 +20,10 @@ final class DeviceStore {
     private var appActionDeviceSerials = Set<String>()
     private var deepLinkLaunchDeviceSerials = Set<String>()
     private var deviceSettingDeviceSerials = Set<String>()
+    private var loadingDeviceDetailSerials = Set<String>()
 
     private(set) var devices: [AndroidDevice] = []
+    private(set) var deviceDetailsBySerial: [String: AndroidDeviceDetails] = [:]
     private(set) var status: DeviceDiscoveryStatus = .loading
     private(set) var resolvedSDK: AndroidSDK?
     private(set) var screenshotFeedback: ScreenshotFeedback?
@@ -105,6 +107,38 @@ final class DeviceStore {
 
     func isCapturingScreenshot(for device: AndroidDevice) -> Bool {
         capturingDeviceSerials.contains(device.serial)
+    }
+
+    func deviceDetails(for device: AndroidDevice) -> AndroidDeviceDetails? {
+        deviceDetailsBySerial[device.serial]
+    }
+
+    func loadDeviceDetails(for device: AndroidDevice) {
+        guard device.isUsable,
+              let resolvedSDK,
+              deviceDetailsBySerial[device.serial] == nil,
+              loadingDeviceDetailSerials.insert(device.serial).inserted else {
+            return
+        }
+
+        let service = AndroidDeviceDetailsService(
+            adbPath: resolvedSDK.adbPath,
+            processRunner: processRunner
+        )
+        Task { [weak self] in
+            let deviceDetails = await service.details(for: device)
+            guard let self, !Task.isCancelled else {
+                return
+            }
+
+            self.loadingDeviceDetailSerials.remove(device.serial)
+            guard self.devices.contains(device) else {
+                return
+            }
+            if let deviceDetails {
+                self.deviceDetailsBySerial[device.serial] = deviceDetails
+            }
+        }
     }
 
     func takeScreenshot(of device: AndroidDevice) {
@@ -574,6 +608,12 @@ final class DeviceStore {
         if self.devices != devices {
             self.devices = devices
         }
+        let activeDeviceSerials = Set(devices.map(\.serial))
+        let currentDetails = deviceDetailsBySerial.filter { activeDeviceSerials.contains($0.key) }
+        if deviceDetailsBySerial != currentDetails {
+            deviceDetailsBySerial = currentDetails
+        }
+        loadingDeviceDetailSerials.formIntersection(activeDeviceSerials)
         if self.status != status {
             self.status = status
         }
