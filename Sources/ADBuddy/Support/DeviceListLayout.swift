@@ -9,7 +9,7 @@ enum DeviceListLayout {
     static let actionButtonLabelWidth: CGFloat = 28
     static let lifecycleControlWidth: CGFloat = 28
     static let rowHeight: CGFloat = 58
-    static let verticalInsets: CGFloat = 16
+    static let verticalInsets: CGFloat = 0
     static let maximumVisibleDeviceCount = 4
     static let sectionHeaderHeight: CGFloat = 24
     static let maximumVisibleSectionedRowCount = 6
