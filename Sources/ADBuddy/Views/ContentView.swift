@@ -149,16 +149,6 @@ struct ContentView: View {
             }
 
             ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    EmulatorMenuContent()
-                } label: {
-                    Label("Open Android Emulator", systemImage: "play.rectangle")
-                        .labelStyle(.iconOnly)
-                }
-                .help("Open Android Emulator")
-            }
-
-            ToolbarItem(placement: .primaryAction) {
                 Button {
                     AppLogger.settings.info("Settings requested from the toolbar")
                     isShowingSettings = true
