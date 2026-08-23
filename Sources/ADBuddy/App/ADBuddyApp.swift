@@ -28,6 +28,7 @@ struct ADBuddyApp: App {
 
         WindowGroup("ADBuddy", id: "main") {
             ContentView(isShowingSettings: $isShowingSettings)
+                .frame(minWidth: DeviceListLayout.windowWidth)
                 .environment(deviceStore)
                 .environment(emulatorStore)
                 .environment(preferences)
@@ -45,6 +46,7 @@ struct ADBuddyApp: App {
             width: DeviceListLayout.windowWidth,
             height: DeviceListLayout.unavailableContentHeight
         )
+        .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
