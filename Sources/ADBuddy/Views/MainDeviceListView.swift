@@ -167,18 +167,6 @@ private struct ConnectedDeviceRow: View {
                         openLogcat: { openLogcat(device) }
                     )
 
-                    if virtualDevice != nil {
-                        Button(action: stopEmulator) {
-                            Label("Stop Emulator", systemImage: "stop.fill")
-                                .labelStyle(.iconOnly)
-                                .frame(width: DeviceListLayout.actionButtonLabelWidth)
-                        }
-                        .frame(width: DeviceListLayout.actionControlWidth)
-                        .buttonStyle(.bordered)
-                        .tint(.red)
-                        .help("Stop Emulator")
-                    }
-
                     DeviceOverflowMenu(
                         isPerformingAppAction: deviceStore.isPerformingAppAction(for: device),
                         isPerformingDeviceSetting: deviceStore.isPerformingDeviceSetting(for: device),
@@ -189,6 +177,8 @@ private struct ConnectedDeviceRow: View {
                         },
                         performDeviceSetting: { deviceStore.performDeviceSetting($0, for: device) }
                     )
+
+                    lifecycleControl
                 }
             } else {
                 Text(device.connectionState.displayName)
@@ -221,6 +211,24 @@ private struct ConnectedDeviceRow: View {
             return nil
         }
         return showEmulatorWindow
+    }
+
+    @ViewBuilder
+    private var lifecycleControl: some View {
+        if virtualDevice != nil {
+            Button(action: stopEmulator) {
+                Label("Stop Emulator", systemImage: "stop.fill")
+                    .labelStyle(.iconOnly)
+            }
+            .frame(width: DeviceListLayout.lifecycleControlWidth)
+            .buttonStyle(.bordered)
+            .tint(.red)
+            .help("Stop Emulator")
+        } else {
+            Color.clear
+                .frame(width: DeviceListLayout.lifecycleControlWidth, height: 28)
+                .accessibilityHidden(true)
+        }
     }
 }
 
@@ -277,21 +285,20 @@ private struct VirtualDeviceRow: View {
         switch virtualDevice.status {
         case .stopped:
             HStack(spacing: 8) {
+                EmulatorOverflowMenu(
+                    coldBoot: { start(.coldBoot) },
+                    requestWipeDataAndStart: requestWipeDataAndStart
+                )
+
                 Button {
                     start(.quickBoot)
                 } label: {
                     Label("Start Emulator", systemImage: "play.fill")
                         .labelStyle(.iconOnly)
-                        .frame(width: DeviceListLayout.actionButtonLabelWidth)
                 }
-                .frame(width: DeviceListLayout.actionControlWidth)
+                .frame(width: DeviceListLayout.lifecycleControlWidth)
                 .buttonStyle(.borderedProminent)
                 .help("Start Emulator (Quick Boot)")
-
-                EmulatorOverflowMenu(
-                    coldBoot: { start(.coldBoot) },
-                    requestWipeDataAndStart: requestWipeDataAndStart
-                )
             }
         case .starting:
             ProgressView()
