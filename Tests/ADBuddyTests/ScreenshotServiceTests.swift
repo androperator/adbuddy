@@ -145,6 +145,44 @@ final class ScreenshotServiceTests: XCTestCase {
         XCTAssertNotEqual(framedPixels.pixel(atX: 400, y: 200), bezelPixel)
     }
 
+    func testUsesTheSDKSkinsMaskToExcludeTheScreenshotFromTheFrameEdge() async throws {
+        let fixture = try ScreenshotFrameFixture.make(includesDisplayMask: true)
+        let screenshotData = try ScreenshotFrameFixture.pngData(
+            width: 400,
+            height: 800,
+            red: 1,
+            green: 0,
+            blue: 0
+        )
+        defer {
+            try? FileManager.default.removeItem(at: fixture.temporaryDirectory)
+        }
+
+        let fileManager = RecordingScreenshotFileManager()
+        let result = await ScreenshotService(
+            adbPath: "/SDK/platform-tools/adb",
+            sdkRootPath: fixture.sdkRootURL.path,
+            processRunner: ScriptedScreenshotProcessRunner(results: [
+                successfulProcessResult(standardOutput: screenshotData),
+                successfulProcessResult(standardOutput: "\(fixture.avdDirectoryURL.path)\nOK\n"),
+            ]),
+            fileManager: fileManager
+        ).capture(
+            device: emulatorDevice,
+            destination: URL(fileURLWithPath: "/tmp/screenshots", isDirectory: true),
+            framing: ScreenshotFramingOptions(addsFrame: true, alsoSavesOriginal: false)
+        )
+
+        guard case .success(let output) = result,
+              let framedData = fileManager.writtenFiles[output.primaryFileURL],
+              let framedPixels = pixelImage(in: framedData) else {
+            return XCTFail("Expected a framed screenshot")
+        }
+
+        let maskedFramePixel = framedPixels.pixel(atX: 450, y: 600)
+        XCTAssertGreaterThan(maskedFramePixel[1], maskedFramePixel[0])
+    }
+
     func testSavesOriginalAlongsideFramedScreenshotWhenRequested() async throws {
         let fixture = try ScreenshotFrameFixture.make()
         defer {
@@ -533,7 +571,7 @@ private struct ScreenshotFrameFixture {
     let avdDirectoryURL: URL
     let screenshotData: Data
 
-    static func make() throws -> ScreenshotFrameFixture {
+    static func make(includesDisplayMask: Bool = false) throws -> ScreenshotFrameFixture {
         let temporaryDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ADBuddyScreenshotFrameTests-\(UUID().uuidString)", isDirectory: true)
         let sdkRootURL = temporaryDirectory.appendingPathComponent("sdk", isDirectory: true)
@@ -545,6 +583,13 @@ private struct ScreenshotFrameFixture {
         try FileManager.default.createDirectory(at: skinDirectoryURL, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: avdDirectoryURL, withIntermediateDirectories: true)
 
+        let foreground = includesDisplayMask
+            ? """
+              foreground {
+                mask mask.png
+              }
+            """
+            : ""
         try Data(
             """
             parts {
@@ -561,6 +606,7 @@ private struct ScreenshotFrameFixture {
                 background {
                   image back.png
                 }
+            \(foreground)
               }
             }
             layouts {
@@ -587,6 +633,9 @@ private struct ScreenshotFrameFixture {
         try pngData(width: 8, height: 12, red: 0, green: 1, blue: 0).write(
             to: skinDirectoryURL.appendingPathComponent("back.png")
         )
+        if includesDisplayMask {
+            try displayMaskPNGData().write(to: skinDirectoryURL.appendingPathComponent("mask.png"))
+        }
 
         return ScreenshotFrameFixture(
             temporaryDirectory: temporaryDirectory,
@@ -643,6 +692,27 @@ private struct ScreenshotFrameFixture {
             throw ScreenshotFrameFixtureError.unableToCreateImage
         }
 
+        return try encodedPNGData(from: image)
+    }
+
+    private static func displayMaskPNGData() throws -> Data {
+        guard let context = CGContext(
+            data: nil,
+            width: 4,
+            height: 8,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ) else {
+            throw ScreenshotFrameFixtureError.unableToCreateImage
+        }
+        context.clear(CGRect(x: 0, y: 0, width: 4, height: 8))
+        context.setFillColor(CGColor(red: 0, green: 0, blue: 0, alpha: 0.5))
+        context.fill(CGRect(x: 2, y: 0, width: 1, height: 8))
+        guard let image = context.makeImage() else {
+            throw ScreenshotFrameFixtureError.unableToCreateImage
+        }
         return try encodedPNGData(from: image)
     }
 

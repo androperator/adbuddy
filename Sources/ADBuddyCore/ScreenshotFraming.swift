@@ -314,6 +314,7 @@ private struct AndroidSDKSkinFrameLayout: Sendable {
     let displayRect: CGRect
     let displayCornerRadius: CGFloat
     let backdropImageURLs: [PositionedSkinAsset]
+    let displayMaskImageURLs: [PositionedSkinAsset]
     let overlayImageURLs: [PositionedSkinAsset]
     let frameOverlayImageURLs: [PositionedSkinAsset]
 
@@ -397,11 +398,12 @@ private enum AndroidSDKSkinLayoutParser {
                 assetKey: "image",
                 skinDirectoryURL: skinDirectoryURL
             )
-            let overlayImageURLs = imageURLs(
+            let displayMaskImageURLs = imageURLs(
                 in: framePart.firstChild(named: "foreground"),
                 assetKey: "mask",
                 skinDirectoryURL: skinDirectoryURL
-            ) + imageURLs(
+            )
+            let overlayImageURLs = displayMaskImageURLs + imageURLs(
                 in: framePart.firstChild(named: "foreground"),
                 assetKey: "image",
                 skinDirectoryURL: skinDirectoryURL
@@ -423,6 +425,9 @@ private enum AndroidSDKSkinLayoutParser {
                 displayCornerRadius: displayCornerRadius,
                 backdropImageURLs: backdropImageURLs.map { imageURL in
                     imageURL.withPlacement(x: frameX, y: frameY)
+                },
+                displayMaskImageURLs: displayMaskImageURLs.map { imageURL in
+                    imageURL.withPlacement(x: Int(displayRect.origin.x), y: Int(displayRect.origin.y))
                 },
                 overlayImageURLs: overlayImageURLs.map { imageURL in
                     imageURL.withPlacement(x: Int(displayRect.origin.x), y: Int(displayRect.origin.y))
@@ -574,9 +579,11 @@ private enum AndroidSDKSkinFrameRenderer {
         }
 
         let backdropImages = layout.backdropImageURLs.compactMap(ImageCanvas.image)
+        let displayMaskImages = layout.displayMaskImageURLs.compactMap(ImageCanvas.image)
         let overlayImages = layout.overlayImageURLs.compactMap(ImageCanvas.image)
         let frameOverlayImages = layout.frameOverlayImageURLs.compactMap(ImageCanvas.image)
         guard backdropImages.count == layout.backdropImageURLs.count,
+              displayMaskImages.count == layout.displayMaskImageURLs.count,
               overlayImages.count == layout.overlayImageURLs.count,
               frameOverlayImages.count == layout.frameOverlayImageURLs.count else {
             return nil
@@ -602,6 +609,22 @@ private enum AndroidSDKSkinFrameRenderer {
             ))
             context.clip()
         }
+        for displayMaskImage in displayMaskImages {
+            guard let screenMask = ScreenMask.make(from: displayMaskImage.image) else {
+                return nil
+            }
+            let maskRect = ImageCanvas.topLeftRect(
+                CGRect(
+                    x: displayMaskImage.origin.x,
+                    y: displayMaskImage.origin.y,
+                    width: CGFloat(displayMaskImage.image.width),
+                    height: CGFloat(displayMaskImage.image.height)
+                ),
+                scale: scaleX,
+                canvasHeight: canvasHeight
+            )
+            context.clip(to: maskRect, mask: screenMask)
+        }
         context.draw(screenshot, in: displayDrawingRect)
         context.restoreGState()
 
@@ -613,6 +636,55 @@ private enum AndroidSDKSkinFrameRenderer {
         }
 
         return context.makeImage()
+    }
+}
+
+private enum ScreenMask {
+    static func make(from displayMask: CGImage) -> CGImage? {
+        let width = displayMask.width
+        let height = displayMask.height
+        guard width > 0,
+              height > 0,
+              let context = CGContext(
+                  data: nil,
+                  width: width,
+                  height: height,
+                  bitsPerComponent: 8,
+                  bytesPerRow: width * 4,
+                  space: CGColorSpaceCreateDeviceRGB(),
+                  bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue
+                      | CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else {
+            return nil
+        }
+
+        context.draw(displayMask, in: CGRect(x: 0, y: 0, width: width, height: height))
+        guard let maskData = context.data else {
+            return nil
+        }
+
+        let sourcePixels = maskData.bindMemory(to: UInt8.self, capacity: width * height * 4)
+        var screenPixels = [UInt8](repeating: 0, count: width * height)
+        for pixelIndex in 0..<(width * height) {
+            let alpha = sourcePixels[pixelIndex * 4 + 3]
+            // CGImage masks use black for the drawable portion. Any skin-mask coverage
+            // belongs to the bezel, so exclude the screenshot from that pixel entirely.
+            screenPixels[pixelIndex] = alpha == 0 ? 0 : 255
+        }
+
+        guard let provider = CGDataProvider(data: Data(screenPixels) as CFData) else {
+            return nil
+        }
+        return CGImage(
+            maskWidth: width,
+            height: height,
+            bitsPerComponent: 8,
+            bitsPerPixel: 8,
+            bytesPerRow: width,
+            provider: provider,
+            decode: nil,
+            shouldInterpolate: false
+        )
     }
 }
 
