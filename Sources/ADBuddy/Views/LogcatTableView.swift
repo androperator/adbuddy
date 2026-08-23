@@ -2,6 +2,8 @@
 import SwiftUI
 
 struct LogcatTableView: NSViewRepresentable {
+    @Environment(\.colorScheme) private var colorScheme
+
     let entryCount: Int
     let entryRevision: UInt64
     let entryAt: (Int) -> LogcatEntry?
@@ -55,6 +57,7 @@ struct LogcatTableView: NSViewRepresentable {
             applicationIDRevision: applicationIDRevision,
             applicationIDForProcessID: applicationIDForProcessID,
             followsLatest: followsLatest,
+            colorScheme: colorScheme,
             priorityColors: priorityColors,
             showsProcessID: showsProcessID,
             showsThreadID: showsThreadID,
@@ -86,6 +89,7 @@ struct LogcatTableView: NSViewRepresentable {
         private var boundsObserver: NSObjectProtocol?
         private var isPerformingProgrammaticScroll = false
         private var wasFollowingLatest = false
+        private var colorScheme: ColorScheme?
         private var priorityColors = LogcatPriority.defaultColors
         private var previouslySelectedRows = IndexSet()
 
@@ -129,6 +133,7 @@ struct LogcatTableView: NSViewRepresentable {
             applicationIDRevision: UInt64,
             applicationIDForProcessID: @escaping (Int) -> String?,
             followsLatest: Bool,
+            colorScheme: ColorScheme,
             priorityColors: [LogcatPriority: LogcatColorComponents],
             showsProcessID: Bool,
             showsThreadID: Bool,
@@ -140,8 +145,9 @@ struct LogcatTableView: NSViewRepresentable {
 
             let entriesChanged = self.entryRevision != entryRevision
             let applicationIDsChanged = self.applicationIDRevision != applicationIDRevision
+            let colorSchemeChanged = self.colorScheme != colorScheme
             let colorsChanged = self.priorityColors != priorityColors
-            let shouldReload = entriesChanged || applicationIDsChanged || colorsChanged
+            let shouldReload = entriesChanged || applicationIDsChanged || colorSchemeChanged || colorsChanged
             let selectedEntries = shouldReload
                 ? LogcatTableSelectionRestorer.selections(
                     at: tableView.selectedRowIndexes,
@@ -154,6 +160,7 @@ struct LogcatTableView: NSViewRepresentable {
             self.entryAt = entryAt
             self.applicationIDRevision = applicationIDRevision
             self.applicationIDForProcessID = applicationIDForProcessID
+            self.colorScheme = colorScheme
             self.priorityColors = priorityColors
             updateColumnVisibility(
                 in: tableView,
@@ -280,7 +287,10 @@ struct LogcatTableView: NSViewRepresentable {
         }
 
         private func messageColor(for priority: LogcatPriority) -> NSColor {
-            color(for: priority).blended(withFraction: 0.55, of: .labelColor) ?? .labelColor
+            let foregroundColor: NSColor = colorScheme == .dark ? .white : .labelColor
+            let foregroundFraction: CGFloat = colorScheme == .dark ? 0.65 : 0.55
+            return color(for: priority).blended(withFraction: foregroundFraction, of: foregroundColor)
+                ?? foregroundColor
         }
 
         private func updateColumnVisibility(

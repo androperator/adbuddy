@@ -556,8 +556,9 @@ is never the only indicator. Default colors are:
 | Assert | deep red |
 
 Colors apply to the level badge and message emphasis while preserving readable
-contrast in both Light and Dark appearances. The app should avoid tinting the
-entire row with a saturated background.
+contrast in both Light and Dark appearances. Message colors brighten toward
+white in Dark mode. The app should avoid tinting the entire row with a
+saturated background.
 
 All six colors are global persisted preferences. The Logcat section in Settings
 provides a native color picker for each level plus **Reset to Defaults**.
