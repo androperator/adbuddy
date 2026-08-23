@@ -3,7 +3,9 @@ import CoreGraphics
 enum DeviceListLayout {
     static let windowWidth: CGFloat = 720
     static let actionControlWidth: CGFloat = 44
-    static let actionControlHeight: CGFloat = 24
+    static let actionControlHeight: CGFloat = 28
+    static let actionControlContentHeight: CGFloat = 20
+    static let actionMenuLabelHeight: CGFloat = 26
     static let actionButtonLabelWidth: CGFloat = 28
     static let actionMenuLabelWidth: CGFloat = 24
     static let lifecycleControlWidth: CGFloat = 28

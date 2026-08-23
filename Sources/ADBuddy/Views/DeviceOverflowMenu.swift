@@ -31,13 +31,17 @@ struct DeviceOverflowMenu: View {
         } label: {
             Label("More Device Actions", systemImage: "ellipsis")
                 .labelStyle(.iconOnly)
-                .frame(width: DeviceListLayout.actionMenuLabelWidth)
+                .frame(
+                    width: DeviceListLayout.actionMenuLabelWidth,
+                    height: DeviceListLayout.actionMenuLabelHeight
+                )
         }
         .frame(
             width: DeviceListLayout.actionControlWidth,
             height: DeviceListLayout.actionControlHeight
         )
         .menuStyle(.borderedButton)
+        .controlSize(.small)
         .accessibilityLabel("More Device Actions")
         .help("More Device Actions")
     }
@@ -57,13 +61,17 @@ struct EmulatorOverflowMenu: View {
         } label: {
             Label("More Emulator Actions", systemImage: "ellipsis")
                 .labelStyle(.iconOnly)
-                .frame(width: DeviceListLayout.actionMenuLabelWidth)
+                .frame(
+                    width: DeviceListLayout.actionMenuLabelWidth,
+                    height: DeviceListLayout.actionMenuLabelHeight
+                )
         }
         .frame(
             width: DeviceListLayout.actionControlWidth,
             height: DeviceListLayout.actionControlHeight
         )
         .menuStyle(.borderedButton)
+        .controlSize(.small)
         .accessibilityLabel("More Emulator Actions")
         .help("More Emulator Actions")
     }

@@ -219,12 +219,17 @@ private struct ConnectedDeviceRow: View {
             Button(action: stopEmulator) {
                 Label("Stop Emulator", systemImage: "stop.fill")
                     .labelStyle(.iconOnly)
+                    .frame(
+                        width: DeviceListLayout.actionControlContentHeight,
+                        height: DeviceListLayout.actionControlContentHeight
+                    )
             }
             .frame(
                 width: DeviceListLayout.lifecycleControlWidth,
                 height: DeviceListLayout.actionControlHeight
             )
             .buttonStyle(.bordered)
+            .controlSize(.small)
             .tint(.red)
             .help("Stop Emulator")
         } else {
@@ -301,12 +306,17 @@ private struct VirtualDeviceRow: View {
                 } label: {
                     Label("Start Emulator", systemImage: "play.fill")
                         .labelStyle(.iconOnly)
+                        .frame(
+                            width: DeviceListLayout.actionControlContentHeight,
+                            height: DeviceListLayout.actionControlContentHeight
+                        )
                 }
                 .frame(
                     width: DeviceListLayout.lifecycleControlWidth,
                     height: DeviceListLayout.actionControlHeight
                 )
                 .buttonStyle(.bordered)
+                .controlSize(.small)
                 .help("Start Emulator (Quick Boot)")
             }
         case .starting:
