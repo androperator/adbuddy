@@ -6,11 +6,6 @@ struct SettingsView: View {
 
     var body: some View {
         TabView {
-            GeneralSettingsView(preferences: preferences)
-                .tabItem {
-                    Label("General", systemImage: "gearshape")
-                }
-
             ScreenshotSettingsView(preferences: preferences)
                 .tabItem {
                     Label("Screenshots", systemImage: "camera")
@@ -21,7 +16,7 @@ struct SettingsView: View {
                     Label("Theme", systemImage: "paintpalette")
                 }
         }
-        .frame(width: 580, height: 370)
+        .frame(width: 580, height: 592)
         .background {
             SettingsWindowTitle(title: "ADBuddy Settings")
                 .frame(width: 0, height: 0)
@@ -29,7 +24,7 @@ struct SettingsView: View {
     }
 }
 
-private struct GeneralSettingsView: View {
+private struct ScreenshotSettingsView: View {
     let preferences: AppPreferences
 
     @State private var isChoosingMediaDirectory = false
@@ -68,32 +63,7 @@ private struct GeneralSettingsView: View {
             } footer: {
                 Text("Screenshots and recordings are saved to the same folder.")
             }
-        }
-        .formStyle(.grouped)
-        .scenePadding()
-        .fileImporter(
-            isPresented: $isChoosingMediaDirectory,
-            allowedContentTypes: [.folder],
-            allowsMultipleSelection: false
-        ) { result in
-            guard case .success(let directoryURLs) = result,
-                  let directoryURL = directoryURLs.first else {
-                return
-            }
 
-            preferences.screenshotDirectory = directoryURL
-            AppLogger.settings.info("Selected a shared media save location")
-        }
-    }
-}
-
-private struct ScreenshotSettingsView: View {
-    let preferences: AppPreferences
-
-    var body: some View {
-        @Bindable var preferences = preferences
-
-        Form {
             Section {
                 Toggle(
                     "Add a device frame to screenshots",
@@ -113,6 +83,19 @@ private struct ScreenshotSettingsView: View {
         }
         .formStyle(.grouped)
         .scenePadding()
+        .fileImporter(
+            isPresented: $isChoosingMediaDirectory,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            guard case .success(let directoryURLs) = result,
+                  let directoryURL = directoryURLs.first else {
+                return
+            }
+
+            preferences.screenshotDirectory = directoryURL
+            AppLogger.settings.info("Selected a shared media save location")
+        }
     }
 }
 
