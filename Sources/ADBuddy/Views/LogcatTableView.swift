@@ -5,9 +5,12 @@ struct LogcatTableView: NSViewRepresentable {
     let entryCount: Int
     let entryRevision: UInt64
     let entryAt: (Int) -> LogcatEntry?
+    let applicationIDRevision: UInt64
+    let applicationIDForProcessID: (Int) -> String?
     let followsLatest: Bool
     let showsProcessID: Bool
     let showsThreadID: Bool
+    let showsApplicationID: Bool
     let priorityColors: [LogcatPriority: LogcatColorComponents]
     let onUserScrollAwayFromLatest: () -> Void
 
@@ -49,10 +52,13 @@ struct LogcatTableView: NSViewRepresentable {
             entryCount: entryCount,
             entryRevision: entryRevision,
             entryAt: entryAt,
+            applicationIDRevision: applicationIDRevision,
+            applicationIDForProcessID: applicationIDForProcessID,
             followsLatest: followsLatest,
             priorityColors: priorityColors,
             showsProcessID: showsProcessID,
-            showsThreadID: showsThreadID
+            showsThreadID: showsThreadID,
+            showsApplicationID: showsApplicationID
         )
     }
 
@@ -73,6 +79,8 @@ struct LogcatTableView: NSViewRepresentable {
         private var entryCount = 0
         private var entryRevision: UInt64?
         private var entryAt: (Int) -> LogcatEntry? = { _ in nil }
+        private var applicationIDRevision: UInt64?
+        private var applicationIDForProcessID: (Int) -> String? = { _ in nil }
         private weak var tableView: CopyableLogcatTableView?
         private weak var scrollView: NSScrollView?
         private var boundsObserver: NSObjectProtocol?
@@ -117,10 +125,13 @@ struct LogcatTableView: NSViewRepresentable {
             entryCount: Int,
             entryRevision: UInt64,
             entryAt: @escaping (Int) -> LogcatEntry?,
+            applicationIDRevision: UInt64,
+            applicationIDForProcessID: @escaping (Int) -> String?,
             followsLatest: Bool,
             priorityColors: [LogcatPriority: LogcatColorComponents],
             showsProcessID: Bool,
-            showsThreadID: Bool
+            showsThreadID: Bool,
+            showsApplicationID: Bool
         ) {
             guard let tableView else {
                 return
@@ -130,14 +141,18 @@ struct LogcatTableView: NSViewRepresentable {
             self.entryCount = entryCount
             self.entryRevision = entryRevision
             self.entryAt = entryAt
+            let applicationIDsChanged = self.applicationIDRevision != applicationIDRevision
+            self.applicationIDRevision = applicationIDRevision
+            self.applicationIDForProcessID = applicationIDForProcessID
             let colorsChanged = self.priorityColors != priorityColors
             self.priorityColors = priorityColors
             let columnVisibilityChanged = updateColumnVisibility(
                 in: tableView,
                 showsProcessID: showsProcessID,
-                showsThreadID: showsThreadID
+                showsThreadID: showsThreadID,
+                showsApplicationID: showsApplicationID
             )
-            if entriesChanged || colorsChanged || columnVisibilityChanged {
+            if entriesChanged || applicationIDsChanged || colorsChanged || columnVisibilityChanged {
                 tableView.reloadData()
             }
 
@@ -184,6 +199,9 @@ struct LogcatTableView: NSViewRepresentable {
             case "threadID":
                 textField.stringValue = String(entry.threadID)
                 textField.alignment = .right
+            case "applicationID":
+                textField.stringValue = applicationIDForProcessID(entry.processID) ?? ""
+                textField.alignment = .left
             case "tag":
                 textField.stringValue = entry.tag
                 textField.alignment = .left
@@ -217,7 +235,8 @@ struct LogcatTableView: NSViewRepresentable {
         private func updateColumnVisibility(
             in tableView: NSTableView,
             showsProcessID: Bool,
-            showsThreadID: Bool
+            showsThreadID: Bool,
+            showsApplicationID: Bool
         ) -> Bool {
             let processIDColumn = tableView.tableColumn(
                 withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.processID.identifier)
@@ -225,11 +244,16 @@ struct LogcatTableView: NSViewRepresentable {
             let threadIDColumn = tableView.tableColumn(
                 withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.threadID.identifier)
             )
+            let applicationIDColumn = tableView.tableColumn(
+                withIdentifier: NSUserInterfaceItemIdentifier(LogcatTableColumn.applicationID.identifier)
+            )
             let processIDChanged = processIDColumn?.isHidden == showsProcessID
             let threadIDChanged = threadIDColumn?.isHidden == showsThreadID
+            let applicationIDChanged = applicationIDColumn?.isHidden == showsApplicationID
             processIDColumn?.isHidden = !showsProcessID
             threadIDColumn?.isHidden = !showsThreadID
-            return processIDChanged || threadIDChanged
+            applicationIDColumn?.isHidden = !showsApplicationID
+            return processIDChanged || threadIDChanged || applicationIDChanged
         }
 
         private func scrollToLatest(in tableView: NSTableView) {

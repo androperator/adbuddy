@@ -401,7 +401,7 @@ stable.
 
 Implement it in this order:
 
-1. Add optional PID and TID column visibility controls.
+1. Add optional PID, TID, and Application ID column visibility controls.
 2. Add accessibility labels, values, keyboard focus, and Help text for every
    glyph-only or letter-only control.
 3. Verify horizontal scrolling for long single-line messages and sensible
@@ -416,8 +416,8 @@ Implement it in this order:
 
 Acceptance checks:
 
-- PID and TID are hidden by default and can be shown without restarting the
-  stream.
+- PID, TID, and Application ID are hidden by default and can be shown without
+  restarting the stream.
 - Every control is usable with the keyboard and understandable to VoiceOver.
 - High-volume logging remains responsive while scrolling and filtering.
 - The first-slice exclusions remain excluded.
@@ -475,7 +475,9 @@ HH:MM:SS.SSS | level | tag | message
 - Time is left-aligned and defaults to `HH:MM:SS.SSS`.
 - The level is a narrow colored badge containing its single-letter value.
 - Tag and message remain visually distinct without adding card chrome.
-- PID and TID are available through optional column visibility controls.
+- PID, TID, and Application ID are available through optional column visibility controls.
+- Application ID resolves from the current process list and is blank for processes that do not
+  identify as Android applications.
 - Long messages remain on one line by default and can scroll horizontally.
 - Rows support selection and standard macOS copy behavior with `Command-C`.
 

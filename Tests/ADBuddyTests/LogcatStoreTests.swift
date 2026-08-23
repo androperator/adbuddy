@@ -349,6 +349,35 @@ final class LogcatStoreTests: XCTestCase {
         store.stop()
     }
 
+    func testResolvesApplicationIDsFromCurrentRunningProcesses() async throws {
+        let service = ControllableLogcatService()
+        let applicationService = ControllableLogcatApplicationService(
+            processes: [
+                AndroidRunningProcess(userID: 10374, processID: 101, name: "com.example.app"),
+                AndroidRunningProcess(userID: 10374, processID: 102, name: "com.example.app:worker"),
+                AndroidRunningProcess(userID: 1000, processID: 103, name: "system_server"),
+            ],
+            packageUserID: nil
+        )
+        let store = makeStore(service: service, applicationService: applicationService)
+
+        store.start(adbPath: "/SDK/platform-tools/adb")
+        try await waitForApplicationID(store, processID: 101, matching: "com.example.app")
+
+        XCTAssertEqual(store.applicationID(for: 102), "com.example.app")
+        XCTAssertNil(store.applicationID(for: 103))
+
+        let revisionBeforeRefresh = store.applicationIDRevision
+        applicationService.setProcesses([
+            AndroidRunningProcess(userID: 10374, processID: 303, name: "com.example.app:worker"),
+        ])
+        try await waitForApplicationID(store, processID: 303, matching: "com.example.app")
+
+        XCTAssertNil(store.applicationID(for: 101))
+        XCTAssertGreaterThan(store.applicationIDRevision, revisionBeforeRefresh)
+        store.stop()
+    }
+
     func testPIDFilteringIncludesSecondaryProcessesAndRecoversAfterRestart() async throws {
         let service = ControllableLogcatService()
         let applicationService = ControllableLogcatApplicationService(
@@ -568,6 +597,20 @@ final class LogcatStoreTests: XCTestCase {
             try await Task.sleep(for: .milliseconds(10))
         }
         XCTFail("Expected visible process IDs \(expectedProcessIDs)")
+    }
+
+    private func waitForApplicationID(
+        _ store: LogcatStore,
+        processID: Int,
+        matching expectedApplicationID: String?
+    ) async throws {
+        for _ in 0..<80 {
+            if store.applicationID(for: processID) == expectedApplicationID {
+                return
+            }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("Expected application ID \(expectedApplicationID ?? "nil") for process \(processID)")
     }
 
     private func waitForLastEntryID(_ store: LogcatStore, expectedID: UInt64) async throws {

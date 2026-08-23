@@ -33,6 +33,7 @@ final class LogcatStore {
     private var activeStreamScope: LogcatStreamScope = .allApplications
     private var activeApplicationScope: LogcatApplicationScope = .allApplications
     private var latestRunningProcesses: [AndroidRunningProcess] = []
+    private var applicationIDsByProcessID: [Int: String] = [:]
     private var packageUserID: Int?
     private var prefersUserIDFiltering = true
     private var pausedEntries: [LogcatEntry]?
@@ -41,6 +42,7 @@ final class LogcatStore {
     private(set) var entries: [LogcatEntry] = []
     private(set) var visibleEntries: [LogcatEntry] = []
     private(set) var displayedEntryRevision: UInt64 = 0
+    private(set) var applicationIDRevision: UInt64 = 0
     private(set) var streamState: LogcatStreamState = .connecting
     private(set) var applicationID: String?
     private(set) var runningApplicationIDs: [String] = []
@@ -85,6 +87,10 @@ final class LogcatStore {
             return nil
         }
         return displayedEntries[index]
+    }
+
+    func applicationID(for processID: Int) -> String? {
+        applicationIDsByProcessID[processID]
     }
 
     var displayedStreamState: LogcatStreamState {
@@ -290,6 +296,7 @@ final class LogcatStore {
         latestRunningProcesses = runningProcesses
         self.packageUserID = packageUserID
         runningApplicationIDs = Array(Set(runningProcesses.compactMap(\.applicationID))).sorted()
+        updateApplicationIDsByProcessID(from: runningProcesses)
 
         guard let selectedApplicationID else {
             applyApplicationScope(.allApplications)
@@ -303,6 +310,21 @@ final class LogcatStore {
             prefersUserIDFiltering: prefersUserIDFiltering
         )
         applyApplicationScope(scope)
+    }
+
+    private func updateApplicationIDsByProcessID(from processes: [AndroidRunningProcess]) {
+        let updatedApplicationIDs = processes.reduce(into: [Int: String]()) { applicationIDs, process in
+            guard let applicationID = process.applicationID else {
+                return
+            }
+            applicationIDs[process.processID] = applicationID
+        }
+        guard applicationIDsByProcessID != updatedApplicationIDs else {
+            return
+        }
+
+        applicationIDsByProcessID = updatedApplicationIDs
+        applicationIDRevision &+= 1
     }
 
     private func applyApplicationScope(_ scope: LogcatApplicationScope) {

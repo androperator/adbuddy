@@ -3,11 +3,11 @@ import XCTest
 @testable import ADBuddyCore
 
 final class LogcatTableColumnTests: XCTestCase {
-    func testProcessAndThreadColumnsAreHiddenByDefault() {
+    func testOptionalColumnsAreHiddenByDefault() {
         XCTAssertEqual(LogcatTableColumn.visibleColumns(), [.time, .level, .tag, .message])
     }
 
-    func testProcessAndThreadColumnsCanBeShownIndependently() {
+    func testOptionalColumnsCanBeShownIndependently() {
         XCTAssertEqual(
             LogcatTableColumn.visibleColumns(showsProcessID: true),
             [.time, .processID, .level, .tag, .message]
@@ -17,8 +17,16 @@ final class LogcatTableColumnTests: XCTestCase {
             [.time, .threadID, .level, .tag, .message]
         )
         XCTAssertEqual(
-            LogcatTableColumn.visibleColumns(showsProcessID: true, showsThreadID: true),
-            [.time, .processID, .threadID, .level, .tag, .message]
+            LogcatTableColumn.visibleColumns(showsApplicationID: true),
+            [.time, .applicationID, .level, .tag, .message]
+        )
+        XCTAssertEqual(
+            LogcatTableColumn.visibleColumns(
+                showsProcessID: true,
+                showsThreadID: true,
+                showsApplicationID: true
+            ),
+            [.time, .processID, .threadID, .applicationID, .level, .tag, .message]
         )
     }
 }

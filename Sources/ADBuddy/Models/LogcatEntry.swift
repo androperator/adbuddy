@@ -40,6 +40,7 @@ enum LogcatTableColumn: CaseIterable, Hashable {
     case time
     case processID
     case threadID
+    case applicationID
     case level
     case tag
     case message
@@ -52,6 +53,8 @@ enum LogcatTableColumn: CaseIterable, Hashable {
             "processID"
         case .threadID:
             "threadID"
+        case .applicationID:
+            "applicationID"
         case .level:
             "level"
         case .tag:
@@ -69,6 +72,8 @@ enum LogcatTableColumn: CaseIterable, Hashable {
             "PID"
         case .threadID:
             "TID"
+        case .applicationID:
+            "Application ID"
         case .level:
             "Level"
         case .tag:
@@ -84,6 +89,8 @@ enum LogcatTableColumn: CaseIterable, Hashable {
             88
         case .processID, .threadID:
             56
+        case .applicationID:
+            220
         case .level:
             42
         case .tag:
@@ -101,6 +108,8 @@ enum LogcatTableColumn: CaseIterable, Hashable {
             "Process ID"
         case .threadID:
             "Thread ID"
+        case .applicationID:
+            "Application ID"
         case .level:
             "Log level"
         case .tag:
@@ -112,7 +121,8 @@ enum LogcatTableColumn: CaseIterable, Hashable {
 
     static func visibleColumns(
         showsProcessID: Bool = false,
-        showsThreadID: Bool = false
+        showsThreadID: Bool = false,
+        showsApplicationID: Bool = false
     ) -> [LogcatTableColumn] {
         allCases.filter { column in
             switch column {
@@ -120,6 +130,8 @@ enum LogcatTableColumn: CaseIterable, Hashable {
                 showsProcessID
             case .threadID:
                 showsThreadID
+            case .applicationID:
+                showsApplicationID
             case .time, .level, .tag, .message:
                 true
             }

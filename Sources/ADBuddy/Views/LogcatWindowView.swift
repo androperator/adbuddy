@@ -8,6 +8,7 @@ struct LogcatWindowView: View {
     @State private var logcatStore: LogcatStore
     @State private var showsProcessID = false
     @State private var showsThreadID = false
+    @State private var showsApplicationID = false
     @State private var isSearchPresented = false
 
     init(windowID: LogcatWindowID) {
@@ -45,9 +46,12 @@ struct LogcatWindowView: View {
                 entryCount: logcatStore.displayedEntryCount,
                 entryRevision: logcatStore.displayedEntryRevision,
                 entryAt: logcatStore.displayedEntry(at:),
+                applicationIDRevision: logcatStore.applicationIDRevision,
+                applicationIDForProcessID: logcatStore.applicationID(for:),
                 followsLatest: logcatStore.isFollowing,
                 showsProcessID: showsProcessID,
                 showsThreadID: showsThreadID,
+                showsApplicationID: showsApplicationID,
                 priorityColors: preferences.logcatColors,
                 onUserScrollAwayFromLatest: logcatStore.userScrolledAwayFromLatest
             )
@@ -118,6 +122,7 @@ struct LogcatWindowView: View {
                 Menu {
                     Toggle("Process ID", isOn: $showsProcessID)
                     Toggle("Thread ID", isOn: $showsThreadID)
+                    Toggle("Application ID", isOn: $showsApplicationID)
                 } label: {
                     Label("Columns", systemImage: "rectangle.3.group")
                 }
