@@ -13,7 +13,7 @@ final class DeviceListLayoutTests: XCTestCase {
     func testClampsWindowContentToTheDeviceListWidth() {
         XCTAssertEqual(
             DeviceListLayout.contentSizeRespectingMinimumWidth(CGSize(width: 240, height: 132)),
-            CGSize(width: 900, height: 132)
+            CGSize(width: 720, height: 132)
         )
         XCTAssertEqual(
             DeviceListLayout.contentSizeRespectingMinimumWidth(CGSize(width: 960, height: 132)),
@@ -27,13 +27,13 @@ final class DeviceListLayoutTests: XCTestCase {
                 CGSize(width: 720, height: 500),
                 updatingHeight: 238
             ),
-            CGSize(width: 900, height: 238)
+            CGSize(width: 720, height: 238)
         )
     }
 
     func testUsesFixedMinimumWindowFrameWidth() {
-        XCTAssertEqual(DeviceListLayout.minimumWindowFrameWidth(for: 240), 900)
-        XCTAssertEqual(DeviceListLayout.minimumWindowFrameWidth(for: 960), 900)
+        XCTAssertEqual(DeviceListLayout.minimumWindowFrameWidth(for: 240), 720)
+        XCTAssertEqual(DeviceListLayout.minimumWindowFrameWidth(for: 960), 720)
     }
 
     func testUsesStableActionControlDimensions() {
@@ -50,7 +50,7 @@ final class DeviceListLayoutTests: XCTestCase {
                 connectedDeviceCount: 0,
                 virtualDeviceCount: 0
             ),
-            CGSize(width: 900, height: 240)
+            CGSize(width: 720, height: 240)
         )
         XCTAssertEqual(
             DeviceListLayout.mainWindowContentSize(
@@ -58,7 +58,7 @@ final class DeviceListLayoutTests: XCTestCase {
                 connectedDeviceCount: 0,
                 virtualDeviceCount: 0
             ),
-            CGSize(width: 900, height: 180)
+            CGSize(width: 720, height: 180)
         )
     }
 
@@ -86,7 +86,7 @@ final class DeviceListLayoutTests: XCTestCase {
                 connectedDeviceCount: 3,
                 virtualDeviceCount: 1
             ),
-            CGSize(width: 900, height: 296)
+            CGSize(width: 720, height: 296)
         )
         XCTAssertEqual(
             DeviceListLayout.mainWindowContentSize(
@@ -94,7 +94,7 @@ final class DeviceListLayoutTests: XCTestCase {
                 connectedDeviceCount: 2,
                 virtualDeviceCount: 1
             ),
-            CGSize(width: 900, height: 238)
+            CGSize(width: 720, height: 238)
         )
     }
 }
