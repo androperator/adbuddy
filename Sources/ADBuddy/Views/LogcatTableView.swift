@@ -92,6 +92,7 @@ struct LogcatTableView: NSViewRepresentable {
         private var colorScheme: ColorScheme?
         private var priorityColors = LogcatPriority.defaultColors
         private var previouslySelectedRows = IndexSet()
+        private var selectionReloadScheduler = LogcatTableSelectionReloadScheduler()
 
         init(onUserScrollAwayFromLatest: @escaping () -> Void) {
             self.onUserScrollAwayFromLatest = onUserScrollAwayFromLatest
@@ -114,6 +115,11 @@ struct LogcatTableView: NSViewRepresentable {
                     self.entryAt(row).map(LogcatEntryTextFormatter.string(from:))
                 }
                 .joined(separator: "\n")
+            }
+            tableView.selectionTrackingDidEnd = { [weak self] in
+                Task { @MainActor [weak self] in
+                    self?.reloadAfterSelectionTrackingIfNeeded()
+                }
             }
             boundsObserver = NotificationCenter.default.addObserver(
                 forName: NSView.boundsDidChangeNotification,
@@ -148,7 +154,10 @@ struct LogcatTableView: NSViewRepresentable {
             let colorSchemeChanged = self.colorScheme != colorScheme
             let colorsChanged = self.priorityColors != priorityColors
             let shouldReload = entriesChanged || applicationIDsChanged || colorSchemeChanged || colorsChanged
-            let selectedEntries = shouldReload
+            let shouldReloadImmediately = shouldReload && selectionReloadScheduler.shouldReloadImmediately(
+                isTrackingRowSelection: tableView.isTrackingRowSelection
+            )
+            let selectedEntries = shouldReloadImmediately
                 ? LogcatTableSelectionRestorer.selections(
                     at: tableView.selectedRowIndexes,
                     entryAt: self.entryAt
@@ -168,12 +177,11 @@ struct LogcatTableView: NSViewRepresentable {
                 showsThreadID: showsThreadID,
                 showsApplicationID: showsApplicationID
             )
-            if shouldReload {
-                tableView.reloadData()
-                restoreSelection(selectedEntries, in: tableView)
+            if shouldReloadImmediately {
+                reloadData(in: tableView, preserving: selectedEntries)
             }
 
-            if followsLatest && (entriesChanged || !wasFollowingLatest) {
+            if followsLatest && !tableView.isTrackingRowSelection && (entriesChanged || !wasFollowingLatest) {
                 scrollToLatest(in: tableView)
             }
             wasFollowingLatest = followsLatest
@@ -193,6 +201,26 @@ struct LogcatTableView: NSViewRepresentable {
                 entryAt: entryAt
             )
             tableView.selectRowIndexes(restoredRows, byExtendingSelection: false)
+        }
+
+        private func reloadAfterSelectionTrackingIfNeeded() {
+            guard selectionReloadScheduler.consumeDeferredReload(), let tableView else {
+                return
+            }
+
+            let selectedEntries = LogcatTableSelectionRestorer.selections(
+                at: tableView.selectedRowIndexes,
+                entryAt: entryAt
+            )
+            reloadData(in: tableView, preserving: selectedEntries)
+        }
+
+        private func reloadData(
+            in tableView: NSTableView,
+            preserving selections: [LogcatTableSelection]
+        ) {
+            tableView.reloadData()
+            restoreSelection(selections, in: tableView)
         }
 
         func numberOfRows(in tableView: NSTableView) -> Int {
@@ -375,6 +403,8 @@ private final class LogcatLevelBadgeView: NSView {
 
 private final class CopyableLogcatTableView: NSTableView {
     var copyText: ((IndexSet) -> String)?
+    var selectionTrackingDidEnd: (() -> Void)?
+    private(set) var isTrackingRowSelection = false
 
     @objc func copy(_ sender: Any?) {
         let text = copyText?(selectedRowIndexes) ?? ""
@@ -391,6 +421,15 @@ private final class CopyableLogcatTableView: NSTableView {
             return selectedRowIndexes.isEmpty == false
         }
         return super.validateUserInterfaceItem(item)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        isTrackingRowSelection = true
+        defer {
+            isTrackingRowSelection = false
+            selectionTrackingDidEnd?()
+        }
+        super.mouseDown(with: event)
     }
 }
 
