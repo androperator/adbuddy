@@ -10,13 +10,15 @@ enum EmulatorDiscoveryStatus: Equatable {
 enum EmulatorFeedback: Equatable {
     case startRequested(AndroidVirtualDevice, AndroidEmulatorStartMode)
     case stopRequested(AndroidVirtualDevice)
+    case windowActivated(AndroidVirtualDevice)
+    case windowActivationFailed(AndroidVirtualDevice)
     case failure(AndroidEmulatorFailure)
 
     var isSuccess: Bool {
         switch self {
-        case .startRequested, .stopRequested:
+        case .startRequested, .stopRequested, .windowActivated:
             return true
-        case .failure:
+        case .windowActivationFailed, .failure:
             return false
         }
     }
@@ -27,6 +29,10 @@ enum EmulatorFeedback: Equatable {
             "Starting Android Emulator"
         case .stopRequested:
             "Stopping Android Emulator"
+        case .windowActivated:
+            "Emulator Window Opened"
+        case .windowActivationFailed:
+            "Could Not Open Emulator Window"
         case .failure(let failure):
             failure.title
         }
@@ -38,6 +44,10 @@ enum EmulatorFeedback: Equatable {
             "\(mode.displayName) requested for \(virtualDevice.name)."
         case .stopRequested(let virtualDevice):
             "Stop requested for \(virtualDevice.name)."
+        case .windowActivated(let virtualDevice):
+            "\(virtualDevice.name) was brought to the front."
+        case .windowActivationFailed(let virtualDevice):
+            "A standalone macOS window is no longer available for \(virtualDevice.name)."
         case .failure(let failure):
             failure.detail
         }
@@ -54,6 +64,7 @@ final class EmulatorStore {
     private var connectedEmulatorDevices: [AndroidDevice] = []
     private var resolvedSDK: AndroidSDK?
     private var runningStatusRefreshID = UUID()
+    private var emulatorWindowPresentations: [String: EmulatorWindowPresentation] = [:]
 
     private(set) var virtualDevices: [AndroidVirtualDevice] = []
     private(set) var status: EmulatorDiscoveryStatus = .loading
@@ -165,6 +176,23 @@ final class EmulatorStore {
         }
     }
 
+    func windowPresentation(for virtualDevice: AndroidVirtualDevice) -> EmulatorWindowPresentation {
+        emulatorWindowPresentations[virtualDevice.name] ?? .unknown
+    }
+
+    func openStandaloneWindow(for virtualDevice: AndroidVirtualDevice) {
+        guard case .standalone(let processIdentifier) = windowPresentation(for: virtualDevice) else {
+            return
+        }
+
+        guard EmulatorWindowService.activateStandaloneWindow(processIdentifier: processIdentifier) else {
+            showFeedback(.windowActivationFailed(virtualDevice))
+            return
+        }
+
+        showFeedback(.windowActivated(virtualDevice))
+    }
+
     func clearFeedback(ifMatching feedback: EmulatorFeedback) {
         guard self.feedback == feedback else {
             return
@@ -245,13 +273,16 @@ final class EmulatorStore {
         runningStatusRefreshID = refreshID
         let service = emulatorService(using: sdk)
         let emulatorDevices = connectedEmulatorDevices
+        let windowService = EmulatorWindowService(processRunner: processRunner)
 
         Task { [weak self] in
             let runningDevices = await service.runningVirtualDevices(in: emulatorDevices)
+            let windowPresentations = await windowService.discoverWindowPresentations()
             guard let self, self.runningStatusRefreshID == refreshID else {
                 return
             }
             self.applyRunningStatuses(runningDevices)
+            self.emulatorWindowPresentations = windowPresentations
         }
     }
 

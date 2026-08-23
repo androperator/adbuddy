@@ -71,6 +71,9 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Show all connected Android devices, physical and emulator, together in the
   compact main-window list. A connected emulator is shown once, with its AVD
   name, ADB serial, stop control, and device actions.
+- Identify whether a connected emulator has a standalone macOS window, is
+  displayed through Android Studio, or is headless. Provide **Open Emulator
+  Window** only for an existing standalone window.
 - Show every installed AVD and whether it is stopped, starting, running, or
   stopping. To avoid duplicate rows, a running AVD is represented by its
   connected Android device row; the installed-emulators section keeps stopped

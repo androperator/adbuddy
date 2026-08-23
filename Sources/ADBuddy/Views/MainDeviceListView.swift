@@ -21,12 +21,21 @@ struct MainDeviceListView: View {
                         ConnectedDeviceRow(
                             device: device,
                             virtualDevice: runningVirtualDevice(for: device),
+                            emulatorWindowPresentation: runningVirtualDevice(for: device).map {
+                                emulatorStore.windowPresentation(for: $0)
+                            },
                             deviceStore: deviceStore,
                             stopEmulator: {
                                 guard let virtualDevice = runningVirtualDevice(for: device) else {
                                     return
                                 }
                                 emulatorStore.stop(virtualDevice)
+                            },
+                            openEmulatorWindow: {
+                                guard let virtualDevice = runningVirtualDevice(for: device) else {
+                                    return
+                                }
+                                emulatorStore.openStandaloneWindow(for: virtualDevice)
                             },
                             openLogcat: openLogcat
                         )
@@ -122,8 +131,10 @@ struct MainDeviceListView: View {
 private struct ConnectedDeviceRow: View {
     let device: AndroidDevice
     let virtualDevice: AndroidVirtualDevice?
+    let emulatorWindowPresentation: EmulatorWindowPresentation?
     let deviceStore: DeviceStore
     let stopEmulator: () -> Void
+    let openEmulatorWindow: () -> Void
     let openLogcat: (AndroidDevice) -> Void
 
     var body: some View {
@@ -134,13 +145,15 @@ private struct ConnectedDeviceRow: View {
 
             DeviceIdentityView(
                 name: virtualDevice?.name ?? device.displayName,
-                detail: device.serial
+                detail: deviceDetail
             )
 
             Spacer()
 
             if device.isUsable {
                 if virtualDevice != nil {
+                    emulatorWindowControl
+
                     Button(action: stopEmulator) {
                         Label("Stop Emulator", systemImage: "stop.fill")
                             .labelStyle(.iconOnly)
@@ -175,6 +188,41 @@ private struct ConnectedDeviceRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private var deviceDetail: String {
+        guard let emulatorWindowPresentation else {
+            return device.serial
+        }
+        return "\(device.serial) · \(emulatorWindowPresentation.detail)"
+    }
+
+    @ViewBuilder
+    private var emulatorWindowControl: some View {
+        switch emulatorWindowPresentation {
+        case .standalone:
+            Button(action: openEmulatorWindow) {
+                Label("Open Emulator Window", systemImage: "macwindow")
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(.bordered)
+            .help("Open Emulator Window")
+        case .embeddedInAndroidStudio:
+            Image(systemName: "rectangle.inset.filled")
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("Android Studio emulator window")
+                .help("This emulator is displayed in Android Studio and has no standalone macOS window.")
+        case .headless:
+            Image(systemName: "rectangle.slash")
+                .foregroundStyle(.orange)
+                .accessibilityLabel("Headless emulator")
+                .help("This emulator is running headlessly and has no macOS window to open.")
+        case .unknown, .none:
+            Image(systemName: "questionmark.app")
+                .foregroundStyle(.secondary)
+                .accessibilityLabel("Emulator window status unavailable")
+                .help("ADBuddy could not determine whether this emulator has a standalone macOS window.")
+        }
     }
 }
 

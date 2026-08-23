@@ -84,6 +84,9 @@ Manual verification should cover, where locally available:
     Android system value, then restore light mode, gesture navigation, and
     disabled rendering overlays. Do not change a physical device's system
     settings during routine verification unless that is intentional.
+17. Check a standalone emulator displays **Open Emulator Window** and brings
+    that window to the front. Check Android Studio-managed and headless
+    emulators clearly state that no standalone window can be opened.
 
 ## Change discipline
 
