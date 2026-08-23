@@ -180,7 +180,8 @@ final class ScreenshotServiceTests: XCTestCase {
         }
 
         let maskedFramePixel = framedPixels.pixel(atX: 450, y: 600)
-        XCTAssertGreaterThan(maskedFramePixel[1], maskedFramePixel[0])
+        XCTAssertLessThan(maskedFramePixel[0], 10)
+        XCTAssertGreaterThan(maskedFramePixel[1], 200)
     }
 
     func testSavesOriginalAlongsideFramedScreenshotWhenRequested() async throws {

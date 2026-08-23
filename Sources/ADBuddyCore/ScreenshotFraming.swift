@@ -403,7 +403,7 @@ private enum AndroidSDKSkinLayoutParser {
                 assetKey: "mask",
                 skinDirectoryURL: skinDirectoryURL
             )
-            let overlayImageURLs = displayMaskImageURLs + imageURLs(
+            let overlayImageURLs = imageURLs(
                 in: framePart.firstChild(named: "foreground"),
                 assetKey: "image",
                 skinDirectoryURL: skinDirectoryURL
