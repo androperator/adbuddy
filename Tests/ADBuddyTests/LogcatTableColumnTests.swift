@@ -60,4 +60,35 @@ final class LogcatTableColumnTests: XCTestCase {
             [.time, .processID, .threadID, .applicationID, .level, .tag, .message]
         )
     }
+
+    func testPersistedColumnOrderIgnoresUnknownAndDuplicateColumns() {
+        XCTAssertEqual(
+            LogcatTableColumn.orderedColumns(
+                from: ["message", "unknown", "tag", "message"]
+            ),
+            [
+                .message,
+                .tag,
+                .time,
+                .processID,
+                .threadID,
+                .applicationID,
+                .level,
+            ]
+        )
+    }
+
+    func testTablePreferencesDiscardInvalidSavedWidths() {
+        var preferences = LogcatTablePreferences()
+        preferences.columnWidths = [
+            "message": 640,
+            "unknown": 200,
+            "tag": 20,
+        ]
+
+        XCTAssertEqual(
+            preferences.normalized().columnWidths,
+            ["message": 640]
+        )
+    }
 }

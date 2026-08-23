@@ -126,6 +126,18 @@ enum LogcatTableColumn: CaseIterable, Hashable {
         .threadID,
     ]
 
+    static func orderedColumns(from identifiers: [String]) -> [LogcatTableColumn] {
+        var seenColumns = Set<LogcatTableColumn>()
+        let storedColumns: [LogcatTableColumn] = identifiers.compactMap { identifier -> LogcatTableColumn? in
+            let column = allCases.first { $0.identifier == identifier }
+            guard let column, seenColumns.insert(column).inserted else {
+                return nil
+            }
+            return column
+        }
+        return storedColumns + allCases.filter { !seenColumns.contains($0) }
+    }
+
     static func visibleColumns(
         showsProcessID: Bool = false,
         showsThreadID: Bool = false,

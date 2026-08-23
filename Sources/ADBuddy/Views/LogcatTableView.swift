@@ -15,15 +15,21 @@ struct LogcatTableView: NSViewRepresentable {
     let showsThreadID: Bool
     let showsApplicationID: Bool
     let showsTag: Bool
+    let columnOrder: [LogcatTableColumn]
+    let columnWidths: [String: Double]
     let wrapsMessages: Bool
     let priorityColors: [LogcatPriority: LogcatColorComponents]
     let onUserScrollAwayFromLatest: () -> Void
     let onToggleColumnVisibility: (LogcatTableColumn) -> Void
+    let onColumnOrderChanged: ([LogcatTableColumn]) -> Void
+    let onColumnWidthsChanged: ([LogcatTableColumn: CGFloat]) -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
             onUserScrollAwayFromLatest: onUserScrollAwayFromLatest,
-            onToggleColumnVisibility: onToggleColumnVisibility
+            onToggleColumnVisibility: onToggleColumnVisibility,
+            onColumnOrderChanged: onColumnOrderChanged,
+            onColumnWidthsChanged: onColumnWidthsChanged
         )
     }
 
@@ -35,8 +41,14 @@ struct LogcatTableView: NSViewRepresentable {
             showsApplicationID: showsApplicationID,
             showsTag: showsTag
         ))
-        for definition in LogcatTableColumn.allCases {
-            tableView.addTableColumn(column(definition, isHidden: !visibleColumns.contains(definition)))
+        for definition in columnOrder {
+            tableView.addTableColumn(
+                column(
+                    definition,
+                    isHidden: !visibleColumns.contains(definition),
+                    savedWidth: columnWidths[definition.identifier].map { CGFloat($0) }
+                )
+            )
         }
 
         let headerView = LogcatTableHeaderView()
@@ -74,6 +86,8 @@ struct LogcatTableView: NSViewRepresentable {
     func updateNSView(_ container: LogcatTableContainer, context: Context) {
         context.coordinator.onUserScrollAwayFromLatest = onUserScrollAwayFromLatest
         context.coordinator.onToggleColumnVisibility = onToggleColumnVisibility
+        context.coordinator.onColumnOrderChanged = onColumnOrderChanged
+        context.coordinator.onColumnWidthsChanged = onColumnWidthsChanged
         context.coordinator.update(
             entryCount: entryCount,
             entryRevision: entryRevision,
@@ -92,11 +106,15 @@ struct LogcatTableView: NSViewRepresentable {
         )
     }
 
-    private func column(_ definition: LogcatTableColumn, isHidden: Bool) -> NSTableColumn {
+    private func column(
+        _ definition: LogcatTableColumn,
+        isHidden: Bool,
+        savedWidth: CGFloat?
+    ) -> NSTableColumn {
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(definition.identifier))
         column.title = definition.title
-        column.width = definition.width
         column.minWidth = 40
+        column.width = max(savedWidth ?? definition.width, column.minWidth)
         column.resizingMask = .userResizingMask
         column.isHidden = isHidden
         return column
@@ -106,6 +124,8 @@ struct LogcatTableView: NSViewRepresentable {
     final class Coordinator: NSObject, NSTableViewDataSource, NSTableViewDelegate {
         var onUserScrollAwayFromLatest: () -> Void
         var onToggleColumnVisibility: (LogcatTableColumn) -> Void
+        var onColumnOrderChanged: ([LogcatTableColumn]) -> Void
+        var onColumnWidthsChanged: ([LogcatTableColumn: CGFloat]) -> Void
 
         private var entryCount = 0
         private var entryRevision: UInt64?
@@ -116,6 +136,7 @@ struct LogcatTableView: NSViewRepresentable {
         private weak var scrollView: NSScrollView?
         private var boundsObserver: NSObjectProtocol?
         private var columnResizeObserver: NSObjectProtocol?
+        private var columnMoveObserver: NSObjectProtocol?
         private var isPerformingProgrammaticScroll = false
         private var isSuppressingScrollEventsForLayout = false
         private var wasFollowingLatest = false
@@ -131,10 +152,14 @@ struct LogcatTableView: NSViewRepresentable {
 
         init(
             onUserScrollAwayFromLatest: @escaping () -> Void,
-            onToggleColumnVisibility: @escaping (LogcatTableColumn) -> Void
+            onToggleColumnVisibility: @escaping (LogcatTableColumn) -> Void,
+            onColumnOrderChanged: @escaping ([LogcatTableColumn]) -> Void,
+            onColumnWidthsChanged: @escaping ([LogcatTableColumn: CGFloat]) -> Void
         ) {
             self.onUserScrollAwayFromLatest = onUserScrollAwayFromLatest
             self.onToggleColumnVisibility = onToggleColumnVisibility
+            self.onColumnOrderChanged = onColumnOrderChanged
+            self.onColumnWidthsChanged = onColumnWidthsChanged
         }
 
         deinit {
@@ -143,6 +168,9 @@ struct LogcatTableView: NSViewRepresentable {
             }
             if let columnResizeObserver {
                 NotificationCenter.default.removeObserver(columnResizeObserver)
+            }
+            if let columnMoveObserver {
+                NotificationCenter.default.removeObserver(columnMoveObserver)
             }
         }
 
@@ -179,6 +207,15 @@ struct LogcatTableView: NSViewRepresentable {
             ) { [weak self] _ in
                 Task { @MainActor [weak self] in
                     self?.handleColumnResize()
+                }
+            }
+            columnMoveObserver = NotificationCenter.default.addObserver(
+                forName: NSTableView.columnDidMoveNotification,
+                object: tableView,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.reportColumnOrder()
                 }
             }
         }
@@ -534,6 +571,8 @@ struct LogcatTableView: NSViewRepresentable {
         }
 
         private func handleColumnResize() {
+            reportColumnWidths()
+
             guard wrapsMessages == true,
                   let tableView,
                   let currentMessageColumnWidth = messageColumnWidth(in: tableView),
@@ -550,6 +589,34 @@ struct LogcatTableView: NSViewRepresentable {
             tableView.noteHeightOfRows(
                 withIndexesChanged: IndexSet(integersIn: 0..<entryCount)
             )
+        }
+
+        private func reportColumnOrder() {
+            guard let tableView else {
+                return
+            }
+            let columns = tableView.tableColumns.compactMap { column in
+                LogcatTableColumn.allCases.first {
+                    $0.identifier == column.identifier.rawValue
+                }
+            }
+            onColumnOrderChanged(columns)
+        }
+
+        private func reportColumnWidths() {
+            guard let tableView else {
+                return
+            }
+            let columnWidths: [(LogcatTableColumn, CGFloat)] = tableView.tableColumns.compactMap { column -> (LogcatTableColumn, CGFloat)? in
+                    guard let definition = LogcatTableColumn.allCases.first(
+                        where: { $0.identifier == column.identifier.rawValue }
+                    ) else {
+                        return nil
+                    }
+                    return (definition, column.width)
+                }
+            let widths = Dictionary(uniqueKeysWithValues: columnWidths)
+            onColumnWidthsChanged(widths)
         }
 
         private func messageColumnWidth(in tableView: NSTableView) -> CGFloat? {

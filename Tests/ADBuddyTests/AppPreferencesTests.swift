@@ -168,4 +168,53 @@ final class AppPreferencesTests: XCTestCase {
 
         XCTAssertEqual(preferences.logcatColors, LogcatPriority.defaultColors)
     }
+
+    func testLogcatTablePreferencesPersistAcrossAppSessions() {
+        let suiteName = "AppPreferencesTests.\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Could not create isolated user defaults")
+        }
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let preferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: URL(fileURLWithPath: "/tmp/default-screenshots", isDirectory: true)
+        )
+        let expectedOrder: [LogcatTableColumn] = [
+            .message,
+            .tag,
+            .time,
+            .level,
+            .applicationID,
+            .processID,
+            .threadID,
+        ]
+
+        XCTAssertEqual(preferences.logcatTablePreferences, LogcatTablePreferences())
+
+        preferences.setLogcatMessageWrapping(true)
+        preferences.setLogcatColumnVisibility(true, for: .applicationID)
+        preferences.setLogcatColumnVisibility(true, for: .processID)
+        preferences.setLogcatColumnVisibility(false, for: .tag)
+        preferences.setLogcatColumnOrder(expectedOrder)
+        preferences.setLogcatColumnWidths([
+            .message: 640,
+            .tag: 180,
+        ])
+
+        let reloadedPreferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: URL(fileURLWithPath: "/tmp/default-screenshots", isDirectory: true)
+        )
+
+        XCTAssertTrue(reloadedPreferences.logcatTablePreferences.wrapsMessages)
+        XCTAssertTrue(reloadedPreferences.logcatTablePreferences.showsApplicationID)
+        XCTAssertTrue(reloadedPreferences.logcatTablePreferences.showsProcessID)
+        XCTAssertFalse(reloadedPreferences.logcatTablePreferences.showsTag)
+        XCTAssertEqual(reloadedPreferences.logcatTablePreferences.orderedColumns, expectedOrder)
+        XCTAssertEqual(reloadedPreferences.logcatTablePreferences.width(for: .message), 640)
+        XCTAssertEqual(reloadedPreferences.logcatTablePreferences.width(for: .tag), 180)
+    }
 }

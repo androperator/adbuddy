@@ -6,11 +6,6 @@ struct LogcatWindowView: View {
 
     let windowID: LogcatWindowID
     @State private var logcatStore: LogcatStore
-    @State private var showsProcessID = false
-    @State private var showsThreadID = false
-    @State private var showsApplicationID = false
-    @State private var showsTag = true
-    @State private var wrapsMessages = false
     @State private var isSearchPresented = false
 
     init(windowID: LogcatWindowID) {
@@ -32,18 +27,10 @@ struct LogcatWindowView: View {
     }
 
     private func toggleColumnVisibility(_ column: LogcatTableColumn) {
-        switch column {
-        case .processID:
-            showsProcessID.toggle()
-        case .threadID:
-            showsThreadID.toggle()
-        case .applicationID:
-            showsApplicationID.toggle()
-        case .tag:
-            showsTag.toggle()
-        case .time, .level, .message:
-            return
-        }
+        preferences.setLogcatColumnVisibility(
+            !preferences.logcatTablePreferences.isVisible(column),
+            for: column
+        )
     }
 
     var body: some View {
@@ -67,14 +54,22 @@ struct LogcatWindowView: View {
                 applicationIDForProcessID: logcatStore.applicationID(for:),
                 followsLatest: logcatStore.isFollowing,
                 showsOnlyCrashesAndExceptions: logcatStore.showsOnlyCrashesAndExceptions,
-                showsProcessID: showsProcessID,
-                showsThreadID: showsThreadID,
-                showsApplicationID: showsApplicationID,
-                showsTag: showsTag,
-                wrapsMessages: wrapsMessages,
+                showsProcessID: preferences.logcatTablePreferences.showsProcessID,
+                showsThreadID: preferences.logcatTablePreferences.showsThreadID,
+                showsApplicationID: preferences.logcatTablePreferences.showsApplicationID,
+                showsTag: preferences.logcatTablePreferences.showsTag,
+                columnOrder: preferences.logcatTablePreferences.orderedColumns,
+                columnWidths: preferences.logcatTablePreferences.columnWidths,
+                wrapsMessages: preferences.logcatTablePreferences.wrapsMessages,
                 priorityColors: preferences.logcatColors,
                 onUserScrollAwayFromLatest: logcatStore.userScrolledAwayFromLatest,
-                onToggleColumnVisibility: toggleColumnVisibility
+                onToggleColumnVisibility: toggleColumnVisibility,
+                onColumnOrderChanged: { columns in
+                    preferences.setLogcatColumnOrder(columns)
+                },
+                onColumnWidthsChanged: { widths in
+                    preferences.setLogcatColumnWidths(widths)
+                }
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -130,10 +125,15 @@ struct LogcatWindowView: View {
                 )
                 .help("Show Crashes and Exceptions")
 
-                Toggle("Wrap", isOn: $wrapsMessages)
+                Toggle("Wrap", isOn: Binding(
+                    get: { preferences.logcatTablePreferences.wrapsMessages },
+                    set: { wrapsMessages in
+                        preferences.setLogcatMessageWrapping(wrapsMessages)
+                    }
+                ))
                     .toggleStyle(.button)
                     .accessibilityLabel("Wrap Logcat Messages")
-                    .accessibilityValue(wrapsMessages ? "On" : "Off")
+                    .accessibilityValue(preferences.logcatTablePreferences.wrapsMessages ? "On" : "Off")
                     .help("Wrap long log messages")
 
                 Button {

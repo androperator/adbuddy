@@ -11,6 +11,7 @@ final class AppPreferences {
         static let screenRecordingResolutionPercentage = ADBuddySharedPreferences.screenRecordingResolutionPercentageKey
         static let screenRecordingShowsTaps = ADBuddySharedPreferences.screenRecordingShowsTapsKey
         static let logcatColors = "logcatColors"
+        static let logcatTablePreferences = "logcatTablePreferences"
         static let deepLinkLauncherEnabled = "deepLinkLauncherEnabled"
     }
 
@@ -62,6 +63,15 @@ final class AppPreferences {
         }
     }
 
+    private(set) var logcatTablePreferences: LogcatTablePreferences {
+        didSet {
+            guard let encodedPreferences = try? JSONEncoder().encode(logcatTablePreferences) else {
+                return
+            }
+            userDefaults.set(encodedPreferences, forKey: Key.logcatTablePreferences)
+        }
+    }
+
     init(
         userDefaults: UserDefaults = ADBuddySharedPreferences.userDefaults(),
         defaultScreenshotDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
@@ -85,6 +95,8 @@ final class AppPreferences {
             ?? ScreenRecordingOptions.default.showsTaps
         isDeepLinkLauncherEnabled = userDefaults.object(forKey: Key.deepLinkLauncherEnabled) as? Bool ?? false
         logcatColors = Self.loadLogcatColors(from: userDefaults) ?? LogcatPriority.defaultColors
+        logcatTablePreferences = Self.loadLogcatTablePreferences(from: userDefaults)
+            ?? LogcatTablePreferences()
     }
 
     func resetScreenshotDirectory() {
@@ -99,6 +111,30 @@ final class AppPreferences {
         logcatColors = LogcatPriority.defaultColors
     }
 
+    func setLogcatMessageWrapping(_ wrapsMessages: Bool) {
+        updateLogcatTablePreferences { preferences in
+            preferences.wrapsMessages = wrapsMessages
+        }
+    }
+
+    func setLogcatColumnVisibility(_ isVisible: Bool, for column: LogcatTableColumn) {
+        updateLogcatTablePreferences { preferences in
+            preferences.setColumnVisibility(isVisible, for: column)
+        }
+    }
+
+    func setLogcatColumnOrder(_ columns: [LogcatTableColumn]) {
+        updateLogcatTablePreferences { preferences in
+            preferences.setColumnOrder(columns)
+        }
+    }
+
+    func setLogcatColumnWidths(_ widths: [LogcatTableColumn: CGFloat]) {
+        updateLogcatTablePreferences { preferences in
+            preferences.setColumnWidths(widths)
+        }
+    }
+
     private static func loadLogcatColors(from userDefaults: UserDefaults) -> [LogcatPriority: LogcatColorComponents]? {
         guard let data = userDefaults.data(forKey: Key.logcatColors),
               let colors = try? JSONDecoder().decode([LogcatPriority: LogcatColorComponents].self, from: data),
@@ -106,5 +142,27 @@ final class AppPreferences {
             return nil
         }
         return colors
+    }
+
+    private func updateLogcatTablePreferences(
+        _ update: (inout LogcatTablePreferences) -> Void
+    ) {
+        var updatedPreferences = logcatTablePreferences
+        update(&updatedPreferences)
+        updatedPreferences = updatedPreferences.normalized()
+        guard updatedPreferences != logcatTablePreferences else {
+            return
+        }
+        logcatTablePreferences = updatedPreferences
+    }
+
+    private static func loadLogcatTablePreferences(
+        from userDefaults: UserDefaults
+    ) -> LogcatTablePreferences? {
+        guard let data = userDefaults.data(forKey: Key.logcatTablePreferences),
+              let preferences = try? JSONDecoder().decode(LogcatTablePreferences.self, from: data) else {
+            return nil
+        }
+        return preferences.normalized()
     }
 }
