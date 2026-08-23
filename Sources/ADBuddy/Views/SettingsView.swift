@@ -127,7 +127,7 @@ private struct ScreenshotSettingsView: View {
             } header: {
                 Text("Device Details")
             } footer: {
-                Text("Adds “Android 16 / API Level 36” to the top-left of saved screenshots and framed recordings.")
+                Text("Adds “Android 16 / API 36” to the top-left of saved screenshots and framed recordings.")
             }
         }
         .formStyle(.grouped)

@@ -155,8 +155,10 @@ private struct ConnectedDeviceRow: View {
                     .frame(width: 18)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(virtualDevice?.name ?? device.displayName)
-                        .fontWeight(.medium)
+                    DeviceNameWithDetails(
+                        name: virtualDevice?.name ?? device.displayName,
+                        deviceDetails: deviceDetails
+                    )
                     deviceDetail
                 }
             }
@@ -223,23 +225,16 @@ private struct ConnectedDeviceRow: View {
 
     @ViewBuilder
     private var deviceDetail: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            if let deviceDetails {
-                Text(deviceDetails.displayText)
-                    .foregroundStyle(.secondary)
-            }
+        HStack(spacing: 4) {
+            Text(device.serial)
+                .foregroundStyle(.secondary)
 
-            HStack(spacing: 4) {
-                Text(device.serial)
+            if let emulatorWindowPresentation {
+                Text("·")
                     .foregroundStyle(.secondary)
 
-                if let emulatorWindowPresentation {
-                    Text("·")
-                        .foregroundStyle(.secondary)
-
-                    Text(emulatorWindowPresentation.detail)
-                        .foregroundStyle(.secondary)
-                }
+                Text(emulatorWindowPresentation.detail)
+                    .foregroundStyle(.secondary)
             }
         }
         .font(.caption)
@@ -401,22 +396,34 @@ private struct DeviceIdentityView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(name)
-                .fontWeight(.medium)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            if let deviceDetails {
-                Text(deviceDetails.displayText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
+            DeviceNameWithDetails(name: name, deviceDetails: deviceDetails)
             Text(detail)
                 .font(.caption)
                 .foregroundStyle(detailTint)
                 .lineLimit(1)
                 .truncationMode(.tail)
+        }
+    }
+}
+
+private struct DeviceNameWithDetails: View {
+    let name: String
+    let deviceDetails: AndroidDeviceDetails?
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(name)
+                .fontWeight(.medium)
+                .lineLimit(1)
+                .truncationMode(.tail)
+
+            if let deviceDetails {
+                Text(deviceDetails.displayText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
         }
     }
 }

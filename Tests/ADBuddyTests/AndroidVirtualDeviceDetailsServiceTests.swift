@@ -40,7 +40,7 @@ final class AndroidVirtualDeviceDetailsServiceTests: XCTestCase {
         let details = service.details(for: AndroidVirtualDevice(name: "Pixel_9"))
 
         XCTAssertEqual(details, AndroidDeviceDetails(androidVersion: "16", apiLevel: "36"))
-        XCTAssertEqual(details?.displayText, "Android 16 / API Level 36")
+        XCTAssertEqual(details?.displayText, "Android 16 / API 36")
     }
 
     func testReturnsNoDetailsWhenTheAVDHasNoSystemImageMetadata() throws {
