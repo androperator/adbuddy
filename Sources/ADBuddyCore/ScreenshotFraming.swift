@@ -39,7 +39,7 @@ struct ScreenshotDeviceDetailsOverlayRenderer {
         context.draw(screenshot, in: CGRect(x: 0, y: 0, width: screenshot.width, height: screenshot.height))
 
         let shortestSide = CGFloat(min(screenshot.width, screenshot.height))
-        let outerMargin = max(20, shortestSide * 0.025)
+        let outerMargin: CGFloat = 4
         let labelPadding = max(10, shortestSide * 0.012)
         let fontSize = max(20, shortestSide * 0.032)
         let font = CTFontCreateUIFontForLanguage(.system, fontSize, nil)
