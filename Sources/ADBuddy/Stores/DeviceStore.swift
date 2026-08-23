@@ -127,14 +127,20 @@ final class DeviceStore {
 
         let screenshotService = ScreenshotService(
             adbPath: resolvedSDK.adbPath,
+            sdkRootPath: resolvedSDK.rootPath,
             processRunner: processRunner
         )
         let destination = preferences.screenshotDirectory
+        let framing = ScreenshotFramingOptions(
+            addsFrame: preferences.screenshotAddsFrame,
+            alsoSavesOriginal: preferences.screenshotAlsoSavesOriginal
+        )
 
         Task { [weak self] in
             let result = await screenshotService.capture(
                 device: device,
-                destination: destination
+                destination: destination,
+                framing: framing
             )
             guard let self, !Task.isCancelled else {
                 return
@@ -143,16 +149,16 @@ final class DeviceStore {
             capturingDeviceSerials.remove(device.serial)
 
             switch result {
-            case .success(let fileURL):
-                let copiedToClipboard = copyScreenshotToClipboardIfNeeded(at: fileURL)
-                revealMediaInFinderIfNeeded(at: fileURL)
+            case .success(let output):
+                let copiedToClipboard = copyScreenshotToClipboardIfNeeded(at: output.primaryFileURL)
+                revealMediaInFinderIfNeeded(at: output.savedFileURLs)
                 AppLogger.screenshot.info("Screenshot capture succeeded")
-                showScreenshotFeedback(.success(fileURL, copiedToClipboard: copiedToClipboard))
+                showScreenshotFeedback(.success(output, copiedToClipboard: copiedToClipboard))
 
                 let mediaNotifier = mediaNotifier
                 Task {
                     await mediaNotifier.notifyAboutSavedMedia(
-                        at: fileURL,
+                        at: output.primaryFileURL,
                         kind: .screenshot(copiedToClipboard: copiedToClipboard)
                     )
                 }
@@ -598,7 +604,7 @@ final class DeviceStore {
         switch result {
         case .success(let fileURL, let warning):
             let copiedToClipboard = copyRecordingToClipboardIfNeeded(at: fileURL)
-            revealMediaInFinderIfNeeded(at: fileURL)
+            revealMediaInFinderIfNeeded(at: [fileURL])
             AppLogger.recording.info("Screen recording saved")
             showScreenRecordingFeedback(
                 .success(fileURL, warning: warning, copiedToClipboard: copiedToClipboard)
@@ -719,11 +725,13 @@ final class DeviceStore {
         }
     }
 
-    private func revealMediaInFinderIfNeeded(at fileURL: URL) {
+    private func revealMediaInFinderIfNeeded(at fileURLs: [URL]) {
         guard preferences.revealMediaInFinder else {
             return
         }
-        mediaFinderRevealer.revealMedia(at: fileURL)
+        for fileURL in fileURLs {
+            mediaFinderRevealer.revealMedia(at: fileURL)
+        }
         AppLogger.devices.info("Revealed saved media in Finder")
     }
 }

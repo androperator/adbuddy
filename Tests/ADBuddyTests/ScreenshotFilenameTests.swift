@@ -24,4 +24,22 @@ final class ScreenshotFilenameTests: XCTestCase {
     func testFallsBackToAndroidDeviceForEmptySanitizedName() {
         XCTAssertEqual(ScreenshotFilename.sanitizedDeviceName("///"), "Android-Device")
     }
+
+    func testGeneratesACollisionFreeOriginalAndFramedPair() {
+        let directory = URL(fileURLWithPath: "/tmp/screenshots", isDirectory: true)
+        let expectedBaseName = "Pixel-9-Pro_1970-01-01_000000_000"
+        let fileURLs = ScreenshotFilename.uniqueOriginalAndFramedURLs(
+            in: directory,
+            deviceName: "Pixel 9 Pro",
+            date: Date(timeIntervalSince1970: 0),
+            timeZone: TimeZone(secondsFromGMT: 0)!,
+            fileExists: { url in
+                url.lastPathComponent == "\(expectedBaseName).png"
+                    || url.lastPathComponent == "\(expectedBaseName)_framed.png"
+            }
+        )
+
+        XCTAssertEqual(fileURLs.original.lastPathComponent, "\(expectedBaseName)-2.png")
+        XCTAssertEqual(fileURLs.framed.lastPathComponent, "\(expectedBaseName)-2_framed.png")
+    }
 }

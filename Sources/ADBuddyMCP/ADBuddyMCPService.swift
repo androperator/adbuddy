@@ -150,19 +150,28 @@ actor ADBuddyMCPService {
         let device = try usableDevice(serial: serial, from: devices)
         let destination = ADBuddySharedPreferences.mediaDestination()
         AppLogger.screenshot.info("MCP screenshot capture requested")
-        let result = await ScreenshotService(adbPath: sdk.adbPath, processRunner: processRunner).capture(
+        let result = await ScreenshotService(
+            adbPath: sdk.adbPath,
+            sdkRootPath: sdk.rootPath,
+            processRunner: processRunner
+        ).capture(
             device: device,
-            destination: destination
+            destination: destination,
+            framing: ADBuddySharedPreferences.screenshotFramingOptions()
         )
 
         switch result {
-        case .success(let fileURL):
+        case .success(let output):
             AppLogger.screenshot.info("MCP screenshot capture succeeded")
-            return try encodedPayload([
+            var payload: [String: Any] = [
                 "serial": serial,
-                "path": fileURL.path,
+                "path": output.primaryFileURL.path,
                 "mediaType": "image/png",
-            ])
+            ]
+            if let originalFileURL = output.originalFileURL {
+                payload["originalPath"] = originalFileURL.path
+            }
+            return try encodedPayload(payload)
         case .failure(let error):
             throw ADBuddyMCPServiceError.screenshotFailure(error)
         }

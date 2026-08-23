@@ -70,6 +70,7 @@ SwiftUI scene
 
 AndroidSDKLocator -> resolved adb path -> ADBClient
 AppPreferences -> screenshot destination -> ScreenshotService
+AppPreferences -> screenshot framing options -> ScreenshotService -> Android SDK skins
 AppPreferences -> clipboard preference -> MediaClipboardService
 AppPreferences -> Finder reveal preference -> MediaFinderRevealService
 DeviceStore -> MediaNotificationService -> macOS notification center
@@ -184,12 +185,22 @@ so open menu hierarchies and the main-window device presentation remain stable.
 
 ## Screenshots
 
-`ScreenshotService` receives a typed device and destination URL. It invokes ADB
-with a fixed executable plus argument array, writes stdout as binary PNG data,
-and returns either a saved file URL or a structured failure.
+`ScreenshotService` receives a typed device, destination URL, and screenshot
+framing options. It invokes ADB with a fixed executable plus argument array,
+validates stdout as binary PNG data, and returns either a saved file result or
+a structured failure. When framing is enabled for an emulator, it asks the
+Emulator console for the running AVD path, reads its `config.ini`, and matches
+the configured SDK skin against a cached index built from `<sdk>/skins/*/layout`.
+It uses the skin's declared display rectangle and frame layers instead of a
+bundled device-to-resolution map. A missing, custom, incompatible, or
+ambiguous SDK skin falls back to a generic black device frame. The screenshot
+pixels are not rescaled; only frame assets are scaled to the compatible display
+size.
 
 Screenshot filenames must be sanitized, timestamped, and collision-resistant.
-The service must not silently replace an existing file.
+The service must not silently replace an existing file. A framed capture uses
+the `_framed.png` suffix; when the user also saves the original, the service
+selects a collision-free pair before either file is written.
 
 After a successful screenshot or recording save, `DeviceStore` can copy media
 to the macOS pasteboard through `MediaClipboardService`. Screenshots copy PNG
@@ -208,15 +219,16 @@ macOS consumes writable attachment files.
 ## Preferences
 
 `AppPreferences` is an application-owned wrapper around `UserDefaults`.
-It persists a screenshot destination path and whether successful screenshots
-and recordings are automatically copied to the clipboard. The same path is the
+It persists a screenshot destination path, screenshot framing and
+original-retention preferences, and whether successful screenshots and
+recordings are automatically copied to the clipboard. The same path is the
 shared media destination for screenshots and MP4 recordings. It also persists
 whether media is automatically revealed in Finder, and stores a recording bit
 rate, resolution percentage, and Show taps value for the next recording. The
 directory defaults to the current user's `~/Screenshots` directory, automatic
-copying defaults to enabled, and automatic Finder reveal defaults to disabled.
-The service layer receives values from the preferences store rather than
-accessing `UserDefaults` itself.
+copying defaults to enabled, screenshot framing defaults to disabled, and
+automatic Finder reveal defaults to disabled. The service layer receives values
+from the preferences store rather than accessing `UserDefaults` itself.
 
 The same store persists six serializable sRGB component values for global
 Logcat severity colors. Settings changes update every open Logcat window
@@ -266,6 +278,7 @@ Test pure behavior without a device:
 - `adb devices -l` parsing;
 - SDK candidate precedence and error classification;
 - filename sanitization and collision handling;
+- SDK skin layout matching, generic-frame fallback, and PNG composition;
 - process result to user-facing error mapping.
 - display-size parsing, recording argument construction, Show taps restoration,
   and non-overwriting MP4 retrieval.

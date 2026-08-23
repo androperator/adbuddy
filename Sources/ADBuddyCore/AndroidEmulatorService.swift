@@ -224,6 +224,10 @@ public struct AndroidEmulatorService: Sendable {
 
 enum AndroidEmulatorConsoleParser {
     static func virtualDeviceName(from output: String) -> String? {
+        firstValue(from: output)
+    }
+
+    static func firstValue(from output: String) -> String? {
         for rawLine in output.split(whereSeparator: \.isNewline) {
             let line = String(rawLine).trimmingCharacters(in: .whitespacesAndNewlines)
             guard !line.isEmpty, line != "OK", !line.hasPrefix("KO:") else {

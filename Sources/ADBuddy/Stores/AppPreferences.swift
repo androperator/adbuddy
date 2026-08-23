@@ -6,6 +6,8 @@ import Observation
 final class AppPreferences {
     private enum Key {
         static let screenshotDirectoryPath = ADBuddySharedPreferences.screenshotDirectoryPathKey
+        static let screenshotAddsFrame = ADBuddySharedPreferences.screenshotAddsFrameKey
+        static let screenshotAlsoSavesOriginal = ADBuddySharedPreferences.screenshotAlsoSavesOriginalKey
         static let automaticallyCopyMedia = "automaticallyCopyMedia"
         static let legacyAutomaticallyCopyScreenshots = "automaticallyCopyScreenshots"
         static let revealMediaInFinder = "revealMediaInFinder"
@@ -29,6 +31,18 @@ final class AppPreferences {
     var automaticallyCopyMedia: Bool {
         didSet {
             userDefaults.set(automaticallyCopyMedia, forKey: Key.automaticallyCopyMedia)
+        }
+    }
+
+    var screenshotAddsFrame: Bool {
+        didSet {
+            userDefaults.set(screenshotAddsFrame, forKey: Key.screenshotAddsFrame)
+        }
+    }
+
+    var screenshotAlsoSavesOriginal: Bool {
+        didSet {
+            userDefaults.set(screenshotAlsoSavesOriginal, forKey: Key.screenshotAlsoSavesOriginal)
         }
     }
 
@@ -104,6 +118,8 @@ final class AppPreferences {
         } else {
             automaticallyCopyMedia = true
         }
+        screenshotAddsFrame = userDefaults.object(forKey: Key.screenshotAddsFrame) as? Bool ?? false
+        screenshotAlsoSavesOriginal = userDefaults.object(forKey: Key.screenshotAlsoSavesOriginal) as? Bool ?? false
         revealMediaInFinder = userDefaults.object(forKey: Key.revealMediaInFinder) as? Bool ?? false
         screenRecordingBitRateMegabitsPerSecond = userDefaults.object(forKey: Key.screenRecordingBitRateMegabitsPerSecond) as? Int
             ?? ScreenRecordingOptions.default.bitRateMegabitsPerSecond

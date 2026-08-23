@@ -5,12 +5,13 @@ enum ScreenshotFilename {
         in directoryURL: URL,
         deviceName: String,
         date: Date,
+        suffix: String = "",
         fileExtension: String = "png",
         timeZone: TimeZone = .current,
         fileExists: (URL) -> Bool
     ) -> URL {
         let timestamp = formattedTimestamp(for: date, timeZone: timeZone)
-        let baseName = "\(sanitizedDeviceName(deviceName))_\(timestamp)"
+        let baseName = "\(sanitizedDeviceName(deviceName))_\(timestamp)\(suffix)"
 
         var attempt = 1
         while true {
@@ -18,6 +19,33 @@ enum ScreenshotFilename {
             let fileURL = directoryURL.appendingPathComponent("\(baseName)\(suffix).\(fileExtension)")
             if !fileExists(fileURL) {
                 return fileURL
+            }
+            attempt += 1
+        }
+    }
+
+    static func uniqueOriginalAndFramedURLs(
+        in directoryURL: URL,
+        deviceName: String,
+        date: Date,
+        fileExtension: String = "png",
+        timeZone: TimeZone = .current,
+        fileExists: (URL) -> Bool
+    ) -> (original: URL, framed: URL) {
+        let timestamp = formattedTimestamp(for: date, timeZone: timeZone)
+        let baseName = "\(sanitizedDeviceName(deviceName))_\(timestamp)"
+
+        var attempt = 1
+        while true {
+            let collisionSuffix = attempt == 1 ? "" : "-\(attempt)"
+            let originalURL = directoryURL.appendingPathComponent(
+                "\(baseName)\(collisionSuffix).\(fileExtension)"
+            )
+            let framedURL = directoryURL.appendingPathComponent(
+                "\(baseName)\(collisionSuffix)_framed.\(fileExtension)"
+            )
+            if !fileExists(originalURL), !fileExists(framedURL) {
+                return (originalURL, framedURL)
             }
             attempt += 1
         }

@@ -38,6 +38,10 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Write a valid local PNG to the configured screenshot directory.
 - Default the directory to `~/Screenshots` and use a safe timestamped filename,
   for example `Pixel-9-Pro_2026-08-22_121530_123.png`.
+- Offer a Settings preference to add a device frame to screenshots. For an
+  emulator, use the matching Android SDK skin configured by its AVD when one
+  is available; otherwise use a generic black frame. The preference can also
+  retain the original screenshot alongside its `_framed.png` version.
 - Report a concise native success state and a useful failure if capture fails.
 - Deliver a native system notification for a successful capture, including a
   preview of the saved PNG and a **Reveal in Finder** action.

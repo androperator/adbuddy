@@ -46,6 +46,25 @@ struct SettingsSheet: View {
                     isOn: $preferences.revealMediaInFinder
                 )
 
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle(
+                        "Add frame to screenshots",
+                        isOn: $preferences.screenshotAddsFrame
+                    )
+
+                    if preferences.screenshotAddsFrame {
+                        Toggle(
+                            "Also save the original screenshot",
+                            isOn: $preferences.screenshotAlsoSavesOriginal
+                        )
+                        .padding(.leading, 22)
+
+                        Text("Uses the matching Android SDK emulator frame when available, otherwise a generic black frame.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Text("Logcat colors")

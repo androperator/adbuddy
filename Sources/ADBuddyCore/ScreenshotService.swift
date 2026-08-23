@@ -1,7 +1,7 @@
 import Foundation
 
 public enum ScreenshotCaptureResult: Equatable, Sendable {
-    case success(URL)
+    case success(ScreenshotCaptureOutput)
     case failure(ScreenshotCaptureError)
 }
 
@@ -9,6 +9,7 @@ public enum ScreenshotCaptureError: Equatable, Sendable {
     case deviceUnavailable
     case adbFailed(String)
     case invalidPNG
+    case unableToAddFrame
     case unableToSave(String)
 
     public var message: String {
@@ -19,6 +20,8 @@ public enum ScreenshotCaptureError: Equatable, Sendable {
             message
         case .invalidPNG:
             "ADB did not return valid PNG screenshot data."
+        case .unableToAddFrame:
+            "Could not add a frame to the screenshot."
         case .unableToSave(let message):
             "Could not save the screenshot: \(message)"
         }
@@ -52,15 +55,18 @@ public struct LocalScreenshotFileManager: ScreenshotFileManaging {
 
 public struct ScreenshotService: Sendable {
     private let adbPath: String
+    private let sdkRootPath: String?
     private let processRunner: any ProcessRunning
     private let fileManager: any ScreenshotFileManaging
 
     public init(
         adbPath: String,
+        sdkRootPath: String? = nil,
         processRunner: any ProcessRunning,
         fileManager: any ScreenshotFileManaging = LocalScreenshotFileManager()
     ) {
         self.adbPath = adbPath
+        self.sdkRootPath = sdkRootPath
         self.processRunner = processRunner
         self.fileManager = fileManager
     }
@@ -68,6 +74,7 @@ public struct ScreenshotService: Sendable {
     public func capture(
         device: AndroidDevice,
         destination: URL,
+        framing: ScreenshotFramingOptions = .disabled,
         date: Date = Date()
     ) async -> ScreenshotCaptureResult {
         guard device.isUsable else {
@@ -87,8 +94,54 @@ public struct ScreenshotService: Sendable {
             return .failure(.invalidPNG)
         }
 
+        let framingData: Data?
+        if framing.addsFrame {
+            framingData = await ScreenshotFrameRenderer(
+                adbPath: adbPath,
+                sdkRootPath: sdkRootPath,
+                processRunner: processRunner
+            ).framedPNG(from: processResult.standardOutput, for: device)
+
+            guard framingData != nil else {
+                return .failure(.unableToAddFrame)
+            }
+        } else {
+            framingData = nil
+        }
+
         do {
             try fileManager.ensureDirectoryExists(at: destination)
+
+            if let framingData {
+                if framing.alsoSavesOriginal {
+                    let fileURLs = ScreenshotFilename.uniqueOriginalAndFramedURLs(
+                        in: destination,
+                        deviceName: device.displayName,
+                        date: date,
+                        fileExists: fileManager.fileExists(at:)
+                    )
+                    try fileManager.write(processResult.standardOutput, to: fileURLs.original)
+                    try fileManager.write(framingData, to: fileURLs.framed)
+                    return .success(ScreenshotCaptureOutput(
+                        primaryFileURL: fileURLs.framed,
+                        originalFileURL: fileURLs.original
+                    ))
+                }
+
+                let framedURL = ScreenshotFilename.uniqueURL(
+                    in: destination,
+                    deviceName: device.displayName,
+                    date: date,
+                    suffix: "_framed",
+                    fileExists: fileManager.fileExists(at:)
+                )
+                try fileManager.write(framingData, to: framedURL)
+                return .success(ScreenshotCaptureOutput(
+                    primaryFileURL: framedURL,
+                    originalFileURL: nil
+                ))
+            }
+
             let fileURL = ScreenshotFilename.uniqueURL(
                 in: destination,
                 deviceName: device.displayName,
@@ -96,7 +149,10 @@ public struct ScreenshotService: Sendable {
                 fileExists: fileManager.fileExists(at:)
             )
             try fileManager.write(processResult.standardOutput, to: fileURL)
-            return .success(fileURL)
+            return .success(ScreenshotCaptureOutput(
+                primaryFileURL: fileURL,
+                originalFileURL: nil
+            ))
         } catch {
             return .failure(.unableToSave(error.localizedDescription))
         }

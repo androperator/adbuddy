@@ -104,6 +104,34 @@ final class AppPreferencesTests: XCTestCase {
         XCTAssertTrue(reloadedPreferences.revealMediaInFinder)
     }
 
+    func testScreenshotFramingPreferencesDefaultToFalseAndPersistChanges() {
+        let suiteName = "AppPreferencesTests.\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Could not create isolated user defaults")
+        }
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let preferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: URL(fileURLWithPath: "/tmp/default-screenshots", isDirectory: true)
+        )
+
+        XCTAssertFalse(preferences.screenshotAddsFrame)
+        XCTAssertFalse(preferences.screenshotAlsoSavesOriginal)
+
+        preferences.screenshotAddsFrame = true
+        preferences.screenshotAlsoSavesOriginal = true
+
+        let reloadedPreferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: URL(fileURLWithPath: "/tmp/default-screenshots", isDirectory: true)
+        )
+        XCTAssertTrue(reloadedPreferences.screenshotAddsFrame)
+        XCTAssertTrue(reloadedPreferences.screenshotAlsoSavesOriginal)
+    }
+
     func testScreenRecordingOptionsUseStableDefaultsAndPersistChanges() {
         let suiteName = "AppPreferencesTests.\(UUID().uuidString)"
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {

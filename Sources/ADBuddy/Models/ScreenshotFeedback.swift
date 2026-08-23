@@ -1,7 +1,7 @@
 import Foundation
 
 enum ScreenshotFeedback: Equatable {
-    case success(URL, copiedToClipboard: Bool)
+    case success(ScreenshotCaptureOutput, copiedToClipboard: Bool)
     case failure(String)
 
     var isSuccess: Bool {
@@ -22,12 +22,16 @@ enum ScreenshotFeedback: Equatable {
 
     var detail: String {
         switch self {
-        case .success(let fileURL, let copiedToClipboard):
-            copiedToClipboard
-                ? "\(fileURL.lastPathComponent) copied to the clipboard."
-                : fileURL.lastPathComponent
+        case .success(let output, let copiedToClipboard):
+            let primaryDetail = copiedToClipboard
+                ? "\(output.primaryFileURL.lastPathComponent) copied to the clipboard."
+                : output.primaryFileURL.lastPathComponent
+            guard let originalFileURL = output.originalFileURL else {
+                return primaryDetail
+            }
+            return "\(primaryDetail) Also saved \(originalFileURL.lastPathComponent)."
         case .failure(let message):
-            message
+            return message
         }
     }
 }
