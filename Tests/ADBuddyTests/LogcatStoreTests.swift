@@ -109,7 +109,7 @@ final class LogcatStoreTests: XCTestCase {
         store.stop()
     }
 
-    func testCrashAndExceptionFilterKeepsStackTracesWithoutRestartingTheStream() async throws {
+    func testCrashAndExceptionFilterKeepsStackTracesAndExcludesRoutineErrorsWithoutRestartingTheStream() async throws {
         let service = ControllableLogcatService()
         let store = makeStore(service: service)
         let entries = [
@@ -166,6 +166,33 @@ final class LogcatStoreTests: XCTestCase {
                 threadID: 202,
                 tag: "ActivityManager",
                 message: "ANR in com.example.app"
+            ),
+            LogcatEntry(
+                id: 7,
+                timestamp: .now,
+                priority: .error,
+                processID: 1062,
+                threadID: 1062,
+                tag: "libbinder.IPCThreadState",
+                message: "binder thread pool (1 threads) starved for 104 ms"
+            ),
+            LogcatEntry(
+                id: 8,
+                timestamp: .now,
+                priority: .error,
+                processID: 1062,
+                threadID: 2711,
+                tag: "WifiHAL",
+                message: "Creating message to get cached scan results"
+            ),
+            LogcatEntry(
+                id: 9,
+                timestamp: .now,
+                priority: .info,
+                processID: 1062,
+                threadID: 2711,
+                tag: "WifiHAL",
+                message: "In GetCachedScanResultsCommand::handleResponse"
             ),
         ]
 

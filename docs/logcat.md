@@ -536,10 +536,10 @@ persisted between launches.
 
 Each Logcat window has a one-click **Show Crashes and Exceptions** toolbar
 toggle. It narrows retained entries without restarting ADB Logcat, retaining
-Error and Assert messages plus entries that identify an exception, crash,
-fatal condition, ANR, or stack-trace frame. It combines with the application,
-minimum-level, and text-search filters. The toggle is window-scoped and is not
-persisted between launches.
+only entries that identify an exception, crash, fatal condition, ANR, or
+stack-trace frame. Routine Error and Assert messages are excluded. It combines
+with the application, minimum-level, and text-search filters. The toggle is
+window-scoped and is not persisted between launches.
 
 ## Color theme
 

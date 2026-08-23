@@ -5,7 +5,6 @@ enum LogcatCrashFilter {
         "exception",
         "crash",
         "fatal",
-        "anr",
     ]
     private static let stackTracePrefixes = [
         "at ",
@@ -15,15 +14,9 @@ enum LogcatCrashFilter {
     ]
 
     static func includes(_ entry: LogcatEntry) -> Bool {
-        switch entry.priority {
-        case .error, .assert:
-            return true
-        case .verbose, .debug, .info, .warn:
-            break
-        }
-
         let diagnosticText = "\(entry.tag) \(entry.message)"
-        if diagnosticTerms.contains(where: diagnosticText.localizedCaseInsensitiveContains) {
+        if diagnosticTerms.contains(where: diagnosticText.localizedCaseInsensitiveContains) ||
+            containsANR(in: diagnosticText) {
             return true
         }
 
@@ -31,5 +24,11 @@ enum LogcatCrashFilter {
         return stackTracePrefixes.contains(where: {
             message.lowercased().hasPrefix($0)
         })
+    }
+
+    private static func containsANR(in text: String) -> Bool {
+        text.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).contains { word in
+            String(word).localizedCaseInsensitiveCompare("ANR") == .orderedSame
+        }
     }
 }
