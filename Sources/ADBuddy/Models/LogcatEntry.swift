@@ -120,10 +120,10 @@ enum LogcatTableColumn: CaseIterable, Hashable {
     }
 
     static let configurableColumns: [LogcatTableColumn] = [
-        .processID,
-        .threadID,
         .applicationID,
+        .processID,
         .tag,
+        .threadID,
     ]
 
     static func visibleColumns(

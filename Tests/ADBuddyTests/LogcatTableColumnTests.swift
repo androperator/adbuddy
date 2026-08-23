@@ -30,7 +30,7 @@ final class LogcatTableColumnTests: XCTestCase {
     func testColumnConfigurationIncludesTagAndAllowsItToBeHidden() {
         XCTAssertEqual(
             LogcatTableColumn.configurableColumns,
-            [.processID, .threadID, .applicationID, .tag]
+            [.applicationID, .processID, .tag, .threadID]
         )
         XCTAssertEqual(
             LogcatTableColumn.visibleColumns(showsTag: false),
