@@ -43,29 +43,13 @@ private struct GeneralSettingsView: View {
         Form {
             Section {
                 Toggle("Show in Menu Bar", isOn: $preferences.showInMenuBar)
-            } header: {
-                Text("Menu Bar")
-            } footer: {
-                Text("When hidden, you can show ADBuddy in the menu bar again from this setting.")
-            }
 
-            Section {
                 Toggle("Show in Dock", isOn: $preferences.showInDock)
                     .onChange(of: preferences.showInDock) { _, isVisible in
                         setDockIconVisible(isVisible)
                     }
-            } header: {
-                Text("Dock")
-            } footer: {
-                Text("ADBuddy continues to run when hidden. Keep the menu-bar item enabled so it remains easy to reach.")
-            }
 
-            Section {
                 Toggle("Show success banners", isOn: $preferences.showSuccessFeedbackBanners)
-            } header: {
-                Text("Feedback")
-            } footer: {
-                Text("Shows temporary in-window confirmations for completed actions. Errors are always shown.")
             }
         }
         .formStyle(.grouped)
