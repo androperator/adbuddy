@@ -171,6 +171,12 @@ use Android Studio flags that hide or embed the Emulator window. Once launched,
 the Android Emulator owns its window and Dock presence independently of
 ADBuddy.
 
+Before a screenshot or recording is saved, `DeviceStore` and the MCP service
+ask `AndroidEmulatorService` for the configured AVD name. They use that name
+only as the media filename's user-facing prefix; the original typed device,
+including its serial, remains the ADB target. If the emulator console does not
+return a name, media falls back to the parsed ADB device name.
+
 `LogcatStore` owns only one Logcat window's retained entries, application,
 minimum-level, crash-and-exception, and text-search filters, pause/follow
 state, and reconnect lifecycle. Column visibility is likewise local to the

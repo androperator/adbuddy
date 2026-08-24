@@ -150,6 +150,48 @@ final class AndroidEmulatorServiceTests: XCTestCase {
         )
     }
 
+    func testUsesTheConfiguredAVDNameForSavedMedia() async {
+        let processRunner = EmulatorProcessRunner(
+            result: successfulResult(standardOutput: "Pixel_9_Pro\nOK\n")
+        )
+        let service = AndroidEmulatorService(
+            sdk: sdk,
+            processRunner: processRunner,
+            isExecutable: { _ in true }
+        )
+        let emulator = connectedEmulator(serial: "emulator-5554")
+
+        let mediaDevice = await service.deviceWithUserFacingName(emulator)
+
+        XCTAssertEqual(mediaDevice.displayName, "Pixel_9_Pro")
+        XCTAssertEqual(mediaDevice.serial, emulator.serial)
+        XCTAssertEqual(mediaDevice.model, emulator.model)
+        let invocations = await processRunner.invocations
+        XCTAssertEqual(
+            invocations,
+            [EmulatorProcessInvocation(
+                executablePath: "/SDK/platform-tools/adb",
+                arguments: ["-s", "emulator-5554", "emu", "avd", "name"]
+            )]
+        )
+    }
+
+    func testRetainsTheADBModelNameWhenAnAVDNameCannotBeResolved() async {
+        let processRunner = EmulatorProcessRunner(
+            result: successfulResult(standardOutput: "KO: unknown command\n")
+        )
+        let service = AndroidEmulatorService(
+            sdk: sdk,
+            processRunner: processRunner,
+            isExecutable: { _ in true }
+        )
+        let emulator = connectedEmulator(serial: "emulator-5554")
+
+        let mediaDevice = await service.deviceWithUserFacingName(emulator)
+
+        XCTAssertEqual(mediaDevice, emulator)
+    }
+
     func testStopsRunningVirtualDeviceWithFixedADBArguments() async {
         let processRunner = EmulatorProcessRunner(result: successfulResult())
         let service = AndroidEmulatorService(

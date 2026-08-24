@@ -77,6 +77,8 @@ Manual verification should cover, where locally available:
 8. a failed ADB invocation presenting an actionable error.
 9. a screen recording with each selected option reaching the same media folder
    as screenshots, followed by a successful Stop Recording action;
+   confirm an emulator capture uses its configured AVD name rather than a
+   system-image model such as `sdk-gphone64-arm64` in the saved filename;
 10. a successful recording notification offering **Reveal in Finder**;
 11. Show taps returning to its original Android setting after recording.
 12. Installed AVDs appearing in the **Android Emulators** section with correct

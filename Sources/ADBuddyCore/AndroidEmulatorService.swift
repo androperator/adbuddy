@@ -139,25 +139,7 @@ public struct AndroidEmulatorService: Sendable {
         var runningVirtualDevices: [String: AndroidDevice] = [:]
 
         for device in devices where device.kind == .emulator && device.isUsable {
-            let result = await processRunner.run(
-                executablePath: adbPath,
-                arguments: ["-s", device.serial, "emu", "avd", "name"]
-            )
-
-            guard result.succeeded else {
-                let message = failureMessage(from: result)
-                AppLogger.emulator.error(
-                    "Could not identify running Android Emulator \(device.serial, privacy: .public): \(message, privacy: .public)"
-                )
-                continue
-            }
-
-            guard let virtualDeviceName = AndroidEmulatorConsoleParser.virtualDeviceName(
-                from: String(decoding: result.standardOutput, as: UTF8.self)
-            ) else {
-                AppLogger.emulator.error(
-                    "Android Emulator \(device.serial, privacy: .public) did not report an AVD name"
-                )
+            guard let virtualDeviceName = await virtualDeviceName(for: device) else {
                 continue
             }
 
@@ -165,6 +147,50 @@ public struct AndroidEmulatorService: Sendable {
         }
 
         return runningVirtualDevices
+    }
+
+    /// Returns the configured AVD name reported by a running emulator.
+    ///
+    /// ADB's device list reports the system-image model (for example,
+    /// `sdk_gphone64_arm64`) rather than the name the developer gave the AVD.
+    /// Saved media uses this value when it is available.
+    public func virtualDeviceName(for device: AndroidDevice) async -> String? {
+        guard device.kind == .emulator, device.isUsable else {
+            return nil
+        }
+
+        let result = await processRunner.run(
+            executablePath: adbPath,
+            arguments: ["-s", device.serial, "emu", "avd", "name"]
+        )
+
+        guard result.succeeded else {
+            let message = failureMessage(from: result)
+            AppLogger.emulator.debug(
+                "Could not identify running Android Emulator \(device.serial, privacy: .public): \(message, privacy: .public)"
+            )
+            return nil
+        }
+
+        guard let virtualDeviceName = AndroidEmulatorConsoleParser.virtualDeviceName(
+            from: String(decoding: result.standardOutput, as: UTF8.self)
+        ) else {
+            AppLogger.emulator.debug(
+                "Android Emulator \(device.serial, privacy: .public) did not report an AVD name"
+            )
+            return nil
+        }
+
+        return virtualDeviceName
+    }
+
+    /// Replaces an emulator's system-image model name with its configured AVD
+    /// name, while preserving the device serial and all ADB-facing metadata.
+    public func deviceWithUserFacingName(_ device: AndroidDevice) async -> AndroidDevice {
+        guard let virtualDeviceName = await virtualDeviceName(for: device) else {
+            return device
+        }
+        return device.replacingDisplayName(with: virtualDeviceName)
     }
 
     public func stop(_ device: AndroidDevice) async -> AndroidEmulatorStopResult {

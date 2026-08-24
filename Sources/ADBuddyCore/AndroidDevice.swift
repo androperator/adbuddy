@@ -42,6 +42,19 @@ public struct AndroidDevice: Equatable, Identifiable, Sendable {
     public var menuTitle: String {
         displayName.count <= 30 ? displayName : String(displayName.prefix(27)) + "..."
     }
+
+    public func replacingDisplayName(with displayName: String) -> AndroidDevice {
+        AndroidDevice(
+            serial: serial,
+            displayName: displayName,
+            connectionState: connectionState,
+            kind: kind,
+            model: model,
+            product: product,
+            deviceCodeName: deviceCodeName,
+            transportID: transportID
+        )
+    }
 }
 
 public enum AndroidDeviceKind: Equatable, Sendable {

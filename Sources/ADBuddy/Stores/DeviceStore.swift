@@ -164,6 +164,10 @@ final class DeviceStore {
             sdkRootPath: resolvedSDK.rootPath,
             processRunner: processRunner
         )
+        let emulatorService = AndroidEmulatorService(
+            sdk: resolvedSDK,
+            processRunner: processRunner
+        )
         let destination = preferences.screenshotDirectory
         let framing = ScreenshotFramingOptions(
             addsFrame: preferences.screenshotAddsFrame,
@@ -175,8 +179,9 @@ final class DeviceStore {
         )
 
         Task { [weak self] in
+            let mediaDevice = await emulatorService.deviceWithUserFacingName(device)
             let result = await screenshotService.capture(
-                device: device,
+                device: mediaDevice,
                 destination: destination,
                 framing: framing,
                 output: output
@@ -276,6 +281,10 @@ final class DeviceStore {
             sdkRootPath: resolvedSDK.rootPath,
             processRunner: processRunner
         )
+        let emulatorService = AndroidEmulatorService(
+            sdk: resolvedSDK,
+            processRunner: processRunner
+        )
         let destination = preferences.screenshotDirectory
         let framing = ScreenRecordingFramingOptions(
             addsFrame: preferences.screenRecordingAddsFrame,
@@ -283,8 +292,13 @@ final class DeviceStore {
         )
 
         Task { [weak self] in
+            let mediaDevice = await emulatorService.deviceWithUserFacingName(device)
+            let mediaSession = ScreenRecordingSession(
+                device: mediaDevice,
+                remoteFilePath: session.remoteFilePath
+            )
             let result = await screenRecordingService.record(
-                session: session,
+                session: mediaSession,
                 options: options,
                 destination: destination,
                 framing: framing,

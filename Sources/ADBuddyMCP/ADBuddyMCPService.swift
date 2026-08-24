@@ -148,6 +148,10 @@ actor ADBuddyMCPService {
     func takeScreenshot(serial: String) async throws -> Data {
         let (sdk, devices) = try await resolvedSDKAndDevices()
         let device = try usableDevice(serial: serial, from: devices)
+        let mediaDevice = await AndroidEmulatorService(
+            sdk: sdk,
+            processRunner: processRunner
+        ).deviceWithUserFacingName(device)
         let destination = ADBuddySharedPreferences.mediaDestination()
         AppLogger.screenshot.info("MCP screenshot capture requested")
         let result = await ScreenshotService(
@@ -155,7 +159,7 @@ actor ADBuddyMCPService {
             sdkRootPath: sdk.rootPath,
             processRunner: processRunner
         ).capture(
-            device: device,
+            device: mediaDevice,
             destination: destination,
             framing: ADBuddySharedPreferences.screenshotFramingOptions(),
             output: ADBuddySharedPreferences.screenshotOutputOptions()
@@ -193,12 +197,16 @@ actor ADBuddyMCPService {
 
         let (sdk, devices) = try await resolvedSDKAndDevices()
         let device = try usableDevice(serial: serial, from: devices)
+        let mediaDevice = await AndroidEmulatorService(
+            sdk: sdk,
+            processRunner: processRunner
+        ).deviceWithUserFacingName(device)
         let options = try recordingOptions(
             bitRateMegabitsPerSecond: bitRateMegabitsPerSecond,
             resolutionPercentage: resolutionPercentage,
             showsTaps: showsTaps
         )
-        let session = ScreenRecordingSession(device: device)
+        let session = ScreenRecordingSession(device: mediaDevice)
         let readiness = RecordingReadiness()
         let recordingService = ScreenRecordingService(
             adbPath: sdk.adbPath,

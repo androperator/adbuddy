@@ -41,6 +41,9 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Write a valid local PNG to the configured screenshot directory.
 - Default the directory to `~/Screenshots` and use a safe timestamped filename,
   for example `Pixel-9-Pro_2026-08-22_121530_123.png`.
+- Use a running emulator's configured AVD name, rather than its Android system
+  image model, as the user-facing prefix for saved screenshots and recordings.
+  If the AVD name cannot be resolved, retain the parsed device name.
 - Offer a Settings preference to add a device frame to screenshots. For an
   emulator, use the matching Android SDK skin configured by its AVD when one
   is available; otherwise use a generic black frame. The preference can also
