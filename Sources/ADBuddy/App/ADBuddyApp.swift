@@ -28,7 +28,7 @@ struct ADBuddyApp: App {
             virtualDeviceCount: displayedVirtualDeviceCount
         )
 
-        WindowGroup("ADBuddy", id: "main") {
+        Window("ADBuddy", id: "main") {
             ContentView()
                 .frame(minWidth: DeviceListLayout.windowWidth)
                 .environment(deviceStore)
