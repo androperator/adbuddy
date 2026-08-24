@@ -16,6 +16,7 @@ APP_BINARY="$APP_MACOS/$APP_NAME"
 MCP_BINARY="$APP_MACOS/adbuddy-mcp"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 ANDROID_STUDIO_ASSETS="$ROOT_DIR/Assets/AndroidStudio"
+APP_ICON="$ROOT_DIR/Assets/AppIcon.icns"
 
 cd "$ROOT_DIR"
 
@@ -25,6 +26,10 @@ cd "$ROOT_DIR"
 }
 [[ -d "$ANDROID_STUDIO_ASSETS" ]] || {
   echo "error: Android Studio assets directory is missing: $ANDROID_STUDIO_ASSETS" >&2
+  exit 1
+}
+[[ -f "$APP_ICON" ]] || {
+  echo "error: app icon is missing: $APP_ICON" >&2
   exit 1
 }
 VERSION="$(<"$VERSION_FILE")"
@@ -43,6 +48,7 @@ chmod +x "$APP_BINARY"
 cp "$BUILD_MCP_BINARY" "$MCP_BINARY"
 chmod +x "$MCP_BINARY"
 cp -R "$ANDROID_STUDIO_ASSETS"/. "$APP_CONTENTS/Resources/"
+cp "$APP_ICON" "$APP_CONTENTS/Resources/AppIcon.icns"
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -55,6 +61,8 @@ cat >"$INFO_PLIST" <<PLIST
   <string>$BUNDLE_ID</string>
   <key>CFBundleName</key>
   <string>$APP_NAME</string>
+  <key>CFBundleIconFile</key>
+  <string>AppIcon</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleShortVersionString</key>
