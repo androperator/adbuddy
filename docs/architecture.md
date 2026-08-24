@@ -32,8 +32,10 @@ Logcat WindowGroup (one window per device serial)
   Dedicated streaming viewer with window-scoped filters, follow state, and retention
 ```
 
-The app should retain normal application behavior with a visible main window
-and a Dock presence, rather than behaving as a menu-only accessory app.
+The app retains normal application behavior with a visible main window and a
+Dock presence by default. Users can hide the Dock icon, which switches the app
+to the accessory activation policy while keeping its menu-bar item and open
+windows available.
 It opts out of automatic window tabbing because the main window is a focused
 utility surface, not a document workspace.
 The main window does not offer a full-screen control.
@@ -274,9 +276,10 @@ Show taps value for the next recording. The directory defaults to the current
 user's `~/Screenshots` directory, automatic copying defaults to enabled,
 screenshot framing, recording framing, and the device-details overlay default
 to disabled, and automatic Finder reveal defaults to disabled. It also persists
-whether ADBuddy is shown in the menu bar and whether successful action feedback
-banners are shown, both of which default to enabled. The service layer receives
-values from the preferences store rather than accessing `UserDefaults` itself.
+whether ADBuddy is shown in the menu bar or Dock and whether successful action
+feedback banners are shown, all of which default to enabled. The service layer
+receives values from the preferences store rather than accessing `UserDefaults`
+itself.
 
 The same store persists six serializable sRGB component values for global
 Logcat severity colors. Settings changes update every open Logcat window
