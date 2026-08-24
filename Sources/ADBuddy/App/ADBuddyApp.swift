@@ -134,7 +134,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.regular)
+        setDockIconVisible(ADBuddySharedPreferences.showsDockIcon())
         NSApp.activate(ignoringOtherApps: true)
         AppLogger.lifecycle.info("ADBuddy application launched")
     }

@@ -80,6 +80,16 @@ final class ADBuddySharedPreferencesTests: XCTestCase {
         )
     }
 
+    func testDockIconVisibilityDefaultsToVisibleAndUsesSavedValue() {
+        let userDefaults = makeUserDefaults()
+
+        XCTAssertTrue(ADBuddySharedPreferences.showsDockIcon(userDefaults: userDefaults))
+
+        userDefaults.set(false, forKey: ADBuddySharedPreferences.showInDockKey)
+
+        XCTAssertFalse(ADBuddySharedPreferences.showsDockIcon(userDefaults: userDefaults))
+    }
+
     private func makeUserDefaults() -> UserDefaults {
         let suiteName = "ADBuddySharedPreferencesTests.\(UUID().uuidString)"
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {
