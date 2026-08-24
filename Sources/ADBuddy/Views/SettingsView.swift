@@ -49,7 +49,12 @@ private struct GeneralSettingsView: View {
                         setDockIconVisible(isVisible)
                     }
 
+            }
+
+            Section {
                 Toggle("Show success banners", isOn: $preferences.showSuccessFeedbackBanners)
+            } footer: {
+                Text("Shows temporary confirmations for completed actions. Errors are always shown.")
             }
         }
         .formStyle(.grouped)
