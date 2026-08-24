@@ -4,7 +4,7 @@ import XCTest
 
 @MainActor
 final class MediaClipboardServiceTests: XCTestCase {
-    func testCopiesScreenshotPNGData() throws {
+    func testCopiesScreenshotAsAFileURL() throws {
         let screenshotData = Data([0x89, 0x50, 0x4E, 0x47])
         let screenshotURL = try makeTemporaryFile(named: "screenshot.png", data: screenshotData)
         defer {
@@ -14,8 +14,7 @@ final class MediaClipboardServiceTests: XCTestCase {
         let service = MediaClipboardService(pasteboard: pasteboard)
 
         XCTAssertEqual(service.copyScreenshot(at: screenshotURL), .copied)
-        XCTAssertEqual(pasteboard.pngData, screenshotData)
-        XCTAssertNil(pasteboard.fileURL)
+        XCTAssertEqual(pasteboard.fileURL, screenshotURL)
     }
 
     func testCopiesRecordingAsAFileURL() throws {
@@ -28,7 +27,6 @@ final class MediaClipboardServiceTests: XCTestCase {
 
         XCTAssertEqual(service.copyRecording(at: recordingURL), .copied)
         XCTAssertEqual(pasteboard.fileURL, recordingURL)
-        XCTAssertNil(pasteboard.pngData)
     }
 
     func testReportsAUsefulFailureWhenTheRecordingIsMissing() {
@@ -44,6 +42,19 @@ final class MediaClipboardServiceTests: XCTestCase {
         XCTAssertNil(pasteboard.fileURL)
     }
 
+    func testReportsAUsefulFailureWhenTheScreenshotIsMissing() {
+        let pasteboard = TestMediaPasteboard()
+        let service = MediaClipboardService(pasteboard: pasteboard)
+        let missingScreenshotURL = URL(fileURLWithPath: "/tmp/adbuddy-missing-screenshot.png")
+
+        guard case .failed(let message) = service.copyScreenshot(at: missingScreenshotURL) else {
+            return XCTFail("Expected the missing screenshot to fail clipboard copy")
+        }
+
+        XCTAssertEqual(message, "Could not find the saved screenshot to copy it to the clipboard.")
+        XCTAssertNil(pasteboard.fileURL)
+    }
+
     private func makeTemporaryFile(named name: String, data: Data) throws -> URL {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("ADBuddyMediaClipboardTests-\(UUID().uuidString)", isDirectory: true)
@@ -56,13 +67,7 @@ final class MediaClipboardServiceTests: XCTestCase {
 
 @MainActor
 private final class TestMediaPasteboard: MediaPasteboardWriting {
-    private(set) var pngData: Data?
     private(set) var fileURL: URL?
-
-    func writePNGData(_ data: Data) -> Bool {
-        pngData = data
-        return true
-    }
 
     func writeFileURL(_ fileURL: URL) -> Bool {
         self.fileURL = fileURL

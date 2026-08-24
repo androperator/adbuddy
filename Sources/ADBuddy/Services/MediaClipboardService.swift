@@ -14,7 +14,6 @@ enum MediaClipboardCopyResult: Equatable {
 
 @MainActor
 protocol MediaPasteboardWriting {
-    func writePNGData(_ data: Data) -> Bool
     func writeFileURL(_ fileURL: URL) -> Bool
 }
 
@@ -24,11 +23,6 @@ struct SystemMediaPasteboard: MediaPasteboardWriting {
 
     init(pasteboard: NSPasteboard = .general) {
         self.pasteboard = pasteboard
-    }
-
-    func writePNGData(_ data: Data) -> Bool {
-        pasteboard.clearContents()
-        return pasteboard.setData(data, forType: .png)
     }
 
     func writeFileURL(_ fileURL: URL) -> Bool {
@@ -46,15 +40,11 @@ struct MediaClipboardService: MediaClipboardCopying {
     }
 
     func copyScreenshot(at fileURL: URL) -> MediaClipboardCopyResult {
-        let screenshotData: Data
-        do {
-            screenshotData = try Data(contentsOf: fileURL)
-        } catch {
-            return .failed("Could not read the saved screenshot: \(error.localizedDescription)")
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            return .failed("Could not find the saved screenshot to copy it to the clipboard.")
         }
-
-        guard pasteboard.writePNGData(screenshotData) else {
-            return .failed("macOS could not write the screenshot to the clipboard.")
+        guard pasteboard.writeFileURL(fileURL) else {
+            return .failed("macOS could not write the screenshot file to the clipboard.")
         }
 
         return .copied

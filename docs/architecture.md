@@ -241,9 +241,10 @@ the `_framed.png` suffix; when the user also saves the original, the service
 selects a collision-free pair before either file is written.
 
 After a successful screenshot or recording save, `DeviceStore` can copy media
-to the macOS pasteboard through `MediaClipboardService`. Screenshots copy PNG
-bytes, while recordings copy the saved MP4's file URL without loading the
-entire video into memory. When the Finder reveal preference is enabled,
+to the macOS pasteboard through `MediaClipboardService`. Screenshots and
+recordings copy their saved file URLs, allowing clipboard managers to reveal
+the media without loading an image or video into memory. When the Finder reveal
+preference is enabled,
 `DeviceStore` uses `MediaFinderRevealService` to ask Finder to select each
 saved item. For saved screenshots and recordings, it asks
 `MediaNotificationService` to post a native
