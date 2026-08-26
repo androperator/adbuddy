@@ -69,7 +69,7 @@ final class ADBuddyMCPServer: @unchecked Sendable {
         return [
             "protocolVersion": requestedVersion ?? "2024-11-05",
             "capabilities": ["tools": ["listChanged": false]],
-            "serverInfo": ["name": "adbuddy", "version": "0.1.0"],
+            "serverInfo": ["name": "adbuddy", "version": "0.1.1"],
         ]
     }
 
