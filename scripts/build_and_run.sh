@@ -17,6 +17,7 @@ MCP_BINARY="$APP_MACOS/adbuddy-mcp"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 ANDROID_STUDIO_ASSETS="$ROOT_DIR/Assets/AndroidStudio"
 APP_ICON="$ROOT_DIR/Assets/AppIcon.icns"
+MENU_BAR_GLYPH="$ROOT_DIR/Assets/ADBuddyMenuBarGlyph.svg"
 
 cd "$ROOT_DIR"
 
@@ -30,6 +31,10 @@ cd "$ROOT_DIR"
 }
 [[ -f "$APP_ICON" ]] || {
   echo "error: app icon is missing: $APP_ICON" >&2
+  exit 1
+}
+[[ -f "$MENU_BAR_GLYPH" ]] || {
+  echo "error: menu bar glyph is missing: $MENU_BAR_GLYPH" >&2
   exit 1
 }
 VERSION="$(<"$VERSION_FILE")"
@@ -49,6 +54,7 @@ cp "$BUILD_MCP_BINARY" "$MCP_BINARY"
 chmod +x "$MCP_BINARY"
 cp -R "$ANDROID_STUDIO_ASSETS"/. "$APP_CONTENTS/Resources/"
 cp "$APP_ICON" "$APP_CONTENTS/Resources/AppIcon.icns"
+cp "$MENU_BAR_GLYPH" "$APP_CONTENTS/Resources/ADBuddyMenuBarGlyph.svg"
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

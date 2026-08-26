@@ -98,16 +98,18 @@ struct ADBuddyApp: App {
             }
         }
 
-        MenuBarExtra(
-            "ADBuddy",
-            systemImage: deviceStore.hasActiveScreenRecording ? "stop.fill" : "camera",
-            isInserted: $preferences.showInMenuBar
-        ) {
+        MenuBarExtra(isInserted: $preferences.showInMenuBar) {
             MenuBarContentView()
                 .environment(deviceStore)
                 .environment(emulatorStore)
                 .environment(preferences)
                 .environment(apkInstallationStore)
+        } label: {
+            if deviceStore.hasActiveScreenRecording {
+                Image(systemName: "stop.fill")
+            } else {
+                ADBuddyMenuBarGlyph()
+            }
         }
         .menuBarExtraStyle(.menu)
     }

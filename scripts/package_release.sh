@@ -16,6 +16,7 @@ MCP_BINARY="$APP_MACOS/adbuddy-mcp"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 ANDROID_STUDIO_ASSETS="$ROOT_DIR/Assets/AndroidStudio"
 APP_ICON="$ROOT_DIR/Assets/AppIcon.icns"
+MENU_BAR_GLYPH="$ROOT_DIR/Assets/ADBuddyMenuBarGlyph.svg"
 
 usage() {
   cat >&2 <<'USAGE'
@@ -60,6 +61,7 @@ VERSION_FILE="$ROOT_DIR/VERSION"
 [[ -f "$VERSION_FILE" ]] || fail "release version file is missing: $VERSION_FILE"
 [[ -d "$ANDROID_STUDIO_ASSETS" ]] || fail "Android Studio assets directory is missing: $ANDROID_STUDIO_ASSETS"
 [[ -f "$APP_ICON" ]] || fail "app icon is missing: $APP_ICON"
+[[ -f "$MENU_BAR_GLYPH" ]] || fail "menu bar glyph is missing: $MENU_BAR_GLYPH"
 VERSION="$(<"$VERSION_FILE")"
 [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}([.-][0-9A-Za-z]+)*$ ]] || \
   fail "release version in $VERSION_FILE must look like 0.1.0"
@@ -107,6 +109,7 @@ mkdir -p "$APP_MACOS" "$APP_CONTENTS/Resources"
 /usr/bin/lipo -create "$ARM64_MCP_BINARY" "$X86_64_MCP_BINARY" -output "$MCP_BINARY"
 cp -R "$ANDROID_STUDIO_ASSETS"/. "$APP_CONTENTS/Resources/"
 cp "$APP_ICON" "$APP_CONTENTS/Resources/AppIcon.icns"
+cp "$MENU_BAR_GLYPH" "$APP_CONTENTS/Resources/ADBuddyMenuBarGlyph.svg"
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
