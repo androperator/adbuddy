@@ -2,7 +2,7 @@
   <!-- ADBuddy app-icon direction: terminal-line background with white eyes. -->
   <rect width="152" height="152" fill="#F7F7F4" />
   <g fill="none" stroke="#D8EADD" stroke-width="3" stroke-linecap="round">
-    <path d="M17 28h27M17 38h43M17 48h19M17 58h33M108 28h27M92 38h43M116 48h19M101 58h34M24 99h20M16 109h37M22 119h15M109 99h20M99 109h37M115 119h15" />
+    <path d="M17 28h27M17 38h43M17 48h19M17 58h33M108 28h27M92 38h43M116 48h19M101 58h34" />
   </g>
   <g transform="translate(13.68 43.38) scale(.82)">
     <path fill="#34A853" d="M.459 88.555C.459 55.982 34.257 29.555 75.959 29.555s75.5 26.427 75.5 59H.459Z" />
