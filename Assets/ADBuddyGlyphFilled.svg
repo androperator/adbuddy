@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 20 20" fill="none">
+  <!-- ADBuddy app-icon direction: filled version of the custom menu-bar glyph. -->
+  <rect width="20" height="20" fill="#F7F7F4" />
+  <g stroke="#A4C639" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.2 10 4.4 7.2l3.8-2.7" />
+    <path d="m11.8 10 3.8-2.8-3.8-2.7" />
+  </g>
+  <path d="M2 18.2c0-5 3.6-8.4 8-8.4s8 3.4 8 8.4H2Z" fill="#A4C639" />
+  <circle cx="7.4" cy="14.3" r="1.05" fill="#fff" />
+  <circle cx="12.6" cy="14.3" r="1.05" fill="#fff" />
+</svg>
