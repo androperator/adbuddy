@@ -3,14 +3,10 @@ import UniformTypeIdentifiers
 
 struct SettingsView: View {
     let preferences: AppPreferences
-    let setDockIconVisible: (Bool) -> Void
 
     var body: some View {
         TabView {
-            GeneralSettingsView(
-                preferences: preferences,
-                setDockIconVisible: setDockIconVisible
-            )
+            GeneralSettingsView(preferences: preferences)
                 .tabItem {
                     Label("General", systemImage: "gearshape")
                 }
@@ -35,7 +31,6 @@ struct SettingsView: View {
 
 private struct GeneralSettingsView: View {
     let preferences: AppPreferences
-    let setDockIconVisible: (Bool) -> Void
 
     var body: some View {
         @Bindable var preferences = preferences
@@ -43,12 +38,6 @@ private struct GeneralSettingsView: View {
         Form {
             Section {
                 Toggle("Show in Menu Bar", isOn: $preferences.showInMenuBar)
-
-                Toggle("Show in Dock", isOn: $preferences.showInDock)
-                    .onChange(of: preferences.showInDock) { _, isVisible in
-                        setDockIconVisible(isVisible)
-                    }
-
             }
 
             Section {

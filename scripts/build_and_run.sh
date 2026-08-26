@@ -79,8 +79,6 @@ cat >"$INFO_PLIST" <<PLIST
   <string>Copyright © Action Launcher Pty Ltd</string>
   <key>LSMinimumSystemVersion</key>
   <string>$MIN_SYSTEM_VERSION</string>
-  <key>LSUIElement</key>
-  <true/>
   <key>CFBundleDocumentTypes</key>
   <array>
     <dict>

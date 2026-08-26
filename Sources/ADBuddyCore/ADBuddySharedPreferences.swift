@@ -11,7 +11,6 @@ public enum ADBuddySharedPreferences {
     public static let screenRecordingResolutionPercentageKey = "screenRecordingResolutionPercentage"
     public static let screenRecordingShowsTapsKey = "screenRecordingShowsTaps"
     public static let screenRecordingAddsFrameKey = "screenRecordingAddsFrame"
-    public static let showInDockKey = "showInDock"
 
     public static func userDefaults(
         bundleIdentifier: String? = Bundle.main.bundleIdentifier
@@ -86,9 +85,4 @@ public enum ADBuddySharedPreferences {
         )
     }
 
-    public static func showsDockIcon(
-        userDefaults: UserDefaults = userDefaults()
-    ) -> Bool {
-        userDefaults.object(forKey: showInDockKey) as? Bool ?? true
-    }
 }

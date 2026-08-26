@@ -14,7 +14,6 @@ final class AppPreferences {
         static let legacyAutomaticallyCopyScreenshots = "automaticallyCopyScreenshots"
         static let revealMediaInFinder = "revealMediaInFinder"
         static let showInMenuBar = "showInMenuBar"
-        static let showInDock = ADBuddySharedPreferences.showInDockKey
         static let showSuccessFeedbackBanners = "showSuccessFeedbackBanners"
         static let screenRecordingBitRateMegabitsPerSecond = ADBuddySharedPreferences.screenRecordingBitRateMegabitsPerSecondKey
         static let screenRecordingResolutionPercentage = ADBuddySharedPreferences.screenRecordingResolutionPercentageKey
@@ -76,12 +75,6 @@ final class AppPreferences {
     var showInMenuBar: Bool {
         didSet {
             userDefaults.set(showInMenuBar, forKey: Key.showInMenuBar)
-        }
-    }
-
-    var showInDock: Bool {
-        didSet {
-            userDefaults.set(showInDock, forKey: Key.showInDock)
         }
     }
 
@@ -171,7 +164,6 @@ final class AppPreferences {
         screenshotOverlaysDeviceDetails = userDefaults.object(forKey: Key.screenshotOverlaysDeviceDetails) as? Bool ?? false
         revealMediaInFinder = userDefaults.object(forKey: Key.revealMediaInFinder) as? Bool ?? false
         showInMenuBar = userDefaults.object(forKey: Key.showInMenuBar) as? Bool ?? true
-        showInDock = ADBuddySharedPreferences.showsDockIcon(userDefaults: userDefaults)
         showSuccessFeedbackBanners = userDefaults.object(forKey: Key.showSuccessFeedbackBanners) as? Bool ?? true
         screenRecordingBitRateMegabitsPerSecond = userDefaults.object(forKey: Key.screenRecordingBitRateMegabitsPerSecond) as? Int
             ?? ScreenRecordingOptions.default.bitRateMegabitsPerSecond

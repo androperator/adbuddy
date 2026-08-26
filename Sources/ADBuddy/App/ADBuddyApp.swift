@@ -45,7 +45,6 @@ struct ADBuddyApp: App {
                     emulatorStore.refreshVirtualDevices()
                 }
                 .onAppear {
-                    appDelegate.setDockIconVisible(preferences.showInDock)
                     appDelegate.setAPKDocumentHandler { fileURLs in
                         guard let fileURL = fileURLs.first else {
                             return
@@ -68,10 +67,7 @@ struct ADBuddyApp: App {
         }
 
         Settings {
-            SettingsView(
-                preferences: preferences,
-                setDockIconVisible: appDelegate.setDockIconVisible
-            )
+            SettingsView(preferences: preferences)
         }
 
         WindowGroup(for: LogcatWindowID.self) { $windowID in
@@ -136,24 +132,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        setDockIconVisible(ADBuddySharedPreferences.showsDockIcon())
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         AppLogger.lifecycle.info("ADBuddy application launched")
-    }
-
-    @MainActor
-    func setDockIconVisible(_ isVisible: Bool) {
-        let activationPolicy: NSApplication.ActivationPolicy = isVisible ? .regular : .accessory
-        guard NSApp.activationPolicy() != activationPolicy else {
-            return
-        }
-
-        guard NSApp.setActivationPolicy(activationPolicy) else {
-            AppLogger.lifecycle.error("Could not update the Dock icon visibility")
-            return
-        }
-
-        AppLogger.lifecycle.info("Updated the Dock icon visibility")
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
