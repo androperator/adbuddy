@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 152 152" fill="none">
+  <!-- ADBuddy app-icon direction: terminal-line background with white eyes. -->
+  <rect width="152" height="152" fill="#F7F7F4" />
+  <g fill="none" stroke="#D8EADD" stroke-width="3" stroke-linecap="round">
+    <path d="M17 28h27M17 38h43M17 48h19M17 58h33M108 28h27M92 38h43M116 48h19M101 58h34M24 99h20M16 109h37M22 119h15M109 99h20M99 109h37M115 119h15" />
+  </g>
+  <g transform="translate(13.68 43.38) scale(.82)">
+    <path fill="#34A853" d="M.459 88.555C.459 55.982 34.257 29.555 75.959 29.555s75.5 26.427 75.5 59H.459Z" />
+    <path d="M59 35 30 15 59-3" fill="none" stroke="#34A853" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="m93 35 29-20L93-3" fill="none" stroke="#34A853" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+    <path fill="#fff" d="M115.225 67.663c3.022-2.012 3.461-6.668.981-10.4-2.48-3.73-6.939-5.123-9.96-3.11-3.021 2.012-3.46 6.668-.98 10.4 2.479 3.73 6.938 5.123 9.959 3.11M46.762 64.564c2.48-3.73 2.04-8.387-.98-10.4-3.022-2.012-7.481-.619-9.96 3.112s-2.041 8.387.98 10.4 7.48.62 9.96-3.112" />
+  </g>
+</svg>
