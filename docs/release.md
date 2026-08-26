@@ -25,7 +25,7 @@ and `x86_64` slices. It must include the `adbuddy-mcp` stdio helper in
 such as:
 
 ```text
-ADBuddy-macos-universal-0.1.1.zip
+ADBuddy-macos-universal-0.1.2.zip
 ```
 
 Do not treat an ad-hoc signed developer build as a public release. Public
@@ -36,7 +36,7 @@ notarization, and stapling.
 
 `VERSION` is the source of truth for the release version. Update it before a
 release, then commit that change with the release notes. The current version is
-`0.1.1`.
+`0.1.2`.
 
 `scripts/package_release.sh` creates the universal application bundle and
 versioned ZIP archive. It defaults to the Action Launcher Developer ID identity
@@ -92,7 +92,7 @@ future shape is:
 
 ```ruby
 cask "adbuddy" do
-  version "0.1.1"
+  version "0.1.2"
   sha256 "<release-sha256>"
 
   url "https://github.com/clawperator/adbuddy/releases/download/v#{version}/ADBuddy-macos-universal-#{version}.zip"
