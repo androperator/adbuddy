@@ -32,13 +32,19 @@ Logcat WindowGroup (one window per device serial)
   Dedicated streaming viewer with window-scoped filters, follow state, and retention
 ```
 
-The app retains normal application behavior with a visible main window and a
-Dock presence.
+The app uses normal application behavior while any ADBuddy window is open, with
+a visible main window and Dock presence. After the user closes the final ADBuddy
+window, the app remains available from its menu-bar utility but transitions to
+the accessory activation policy, removing its Dock and Command-Tab presence
+until another ADBuddy window opens.
 It opts out of automatic window tabbing because the main window is a focused
 utility surface, not a document workspace.
 The main window does not offer a full-screen control.
 Its window frame cannot be resized narrower than its initial or restored width,
 so device controls and toolbar actions remain usable.
+Although it uses a `WindowGroup` so the menu-bar utility can remain running
+after the main window closes, the app presents only one main window. Menu-bar
+actions bring that existing window forward rather than creating another.
 
 The per-device Logcat scene is specified in [`logcat.md`](logcat.md). Its state
 remains isolated from the shared device-discovery store.

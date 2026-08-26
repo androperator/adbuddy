@@ -36,6 +36,7 @@ struct MainWindowSizer: NSViewRepresentable {
                     return
                 }
 
+                MainWindowController.shared.register(window)
                 window.tabbingMode = .disallowed
                 window.standardWindowButton(.zoomButton)?.isHidden = true
                 window.collectionBehavior.insert(.fullScreenNone)

@@ -28,7 +28,7 @@ struct ADBuddyApp: App {
             virtualDeviceCount: displayedVirtualDeviceCount
         )
 
-        Window("ADBuddy", id: "main") {
+        WindowGroup("ADBuddy", id: "main") {
             ContentView()
                 .frame(minWidth: DeviceListLayout.windowWidth)
                 .environment(deviceStore)
@@ -64,6 +64,8 @@ struct ADBuddyApp: App {
                     ADBuddyAboutPanel.present()
                 }
             }
+
+            CommandGroup(replacing: .newItem) {}
         }
 
         Settings {
@@ -95,7 +97,9 @@ struct ADBuddyApp: App {
         }
 
         MenuBarExtra(isInserted: $preferences.showInMenuBar) {
-            MenuBarContentView()
+            MenuBarContentView(
+                prepareForWindowPresentation: appDelegate.prepareForWindowPresentation
+            )
                 .environment(deviceStore)
                 .environment(emulatorStore)
                 .environment(preferences)
@@ -129,12 +133,69 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSWindow.allowsAutomaticWindowTabbing = false
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidBecomeKey(_:)),
+            name: NSWindow.didBecomeKeyNotification,
+            object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowWillClose(_:)),
+            name: NSWindow.willCloseNotification,
+            object: nil
+        )
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         AppLogger.lifecycle.info("ADBuddy application launched")
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
+    @MainActor
+    @objc private func windowDidBecomeKey(_ notification: Notification) {
+        setApplicationActivationPolicy(.regular)
+    }
+
+    @MainActor
+    @objc private func windowWillClose(_ notification: Notification) {
+        if let window = notification.object as? NSWindow {
+            MainWindowController.shared.unregister(window)
+        }
+        perform(#selector(hideDockIconIfNoWindowsRemain), with: nil, afterDelay: 0)
+    }
+
+    @MainActor
+    @objc private func hideDockIconIfNoWindowsRemain() {
+        guard !NSApp.windows.contains(where: \.isVisible) else {
+            return
+        }
+        setApplicationActivationPolicy(.accessory)
+    }
+
+    @MainActor
+    private func setApplicationActivationPolicy(_ activationPolicy: NSApplication.ActivationPolicy) {
+        guard NSApp.activationPolicy() != activationPolicy else {
+            return
+        }
+
+        guard NSApp.setActivationPolicy(activationPolicy) else {
+            AppLogger.lifecycle.error("Could not update the application activation policy")
+            return
+        }
+
+        AppLogger.lifecycle.info("Updated the application activation policy")
+    }
+
+    @MainActor
+    func prepareForWindowPresentation() {
+        setApplicationActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
@@ -145,6 +206,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        setApplicationActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         if let apkDocumentHandler {
             apkDocumentHandler(apkURLs)
