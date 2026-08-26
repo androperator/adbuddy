@@ -4,6 +4,9 @@
     the final icon mask when it renders the app bundle's icon.
   -->
   <rect width="152" height="152" fill="#F7F7F4" />
+  <g fill="none" stroke="#D8EADD" stroke-width="3" stroke-linecap="round">
+    <path d="M17 28h27M17 38h43M17 48h19M17 58h33M108 28h27M92 38h43M116 48h19M101 58h34" />
+  </g>
   <g transform="translate(13.68 43.38) scale(.82)">
     <path
       fill="#34A853"
@@ -24,7 +27,7 @@
       stroke-linejoin="round"
     />
     <path
-      fill="#202124"
+      fill="#fff"
       d="M115.225 67.663c3.022-2.012 3.461-6.668.981-10.4-2.48-3.73-6.939-5.123-9.96-3.11-3.021 2.012-3.46 6.668-.98 10.4 2.479 3.73 6.938 5.123 9.959 3.11M46.762 64.564c2.48-3.73 2.04-8.387-.98-10.4-3.022-2.012-7.481-.619-9.96 3.112s-2.041 8.387.98 10.4 7.48.62 9.96-3.112"
     />
   </g>
