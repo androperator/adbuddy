@@ -27,6 +27,15 @@ enum SavedMediaNotificationKind: Sendable {
                 : fileURL.lastPathComponent
         }
     }
+
+    var notificationSound: UNNotificationSound? {
+        switch self {
+        case .screenshot:
+            nil
+        case .recording:
+            .default
+        }
+    }
 }
 
 protocol SavedMediaNotifying: Sendable {
@@ -86,7 +95,7 @@ final class MediaNotificationService: NSObject, SavedMediaNotifying, @unchecked 
         let content = UNMutableNotificationContent()
         content.title = kind.title
         content.body = kind.body(for: fileURL)
-        content.sound = .default
+        content.sound = kind.notificationSound
         content.categoryIdentifier = MediaNotificationIdentifier.category
         content.userInfo = [MediaNotificationIdentifier.savedMediaPath: fileURL.path]
         if let attachment = makeMediaAttachment(for: fileURL, kind: kind) {
@@ -105,6 +114,16 @@ final class MediaNotificationService: NSObject, SavedMediaNotifying, @unchecked 
         case .recording:
             [UNNotificationAttachmentOptionsThumbnailTimeKey: 0]
         }
+    }
+
+    static func presentationOptions(
+        for content: UNNotificationContent
+    ) -> UNNotificationPresentationOptions {
+        var options: UNNotificationPresentationOptions = [.banner, .list]
+        if content.sound != nil {
+            options.insert(.sound)
+        }
+        return options
     }
 
     private static func makeMediaAttachment(
@@ -177,6 +196,6 @@ extension MediaNotificationService: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         AppLogger.notifications.info("Presenting saved media notification")
-        completionHandler([.banner, .list, .sound])
+        completionHandler(Self.presentationOptions(for: notification.request.content))
     }
 }

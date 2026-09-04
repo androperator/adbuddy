@@ -24,6 +24,10 @@ final class MediaNotificationServiceTests: XCTestCase {
             request.content.userInfo[MediaNotificationIdentifier.savedMediaPath] as? String,
             screenshotURL.path
         )
+        XCTAssertNil(request.content.sound)
+        XCTAssertFalse(
+            MediaNotificationService.presentationOptions(for: request.content).contains(.sound)
+        )
 
         let category = MediaNotificationService.makeNotificationCategory()
         XCTAssertEqual(category.identifier, MediaNotificationIdentifier.category)
@@ -86,6 +90,10 @@ final class MediaNotificationServiceTests: XCTestCase {
         XCTAssertEqual(
             request.content.userInfo[MediaNotificationIdentifier.savedMediaPath] as? String,
             recordingURL.path
+        )
+        XCTAssertNotNil(request.content.sound)
+        XCTAssertTrue(
+            MediaNotificationService.presentationOptions(for: request.content).contains(.sound)
         )
     }
 
