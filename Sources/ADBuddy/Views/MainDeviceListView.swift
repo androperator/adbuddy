@@ -171,6 +171,8 @@ private struct ConnectedDeviceRow: View {
                 revealEmulatorHostWindow()
             }
 
+            ScreenInformationButton(screen: deviceDetails?.screen)
+
             if device.isUsable {
                 HStack(spacing: 8) {
                     DeviceActionControls(
@@ -289,6 +291,8 @@ private struct VirtualDeviceRow: View {
                 deviceDetails: virtualDevice.deviceDetails,
                 detailTint: statusTint
             )
+
+            ScreenInformationButton(screen: virtualDevice.deviceDetails?.screen)
 
             Spacer()
 
@@ -425,13 +429,65 @@ private struct DeviceNameWithDetails: View {
                     .fixedSize(horizontal: true, vertical: false)
             }
         }
+    }
+}
 
-        if let screen = deviceDetails?.screen {
-            Text("Screen \(screen.displayText)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
+private struct ScreenInformationButton: View {
+    let screen: AndroidDeviceScreen?
+
+    @State private var isPresentingScreenInformation = false
+
+    var body: some View {
+        Button {
+            isPresentingScreenInformation = true
+        } label: {
+            Label("Show Screen Information", systemImage: "info.circle")
+                .labelStyle(.iconOnly)
         }
+        .buttonStyle(.borderless)
+        .controlSize(.small)
+        .accessibilityLabel("Show Screen Information")
+        .help("Show Screen Information")
+        .popover(isPresented: $isPresentingScreenInformation) {
+            ScreenInformationPopover(screen: screen)
+        }
+    }
+}
+
+private struct ScreenInformationPopover: View {
+    let screen: AndroidDeviceScreen?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Screen Information")
+                .font(.headline)
+
+            if let screen {
+                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+                    GridRow {
+                        Text("Physical pixels")
+                            .foregroundStyle(.secondary)
+                        Text("\(screen.physicalPixelSize.width) × \(screen.physicalPixelSize.height) px")
+                    }
+
+                    GridRow {
+                        Text("Logical size")
+                            .foregroundStyle(.secondary)
+                        Text("\(screen.dpSize.width) × \(screen.dpSize.height) dp")
+                    }
+                }
+
+                if screen.usesDisplayOverride {
+                    Text("Android display overrides are active.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Text("Screen information is not available for this device.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(16)
+        .frame(minWidth: 280, alignment: .leading)
     }
 }
