@@ -87,9 +87,11 @@ public struct AndroidVirtualDeviceDetailsService {
             return nil
         }
 
+        let configurationURL = virtualDeviceDirectory.appendingPathComponent("config.ini")
         return AndroidDeviceDetails(
             androidVersion: androidVersion,
-            apiLevel: String(apiLevel)
+            apiLevel: String(apiLevel),
+            screen: screen(in: configurationURL)
         )
     }
 
@@ -128,6 +130,23 @@ public struct AndroidVirtualDeviceDetailsService {
         }
 
         return nil
+    }
+
+    private func screen(in configurationURL: URL) -> AndroidDeviceScreen? {
+        guard let widthText = configurationValue(named: "hw.lcd.width", in: configurationURL),
+              let width = Int(widthText),
+              let heightText = configurationValue(named: "hw.lcd.height", in: configurationURL),
+              let height = Int(heightText),
+              let densityText = configurationValue(named: "hw.lcd.density", in: configurationURL),
+              let densityDPI = Int(densityText),
+              let pixelSize = AndroidDisplaySize(width: width, height: height) else {
+            return nil
+        }
+
+        return AndroidDeviceScreen(
+            physicalPixelSize: pixelSize,
+            logicalDensityDPI: densityDPI
+        )
     }
 }
 

@@ -7,21 +7,58 @@ final class AndroidDeviceDetailsServiceTests: XCTestCase {
         let processRunner = RecordingDeviceDetailsProcessRunner(results: [
             successfulResult("16\n"),
             successfulResult("36\n"),
+            successfulResult("Physical size: 1080x2400\n"),
+            successfulResult("Physical density: 420\n"),
         ])
         let service = AndroidDeviceDetailsService(
             adbPath: "/SDK/platform-tools/adb",
             processRunner: processRunner
         )
 
-        let details = await service.details(for: connectedDevice)
+        let details = await service.details(for: connectedDevice, includesScreen: true)
         let requests = await processRunner.requests()
 
-        XCTAssertEqual(details, AndroidDeviceDetails(androidVersion: "16", apiLevel: "36"))
+        XCTAssertEqual(
+            details,
+            AndroidDeviceDetails(
+                androidVersion: "16",
+                apiLevel: "36",
+                screen: makeScreen(
+                    physicalWidth: 1080,
+                    physicalHeight: 2400,
+                    densityDPI: 420
+                )
+            )
+        )
         XCTAssertEqual(details?.screenshotOverlayText, "Android 16 / API 36")
+        XCTAssertEqual(details?.screen?.displayText, "1080 × 2400 px · 411 × 914 dp")
         XCTAssertEqual(requests, [
             ["-s", "device-serial", "shell", "getprop", "ro.build.version.release"],
             ["-s", "device-serial", "shell", "getprop", "ro.build.version.sdk"],
+            ["-s", "device-serial", "shell", "wm", "size"],
+            ["-s", "device-serial", "shell", "wm", "density"],
         ])
+    }
+
+    func testUsesDisplayOverridesForTheDPSizeWhileKeepingPhysicalPixels() async throws {
+        let processRunner = RecordingDeviceDetailsProcessRunner(results: [
+            successfulResult("16\n"),
+            successfulResult("36\n"),
+            successfulResult("Physical size: 1080x2400\nOverride size: 720x1600\n"),
+            successfulResult("Physical density: 420\nOverride density: 320\n"),
+        ])
+        let service = AndroidDeviceDetailsService(
+            adbPath: "/SDK/platform-tools/adb",
+            processRunner: processRunner
+        )
+
+        let details = await service.details(for: connectedDevice, includesScreen: true)
+        let screen = try XCTUnwrap(details?.screen)
+
+        XCTAssertEqual(screen.physicalPixelSize, AndroidDisplaySize(width: 1080, height: 2400))
+        XCTAssertEqual(screen.dpSize, AndroidDisplaySize(width: 360, height: 800))
+        XCTAssertTrue(screen.usesDisplayOverride)
+        XCTAssertEqual(screen.displayText, "1080 × 2400 px · 360 × 800 dp (display override)")
     }
 
     func testReturnsNoDetailsWhenAPropertyIsMissing() async {
@@ -60,6 +97,20 @@ final class AndroidDeviceDetailsServiceTests: XCTestCase {
             durationMilliseconds: 5,
             failureDescription: nil,
             wasCancelled: false
+        )
+    }
+
+    private func makeScreen(
+        physicalWidth: Int,
+        physicalHeight: Int,
+        densityDPI: Int
+    ) -> AndroidDeviceScreen? {
+        guard let pixelSize = AndroidDisplaySize(width: physicalWidth, height: physicalHeight) else {
+            return nil
+        }
+        return AndroidDeviceScreen(
+            physicalPixelSize: pixelSize,
+            logicalDensityDPI: densityDPI
         )
     }
 }

@@ -105,13 +105,21 @@ public struct AndroidDisplaySize: Equatable, Sendable {
 
 public enum AndroidDisplaySizeParser {
     public static func parse(_ output: String) -> AndroidDisplaySize? {
+        parse(output, prefix: "Physical size:")
+    }
+
+    public static func parseOverride(_ output: String) -> AndroidDisplaySize? {
+        parse(output, prefix: "Override size:")
+    }
+
+    private static func parse(_ output: String, prefix: String) -> AndroidDisplaySize? {
         for line in output.split(whereSeparator: \.isNewline) {
             let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard trimmedLine.hasPrefix("Physical size:") else {
+            guard trimmedLine.hasPrefix(prefix) else {
                 continue
             }
 
-            let dimensions = trimmedLine.dropFirst("Physical size:".count)
+            let dimensions = trimmedLine.dropFirst(prefix.count)
                 .trimmingCharacters(in: .whitespaces)
                 .split(separator: "x", maxSplits: 1)
             guard dimensions.count == 2,

@@ -425,5 +425,13 @@ private struct DeviceNameWithDetails: View {
                     .fixedSize(horizontal: true, vertical: false)
             }
         }
+
+        if let screen = deviceDetails?.screen {
+            Text("Screen \(screen.displayText)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
     }
 }

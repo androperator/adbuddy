@@ -3,10 +3,16 @@ import Foundation
 public struct AndroidDeviceDetails: Equatable, Sendable {
     public let androidVersion: String
     public let apiLevel: String
+    public let screen: AndroidDeviceScreen?
 
-    public init(androidVersion: String, apiLevel: String) {
+    public init(
+        androidVersion: String,
+        apiLevel: String,
+        screen: AndroidDeviceScreen? = nil
+    ) {
         self.androidVersion = androidVersion
         self.apiLevel = apiLevel
+        self.screen = screen
     }
 
     public var displayText: String {
@@ -15,6 +21,40 @@ public struct AndroidDeviceDetails: Equatable, Sendable {
 
     public var screenshotOverlayText: String {
         displayText
+    }
+}
+
+public struct AndroidDeviceScreen: Equatable, Sendable {
+    public let physicalPixelSize: AndroidDisplaySize
+    public let dpSize: AndroidDisplaySize
+    public let usesDisplayOverride: Bool
+
+    public init?(
+        physicalPixelSize: AndroidDisplaySize,
+        logicalPixelSize: AndroidDisplaySize? = nil,
+        logicalDensityDPI: Int,
+        usesDisplayOverride: Bool = false
+    ) {
+        guard logicalDensityDPI > 0 else {
+            return nil
+        }
+
+        let logicalPixelSize = logicalPixelSize ?? physicalPixelSize
+        guard let dpSize = AndroidDisplaySize(
+            width: Int((Double(logicalPixelSize.width) * 160 / Double(logicalDensityDPI)).rounded()),
+            height: Int((Double(logicalPixelSize.height) * 160 / Double(logicalDensityDPI)).rounded())
+        ) else {
+            return nil
+        }
+
+        self.physicalPixelSize = physicalPixelSize
+        self.dpSize = dpSize
+        self.usesDisplayOverride = usesDisplayOverride
+    }
+
+    public var displayText: String {
+        let overrideDetail = usesDisplayOverride ? " (display override)" : ""
+        return "\(physicalPixelSize.width) × \(physicalPixelSize.height) px · \(dpSize.width) × \(dpSize.height) dp\(overrideDetail)"
     }
 }
 
@@ -27,7 +67,10 @@ public struct AndroidDeviceDetailsService: Sendable {
         self.processRunner = processRunner
     }
 
-    public func details(for device: AndroidDevice) async -> AndroidDeviceDetails? {
+    public func details(
+        for device: AndroidDevice,
+        includesScreen: Bool = false
+    ) async -> AndroidDeviceDetails? {
         guard device.isUsable else {
             return nil
         }
@@ -39,11 +82,15 @@ public struct AndroidDeviceDetailsService: Sendable {
             "ro.build.version.sdk",
             for: device
         ) else {
-            AppLogger.screenshot.error("Could not read Android version details for screenshot overlay")
+            AppLogger.devices.error("Could not read Android version details")
             return nil
         }
 
-        return AndroidDeviceDetails(androidVersion: androidVersion, apiLevel: apiLevel)
+        return AndroidDeviceDetails(
+            androidVersion: androidVersion,
+            apiLevel: apiLevel,
+            screen: includesScreen ? await screen(for: device) : nil
+        )
     }
 
     private func deviceProperty(_ name: String, for device: AndroidDevice) async -> String? {
@@ -58,5 +105,57 @@ public struct AndroidDeviceDetailsService: Sendable {
         let value = String(decoding: result.standardOutput, as: UTF8.self)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
+    }
+
+    private func screen(for device: AndroidDevice) async -> AndroidDeviceScreen? {
+        let sizeResult = await processRunner.run(
+            executablePath: adbPath,
+            arguments: ["-s", device.serial, "shell", "wm", "size"]
+        )
+        guard sizeResult.succeeded else {
+            return nil
+        }
+
+        let sizeOutput = String(decoding: sizeResult.standardOutput, as: UTF8.self)
+        guard let physicalPixelSize = AndroidDisplaySizeParser.parse(sizeOutput) else {
+            return nil
+        }
+
+        let densityResult = await processRunner.run(
+            executablePath: adbPath,
+            arguments: ["-s", device.serial, "shell", "wm", "density"]
+        )
+        guard densityResult.succeeded else {
+            return nil
+        }
+
+        let densityOutput = String(decoding: densityResult.standardOutput, as: UTF8.self)
+        guard let physicalDensityDPI = density(in: densityOutput, prefix: "Physical density:") else {
+            return nil
+        }
+
+        let overrideSize = AndroidDisplaySizeParser.parseOverride(sizeOutput)
+        let overrideDensityDPI = density(in: densityOutput, prefix: "Override density:")
+        return AndroidDeviceScreen(
+            physicalPixelSize: physicalPixelSize,
+            logicalPixelSize: overrideSize,
+            logicalDensityDPI: overrideDensityDPI ?? physicalDensityDPI,
+            usesDisplayOverride: overrideSize != nil || overrideDensityDPI != nil
+        )
+    }
+
+    private func density(in output: String, prefix: String) -> Int? {
+        for line in output.split(whereSeparator: \.isNewline) {
+            let trimmedLine = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmedLine.hasPrefix(prefix) else {
+                continue
+            }
+
+            let value = trimmedLine.dropFirst(prefix.count)
+                .trimmingCharacters(in: .whitespaces)
+            return Int(value)
+        }
+
+        return nil
     }
 }

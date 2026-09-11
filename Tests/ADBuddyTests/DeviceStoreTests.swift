@@ -43,6 +43,8 @@ final class DeviceStoreTests: XCTestCase {
             successfulResult(standardOutput: "List of devices attached\nserial\tdevice model:Pixel_9\n"),
             successfulResult(standardOutput: "16\n"),
             successfulResult(standardOutput: "36\n"),
+            successfulResult(standardOutput: "Physical size: 1080x2400\n"),
+            successfulResult(standardOutput: "Physical density: 420\n"),
         ])
         let store = makeDeviceStore(processRunner: runner)
         store.refreshFromPolling()
@@ -54,7 +56,14 @@ final class DeviceStoreTests: XCTestCase {
 
         XCTAssertEqual(
             store.deviceDetails(for: device),
-            AndroidDeviceDetails(androidVersion: "16", apiLevel: "36")
+            AndroidDeviceDetails(
+                androidVersion: "16",
+                apiLevel: "36",
+                screen: AndroidDeviceScreen(
+                    physicalPixelSize: try XCTUnwrap(AndroidDisplaySize(width: 1080, height: 2400)),
+                    logicalDensityDPI: 420
+                )
+            )
         )
         let invocations = await runner.invocations
         XCTAssertEqual(
@@ -63,6 +72,8 @@ final class DeviceStoreTests: XCTestCase {
                 ["devices", "-l"],
                 ["-s", "serial", "shell", "getprop", "ro.build.version.release"],
                 ["-s", "serial", "shell", "getprop", "ro.build.version.sdk"],
+                ["-s", "serial", "shell", "wm", "size"],
+                ["-s", "serial", "shell", "wm", "density"],
             ]
         )
     }

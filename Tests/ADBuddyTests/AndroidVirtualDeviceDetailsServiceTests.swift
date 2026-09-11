@@ -21,7 +21,12 @@ final class AndroidVirtualDeviceDetailsServiceTests: XCTestCase {
             .appendingPathComponent("arm64-v8a", isDirectory: true)
         try FileManager.default.createDirectory(at: virtualDeviceDirectory, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: systemImageDirectory, withIntermediateDirectories: true)
-        try "image.sysdir.1=system-images/android-36/google_apis/arm64-v8a/\n".write(
+        try """
+        image.sysdir.1=system-images/android-36/google_apis/arm64-v8a/
+        hw.lcd.width=1080
+        hw.lcd.height=2400
+        hw.lcd.density=420
+        """.write(
             to: virtualDeviceDirectory.appendingPathComponent("config.ini"),
             atomically: true,
             encoding: .utf8
@@ -39,8 +44,19 @@ final class AndroidVirtualDeviceDetailsServiceTests: XCTestCase {
 
         let details = service.details(for: AndroidVirtualDevice(name: "Pixel_9"))
 
-        XCTAssertEqual(details, AndroidDeviceDetails(androidVersion: "16", apiLevel: "36"))
+        XCTAssertEqual(
+            details,
+            AndroidDeviceDetails(
+                androidVersion: "16",
+                apiLevel: "36",
+                screen: AndroidDeviceScreen(
+                    physicalPixelSize: try XCTUnwrap(AndroidDisplaySize(width: 1080, height: 2400)),
+                    logicalDensityDPI: 420
+                )
+            )
+        )
         XCTAssertEqual(details?.displayText, "Android 16 / API 36")
+        XCTAssertEqual(details?.screen?.displayText, "1080 × 2400 px · 411 × 914 dp")
     }
 
     func testReturnsNoDetailsWhenTheAVDHasNoSystemImageMetadata() throws {
