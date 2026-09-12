@@ -294,11 +294,11 @@ private struct VirtualDeviceRow: View {
                 detailTint: statusTint
             )
 
+            Spacer()
+
             if let deviceDetails = virtualDevice.deviceDetails {
                 DeviceInformationButton(deviceDetails: deviceDetails)
             }
-
-            Spacer()
 
             lifecycleControls
         }
