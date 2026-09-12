@@ -70,6 +70,28 @@ final class DeviceContextMenuServiceTests: XCTestCase {
         XCTAssertEqual(resolver.directoryURL(for: "Pixel_9_Pro"), defaultVirtualDevice)
     }
 
+    func testUsesTheDirectoryDeclaredByAVDMetadata() throws {
+        let temporaryDirectory = try makeTemporaryDirectory()
+        defer {
+            try? FileManager.default.removeItem(at: temporaryDirectory)
+        }
+        let avdRoot = temporaryDirectory.appendingPathComponent("avd", isDirectory: true)
+        let configuredDirectory = avdRoot
+            .appendingPathComponent("Pixel_9_Pro_Storage.avd", isDirectory: true)
+        try FileManager.default.createDirectory(at: configuredDirectory, withIntermediateDirectories: true)
+        try "path=\(configuredDirectory.path)\n".write(
+            to: avdRoot.appendingPathComponent("Pixel_9_Pro.ini"),
+            atomically: true,
+            encoding: .utf8
+        )
+        let resolver = AndroidVirtualDeviceDirectoryResolver(
+            environment: ["ANDROID_AVD_HOME": avdRoot.path],
+            homeDirectory: temporaryDirectory
+        )
+
+        XCTAssertEqual(resolver.directoryURL(for: "Pixel_9_Pro"), configuredDirectory)
+    }
+
     func testRejectsVirtualDeviceNamesThatCouldEscapeTheAVDDirectory() throws {
         let temporaryDirectory = try makeTemporaryDirectory()
         defer {

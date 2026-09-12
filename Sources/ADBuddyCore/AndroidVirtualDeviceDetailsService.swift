@@ -20,15 +20,19 @@ public struct AndroidVirtualDeviceDirectoryResolver {
             return nil
         }
 
-        let directoryName = "\(virtualDeviceName).avd"
         for avdRootURL in avdRootURLs {
-            let virtualDeviceURL = avdRootURL.appendingPathComponent(directoryName, isDirectory: true)
-            var isDirectory: ObjCBool = false
-            guard fileManager.fileExists(atPath: virtualDeviceURL.path, isDirectory: &isDirectory),
-                  isDirectory.boolValue else {
-                continue
+            if let configuredDirectoryURL = configuredDirectoryURL(
+                for: virtualDeviceName,
+                in: avdRootURL
+            ) {
+                return configuredDirectoryURL
             }
-            return virtualDeviceURL
+
+            let directoryName = "\(virtualDeviceName).avd"
+            let virtualDeviceURL = avdRootURL.appendingPathComponent(directoryName, isDirectory: true)
+            if isDirectory(at: virtualDeviceURL) {
+                return virtualDeviceURL
+            }
         }
 
         return nil
@@ -61,6 +65,64 @@ public struct AndroidVirtualDeviceDirectoryResolver {
         !virtualDeviceName.isEmpty &&
             !virtualDeviceName.contains("/") &&
             !virtualDeviceName.contains("\\")
+    }
+
+    private func configuredDirectoryURL(
+        for virtualDeviceName: String,
+        in avdRootURL: URL
+    ) -> URL? {
+        let metadataURL = avdRootURL.appendingPathComponent("\(virtualDeviceName).ini")
+        guard let metadata = try? String(contentsOf: metadataURL, encoding: .utf8) else {
+            return nil
+        }
+
+        if let configuredPath = configurationValue(named: "path", in: metadata),
+           let configuredDirectoryURL = directoryURL(for: configuredPath, relativeTo: avdRootURL),
+           isDirectory(at: configuredDirectoryURL) {
+            return configuredDirectoryURL
+        }
+
+        if let relativePath = configurationValue(named: "path.rel", in: metadata),
+           let configuredDirectoryURL = directoryURL(
+               for: relativePath,
+               relativeTo: avdRootURL.deletingLastPathComponent()
+           ), isDirectory(at: configuredDirectoryURL) {
+            return configuredDirectoryURL
+        }
+
+        return nil
+    }
+
+    private func directoryURL(for path: String, relativeTo directoryURL: URL) -> URL? {
+        guard !path.isEmpty else {
+            return nil
+        }
+
+        if path.hasPrefix("/") {
+            return URL(fileURLWithPath: path, isDirectory: true)
+        }
+
+        return directoryURL.appendingPathComponent(path, isDirectory: true)
+    }
+
+    private func configurationValue(named name: String, in contents: String) -> String? {
+        let prefix = "\(name)="
+        for rawLine in contents.split(whereSeparator: \.isNewline) {
+            let line = String(rawLine).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard line.hasPrefix(prefix) else {
+                continue
+            }
+
+            let value = String(line.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            return value.isEmpty ? nil : value
+        }
+
+        return nil
+    }
+
+    private func isDirectory(at url: URL) -> Bool {
+        var isDirectory: ObjCBool = false
+        return fileManager.fileExists(atPath: url.path, isDirectory: &isDirectory) && isDirectory.boolValue
     }
 }
 

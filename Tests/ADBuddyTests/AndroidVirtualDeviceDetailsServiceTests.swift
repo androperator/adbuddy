@@ -13,7 +13,7 @@ final class AndroidVirtualDeviceDetailsServiceTests: XCTestCase {
         let virtualDeviceDirectory = homeDirectory
             .appendingPathComponent(".android", isDirectory: true)
             .appendingPathComponent("avd", isDirectory: true)
-            .appendingPathComponent("Pixel_9.avd", isDirectory: true)
+            .appendingPathComponent("Pixel_9_Storage.avd", isDirectory: true)
         let systemImageDirectory = sdkDirectory
             .appendingPathComponent("system-images", isDirectory: true)
             .appendingPathComponent("android-36", isDirectory: true)
@@ -21,6 +21,13 @@ final class AndroidVirtualDeviceDetailsServiceTests: XCTestCase {
             .appendingPathComponent("arm64-v8a", isDirectory: true)
         try FileManager.default.createDirectory(at: virtualDeviceDirectory, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: systemImageDirectory, withIntermediateDirectories: true)
+        try "path=\(virtualDeviceDirectory.path)\n".write(
+            to: virtualDeviceDirectory
+                .deletingLastPathComponent()
+                .appendingPathComponent("Pixel_9.ini"),
+            atomically: true,
+            encoding: .utf8
+        )
         try """
         image.sysdir.1=system-images/android-36/google_apis/arm64-v8a/
         hw.lcd.width=1080

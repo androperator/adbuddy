@@ -171,7 +171,9 @@ private struct ConnectedDeviceRow: View {
                 revealEmulatorHostWindow()
             }
 
-            DeviceInformationButton(deviceDetails: deviceDetails)
+            if let deviceDetails {
+                DeviceInformationButton(deviceDetails: deviceDetails)
+            }
 
             if device.isUsable {
                 HStack(spacing: 8) {
@@ -292,7 +294,9 @@ private struct VirtualDeviceRow: View {
                 detailTint: statusTint
             )
 
-            DeviceInformationButton(deviceDetails: virtualDevice.deviceDetails)
+            if let deviceDetails = virtualDevice.deviceDetails {
+                DeviceInformationButton(deviceDetails: deviceDetails)
+            }
 
             Spacer()
 
@@ -433,7 +437,7 @@ private struct DeviceNameWithDetails: View {
 }
 
 private struct DeviceInformationButton: View {
-    let deviceDetails: AndroidDeviceDetails?
+    let deviceDetails: AndroidDeviceDetails
 
     @State private var isPresentingDeviceInformation = false
 
@@ -455,45 +459,40 @@ private struct DeviceInformationButton: View {
 }
 
 private struct DeviceInformationPopover: View {
-    let deviceDetails: AndroidDeviceDetails?
+    let deviceDetails: AndroidDeviceDetails
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Device Information")
                 .font(.headline)
 
-            if let deviceDetails {
-                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                    if let language = deviceDetails.languageDisplayText {
-                        GridRow {
-                            Text("Language")
-                                .foregroundStyle(.secondary)
-                            Text(language)
-                        }
-                    }
-
-                    if let screen = deviceDetails.screen {
-                        GridRow {
-                            Text("Physical pixels")
-                                .foregroundStyle(.secondary)
-                            Text("\(screen.physicalPixelSize.width) × \(screen.physicalPixelSize.height) px")
-                        }
-
-                        GridRow {
-                            Text("Logical size")
-                                .foregroundStyle(.secondary)
-                            Text("\(screen.dpSize.width) × \(screen.dpSize.height) dp")
-                        }
+            Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
+                if let language = deviceDetails.languageDisplayText {
+                    GridRow {
+                        Text("Language")
+                            .foregroundStyle(.secondary)
+                        Text(language)
                     }
                 }
 
-                if deviceDetails.screen?.usesDisplayOverride == true {
-                    Text("Android display overrides are active.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                if let screen = deviceDetails.screen {
+                    GridRow {
+                        Text("Physical pixels")
+                            .foregroundStyle(.secondary)
+                        Text("\(screen.physicalPixelSize.width) × \(screen.physicalPixelSize.height) px")
+                    }
+
+                    GridRow {
+                        Text("Logical size")
+                            .foregroundStyle(.secondary)
+                        Text("\(screen.dpSize.width) × \(screen.dpSize.height) dp")
+                    }
                 }
-            } else {
-                Text("Device information is not available for this device.")
+            }
+
+            if deviceDetails.screen?.usesDisplayOverride == true {
+                Text("Android display overrides are active.")
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
