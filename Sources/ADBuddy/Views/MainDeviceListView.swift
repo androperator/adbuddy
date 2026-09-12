@@ -464,12 +464,6 @@ private struct DeviceInformationPopover: View {
 
             if let deviceDetails {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                    GridRow {
-                        Text("Android")
-                            .foregroundStyle(.secondary)
-                        Text(deviceDetails.displayText)
-                    }
-
                     if let language = deviceDetails.languageDisplayText {
                         GridRow {
                             Text("Language")
