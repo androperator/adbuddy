@@ -45,6 +45,7 @@ final class DeviceStoreTests: XCTestCase {
             successfulResult(standardOutput: "36\n"),
             successfulResult(standardOutput: "Physical size: 1080x2400\n"),
             successfulResult(standardOutput: "Physical density: 420\n"),
+            successfulResult(standardOutput: "en-AU\n"),
         ])
         let store = makeDeviceStore(processRunner: runner)
         store.refreshFromPolling()
@@ -62,7 +63,8 @@ final class DeviceStoreTests: XCTestCase {
                 screen: AndroidDeviceScreen(
                     physicalPixelSize: try XCTUnwrap(AndroidDisplaySize(width: 1080, height: 2400)),
                     logicalDensityDPI: 420
-                )
+                ),
+                languageIdentifier: "en-AU"
             )
         )
         let invocations = await runner.invocations
@@ -74,6 +76,7 @@ final class DeviceStoreTests: XCTestCase {
                 ["-s", "serial", "shell", "getprop", "ro.build.version.sdk"],
                 ["-s", "serial", "shell", "wm", "size"],
                 ["-s", "serial", "shell", "wm", "density"],
+                ["-s", "serial", "shell", "getprop", "persist.sys.locale"],
             ]
         )
     }

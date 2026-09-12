@@ -4,15 +4,18 @@ public struct AndroidDeviceDetails: Equatable, Sendable {
     public let androidVersion: String
     public let apiLevel: String
     public let screen: AndroidDeviceScreen?
+    public let languageIdentifier: String?
 
     public init(
         androidVersion: String,
         apiLevel: String,
-        screen: AndroidDeviceScreen? = nil
+        screen: AndroidDeviceScreen? = nil,
+        languageIdentifier: String? = nil
     ) {
         self.androidVersion = androidVersion
         self.apiLevel = apiLevel
         self.screen = screen
+        self.languageIdentifier = languageIdentifier
     }
 
     public var displayText: String {
@@ -21,6 +24,15 @@ public struct AndroidDeviceDetails: Equatable, Sendable {
 
     public var screenshotOverlayText: String {
         displayText
+    }
+
+    public var languageDisplayText: String? {
+        guard let languageIdentifier else {
+            return nil
+        }
+
+        let languageName = Locale.current.localizedString(forIdentifier: languageIdentifier)
+        return languageName.map { "\($0) (\(languageIdentifier))" } ?? languageIdentifier
     }
 }
 
@@ -69,7 +81,7 @@ public struct AndroidDeviceDetailsService: Sendable {
 
     public func details(
         for device: AndroidDevice,
-        includesScreen: Bool = false
+        includesExtendedDetails: Bool = false
     ) async -> AndroidDeviceDetails? {
         guard device.isUsable else {
             return nil
@@ -89,7 +101,10 @@ public struct AndroidDeviceDetailsService: Sendable {
         return AndroidDeviceDetails(
             androidVersion: androidVersion,
             apiLevel: apiLevel,
-            screen: includesScreen ? await screen(for: device) : nil
+            screen: includesExtendedDetails ? await screen(for: device) : nil,
+            languageIdentifier: includesExtendedDetails
+                ? await languageIdentifier(for: device)
+                : nil
         )
     }
 
@@ -105,6 +120,14 @@ public struct AndroidDeviceDetailsService: Sendable {
         let value = String(decoding: result.standardOutput, as: UTF8.self)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return value.isEmpty ? nil : value
+    }
+
+    private func languageIdentifier(for device: AndroidDevice) async -> String? {
+        if let currentLanguage = await deviceProperty("persist.sys.locale", for: device) {
+            return currentLanguage
+        }
+
+        return await deviceProperty("ro.product.locale", for: device)
     }
 
     private func screen(for device: AndroidDevice) async -> AndroidDeviceScreen? {

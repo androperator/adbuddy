@@ -126,7 +126,7 @@ final class DeviceStore {
             processRunner: processRunner
         )
         Task { [weak self] in
-            let deviceDetails = await service.details(for: device, includesScreen: true)
+            let deviceDetails = await service.details(for: device, includesExtendedDetails: true)
             guard let self, !Task.isCancelled else {
                 return
             }

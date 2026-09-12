@@ -171,7 +171,7 @@ private struct ConnectedDeviceRow: View {
                 revealEmulatorHostWindow()
             }
 
-            ScreenInformationButton(screen: deviceDetails?.screen)
+            DeviceInformationButton(deviceDetails: deviceDetails)
 
             if device.isUsable {
                 HStack(spacing: 8) {
@@ -292,7 +292,7 @@ private struct VirtualDeviceRow: View {
                 detailTint: statusTint
             )
 
-            ScreenInformationButton(screen: virtualDevice.deviceDetails?.screen)
+            DeviceInformationButton(deviceDetails: virtualDevice.deviceDetails)
 
             Spacer()
 
@@ -432,58 +432,74 @@ private struct DeviceNameWithDetails: View {
     }
 }
 
-private struct ScreenInformationButton: View {
-    let screen: AndroidDeviceScreen?
+private struct DeviceInformationButton: View {
+    let deviceDetails: AndroidDeviceDetails?
 
-    @State private var isPresentingScreenInformation = false
+    @State private var isPresentingDeviceInformation = false
 
     var body: some View {
         Button {
-            isPresentingScreenInformation = true
+            isPresentingDeviceInformation = true
         } label: {
-            Label("Show Screen Information", systemImage: "info.circle")
+            Label("Show Device Information", systemImage: "info.circle")
                 .labelStyle(.iconOnly)
         }
         .buttonStyle(.borderless)
         .controlSize(.small)
-        .accessibilityLabel("Show Screen Information")
-        .help("Show Screen Information")
-        .popover(isPresented: $isPresentingScreenInformation) {
-            ScreenInformationPopover(screen: screen)
+        .accessibilityLabel("Show Device Information")
+        .help("Show Device Information")
+        .popover(isPresented: $isPresentingDeviceInformation) {
+            DeviceInformationPopover(deviceDetails: deviceDetails)
         }
     }
 }
 
-private struct ScreenInformationPopover: View {
-    let screen: AndroidDeviceScreen?
+private struct DeviceInformationPopover: View {
+    let deviceDetails: AndroidDeviceDetails?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Screen Information")
+            Text("Device Information")
                 .font(.headline)
 
-            if let screen {
+            if let deviceDetails {
                 Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
                     GridRow {
-                        Text("Physical pixels")
+                        Text("Android")
                             .foregroundStyle(.secondary)
-                        Text("\(screen.physicalPixelSize.width) × \(screen.physicalPixelSize.height) px")
+                        Text(deviceDetails.displayText)
                     }
 
-                    GridRow {
-                        Text("Logical size")
-                            .foregroundStyle(.secondary)
-                        Text("\(screen.dpSize.width) × \(screen.dpSize.height) dp")
+                    if let language = deviceDetails.languageDisplayText {
+                        GridRow {
+                            Text("Language")
+                                .foregroundStyle(.secondary)
+                            Text(language)
+                        }
+                    }
+
+                    if let screen = deviceDetails.screen {
+                        GridRow {
+                            Text("Physical pixels")
+                                .foregroundStyle(.secondary)
+                            Text("\(screen.physicalPixelSize.width) × \(screen.physicalPixelSize.height) px")
+                        }
+
+                        GridRow {
+                            Text("Logical size")
+                                .foregroundStyle(.secondary)
+                            Text("\(screen.dpSize.width) × \(screen.dpSize.height) dp")
+                        }
                     }
                 }
 
-                if screen.usesDisplayOverride {
+                if deviceDetails.screen?.usesDisplayOverride == true {
                     Text("Android display overrides are active.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             } else {
-                Text("Screen information is not available for this device.")
+                Text("Device information is not available for this device.")
                     .foregroundStyle(.secondary)
             }
         }
