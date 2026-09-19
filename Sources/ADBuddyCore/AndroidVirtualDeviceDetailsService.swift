@@ -106,14 +106,14 @@ public struct AndroidVirtualDeviceDirectoryResolver {
     }
 
     private func configurationValue(named name: String, in contents: String) -> String? {
-        let prefix = "\(name)="
         for rawLine in contents.split(whereSeparator: \.isNewline) {
             let line = String(rawLine).trimmingCharacters(in: .whitespacesAndNewlines)
-            guard line.hasPrefix(prefix) else {
+            guard let separator = line.firstIndex(of: "="),
+                  line[..<separator].trimmingCharacters(in: .whitespaces) == name else {
                 continue
             }
 
-            let value = String(line.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            let value = String(line[line.index(after: separator)...]).trimmingCharacters(in: .whitespacesAndNewlines)
             return value.isEmpty ? nil : value
         }
 
@@ -180,14 +180,14 @@ public struct AndroidVirtualDeviceDetailsService {
             return nil
         }
 
-        let prefix = "\(name)="
         for rawLine in contents.split(whereSeparator: \.isNewline) {
             let line = String(rawLine).trimmingCharacters(in: .whitespacesAndNewlines)
-            guard line.hasPrefix(prefix) else {
+            guard let separator = line.firstIndex(of: "="),
+                  line[..<separator].trimmingCharacters(in: .whitespaces) == name else {
                 continue
             }
 
-            let value = String(line.dropFirst(prefix.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+            let value = String(line[line.index(after: separator)...]).trimmingCharacters(in: .whitespacesAndNewlines)
             return value.isEmpty ? nil : value
         }
 

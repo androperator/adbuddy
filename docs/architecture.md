@@ -144,7 +144,8 @@ or 3-button navigation, Show or Hide Layout Bounds, and Show or Hide GPU
 Rendering Bars. It does not run with device discovery polling: the menu starts
 one short-lived operation and `DeviceStore` presents the result.
 
-`EmulatorStore` loads installed AVD names on demand, maps usable ADB emulator
+`EmulatorStore` loads installed AVD names at startup and every five seconds, without
+resetting the visible list during refresh. It maps usable ADB emulator
 serials back to their AVD names, and owns lifecycle state plus concise user
 feedback. The main window renders every physical device and usable ADB emulator
 under **Connected Android Devices**. A running AVD maps to that device row,

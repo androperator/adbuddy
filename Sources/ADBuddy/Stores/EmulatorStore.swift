@@ -55,6 +55,7 @@ final class EmulatorStore {
     private let sdkLocator: AndroidSDKLocator
     private let processRunner: any ProcessRunning
     private let applicationLauncher: any ApplicationProcessLaunching
+    private var pollingTask: Task<Void, Never>?
     private var isLoadingVirtualDevices = false
     private var connectedEmulatorDevices: [AndroidDevice] = []
     private var resolvedSDK: AndroidSDK?
@@ -76,13 +77,37 @@ final class EmulatorStore {
         self.applicationLauncher = applicationLauncher
     }
 
+    func start() {
+        guard pollingTask == nil else {
+            return
+        }
+        refreshVirtualDevices()
+        pollingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(5))
+                } catch {
+                    return
+                }
+                guard let self else {
+                    return
+                }
+                self.refreshVirtualDevices()
+            }
+        }
+    }
+
+    func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
+    }
+
     func refreshVirtualDevices() {
         guard !isLoadingVirtualDevices else {
             return
         }
 
         isLoadingVirtualDevices = true
-        status = .loading
         AppLogger.emulator.debug("Refreshing installed Android virtual devices")
 
         Task { [weak self] in

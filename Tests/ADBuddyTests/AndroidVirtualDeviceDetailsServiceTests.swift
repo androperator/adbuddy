@@ -4,6 +4,14 @@ import XCTest
 
 final class AndroidVirtualDeviceDetailsServiceTests: XCTestCase {
     func testReadsAndroidVersionAndAPILevelFromTheConfiguredSystemImage() throws {
+        try assertReadsDetails(separator: "=")
+    }
+
+    func testReadsAndroidStudioConfigurationWithSpacesAroundEquals() throws {
+        try assertReadsDetails(separator: " = ")
+    }
+
+    private func assertReadsDetails(separator: String) throws {
         let temporaryDirectory = try makeTemporaryDirectory()
         defer {
             try? FileManager.default.removeItem(at: temporaryDirectory)
@@ -21,7 +29,7 @@ final class AndroidVirtualDeviceDetailsServiceTests: XCTestCase {
             .appendingPathComponent("arm64-v8a", isDirectory: true)
         try FileManager.default.createDirectory(at: virtualDeviceDirectory, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: systemImageDirectory, withIntermediateDirectories: true)
-        try "path=\(virtualDeviceDirectory.path)\n".write(
+        try "path\(separator)\(virtualDeviceDirectory.path)\n".write(
             to: virtualDeviceDirectory
                 .deletingLastPathComponent()
                 .appendingPathComponent("Pixel_9.ini"),
@@ -29,16 +37,16 @@ final class AndroidVirtualDeviceDetailsServiceTests: XCTestCase {
             encoding: .utf8
         )
         try """
-        image.sysdir.1=system-images/android-36/google_apis/arm64-v8a/
-        hw.lcd.width=1080
-        hw.lcd.height=2400
-        hw.lcd.density=420
+        image.sysdir.1\(separator)system-images/android-36/google_apis/arm64-v8a/
+        hw.lcd.width\(separator)1080
+        hw.lcd.height\(separator)2400
+        hw.lcd.density\(separator)420
         """.write(
             to: virtualDeviceDirectory.appendingPathComponent("config.ini"),
             atomically: true,
             encoding: .utf8
         )
-        try "AndroidVersion.ApiLevel=36\n".write(
+        try "AndroidVersion.ApiLevel\(separator)36\n".write(
             to: systemImageDirectory.appendingPathComponent("source.properties"),
             atomically: true,
             encoding: .utf8

@@ -42,7 +42,7 @@ struct ADBuddyApp: App {
                 }
                 .task {
                     deviceStore.start()
-                    emulatorStore.refreshVirtualDevices()
+                    emulatorStore.start()
                 }
                 .onAppear {
                     appDelegate.setAPKDocumentHandler { fileURLs in
