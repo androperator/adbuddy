@@ -52,14 +52,14 @@ struct EmulatorOverflowMenu: View {
 
 private struct OverflowMenuLabel: View {
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4.2) {
             Image(systemName: "ellipsis")
             Image(systemName: "chevron.down")
                 .font(.caption.weight(.semibold))
         }
         .foregroundStyle(.primary)
         .frame(
-            width: DeviceListLayout.actionControlWidth,
+            width: DeviceListLayout.actionMenuControlWidth,
             height: DeviceListLayout.actionMenuLabelHeight
         )
     }
@@ -69,10 +69,11 @@ private struct OverflowMenuControlStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .frame(
-                width: DeviceListLayout.actionControlWidth,
+                width: DeviceListLayout.actionMenuControlWidth,
                 height: DeviceListLayout.actionControlHeight
             )
             .menuStyle(.borderlessButton)
+            .padding(.horizontal, 5.5)
             .background {
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .fill(Color.primary.opacity(0.08))

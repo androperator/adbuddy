@@ -5,6 +5,7 @@ enum DeviceListLayout {
     static let actionControlWidth: CGFloat = 44
     static let actionControlHeight: CGFloat = 28
     static let actionControlContentHeight: CGFloat = 20
+    static let actionMenuControlWidth: CGFloat = 38.5
     static let actionMenuLabelHeight: CGFloat = 26
     static let actionButtonLabelWidth: CGFloat = 28
     static let lifecycleControlWidth: CGFloat = 28
