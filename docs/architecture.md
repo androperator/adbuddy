@@ -144,8 +144,11 @@ or 3-button navigation, Show or Hide Layout Bounds, and Show or Hide GPU
 Rendering Bars. It switches navigation using the current Android user's installed
 navigation overlays and verifies the effective mode before reporting success.
 Unsupported navigation modes produce an explanatory failure
-without changing the device. It does not run with device discovery polling: the menu starts one
-short-lived operation and `DeviceStore` presents the result.
+without changing the device. Rendering changes notify running applications to
+reload system properties without a restart. If that refresh fails, feedback
+explains that the setting was saved but an app restart may be needed. It does
+not run with device discovery polling: the menu starts one short-lived operation
+and `DeviceStore` presents the result.
 
 `EmulatorStore` loads installed AVD names at startup and every five seconds, without
 resetting the visible list during refresh. It maps usable ADB emulator

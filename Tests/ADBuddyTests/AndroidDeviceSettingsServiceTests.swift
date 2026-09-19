@@ -5,8 +5,7 @@ import XCTest
 final class AndroidDeviceSettingsServiceTests: XCTestCase {
     func testUsesFixedArgumentsForNonNavigationSettings() async {
         let actions: [AndroidDeviceSettingAction] = [
-            .enableDarkTheme, .enableLightTheme, .showLayoutBounds, .hideLayoutBounds,
-            .showGPURenderingBars, .hideGPURenderingBars,
+            .enableDarkTheme, .enableLightTheme,
         ]
         let runner = ScriptedDeviceSettingsProcessRunner(
             results: actions.map { _ in successfulResult() }
@@ -30,10 +29,6 @@ final class AndroidDeviceSettingsServiceTests: XCTestCase {
             [
                 ["-s", "device-serial", "shell", "cmd", "uimode", "night", "yes"],
                 ["-s", "device-serial", "shell", "cmd", "uimode", "night", "no"],
-                ["-s", "device-serial", "shell", "setprop", "debug.layout", "true"],
-                ["-s", "device-serial", "shell", "setprop", "debug.layout", "false"],
-                ["-s", "device-serial", "shell", "setprop", "debug.hwui.profile", "visual_bars"],
-                ["-s", "device-serial", "shell", "setprop", "debug.hwui.profile", "false"],
             ]
         )
     }
@@ -135,6 +130,43 @@ final class AndroidDeviceSettingsServiceTests: XCTestCase {
             return XCTFail("Unverified mode must not report success")
         }
         XCTAssertTrue(failure.message.contains("could not be verified"))
+    }
+
+    func testRenderingChangesRefreshRunningAppsAfterWritingTheProperty() async {
+        let actions: [(AndroidDeviceSettingAction, String, String)] = [
+            (.showLayoutBounds, "debug.layout", "true"),
+            (.hideLayoutBounds, "debug.layout", "false"),
+            (.showGPURenderingBars, "debug.hwui.profile", "visual_bars"),
+            (.hideGPURenderingBars, "debug.hwui.profile", "false"),
+        ]
+        for reply in ["Result: Parcel(NULL)", "Result: Parcel(Error: 0xffffffffffffffb6 \"Not a data message\")"] {
+            for (action, property, value) in actions {
+                let runner = ScriptedDeviceSettingsProcessRunner(results: [
+                    successfulResult(), successfulResult(output: reply + "\n"),
+                ])
+                let service = AndroidDeviceSettingsService(adbPath: "/SDK/adb", processRunner: runner)
+                let result = await service.apply(action, to: "serial")
+                XCTAssertEqual(result, .success(AndroidDeviceSettingOutcome(action: action, deviceSerial: "serial")))
+                let invocations = await runner.invocations
+                XCTAssertEqual(invocations, [
+                    ["-s", "serial", "shell", "setprop", property, value],
+                    ["-s", "serial", "shell", "service", "call", "activity", "1599295570"],
+                ])
+            }
+        }
+    }
+
+    func testRefreshFailureReportsThatThePropertyWasSaved() async {
+        for refresh in [permissionFailure(), successfulResult(output: "Result: Parcel(ffffffff 'Permission denied')")] {
+            let runner = ScriptedDeviceSettingsProcessRunner(results: [successfulResult(), refresh])
+            let service = AndroidDeviceSettingsService(adbPath: "/SDK/adb", processRunner: runner)
+            let result = await service.apply(.showLayoutBounds, to: "serial")
+            guard case .failure(let failure) = result else {
+                return XCTFail("Failed refresh must not report that the overlay is showing")
+            }
+            XCTAssertTrue(failure.message.contains("Setting saved"))
+            XCTAssertTrue(failure.message.contains("Restart the app"))
+        }
     }
 
     private func permissionFailure() -> ProcessResult {

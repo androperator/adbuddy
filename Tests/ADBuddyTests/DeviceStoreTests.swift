@@ -184,6 +184,7 @@ final class DeviceStoreTests: XCTestCase {
         let runner = ScriptedDeviceStoreProcessRunner(results: [
             successfulResult(standardOutput: "List of devices attached\nserial\tdevice model:Pixel_9\n"),
             successfulResult(),
+            successfulResult(standardOutput: "Result: Parcel(NULL)"),
         ])
         let store = makeDeviceStore(processRunner: runner)
         store.refreshFromPolling()
@@ -209,6 +210,7 @@ final class DeviceStoreTests: XCTestCase {
                     "-s", "serial",
                     "shell", "setprop", "debug.hwui.profile", "visual_bars",
                 ],
+                ["-s", "serial", "shell", "service", "call", "activity", "1599295570"],
             ]
         )
     }

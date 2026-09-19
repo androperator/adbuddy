@@ -102,6 +102,26 @@ public struct AndroidDeviceSettingsService: Sendable {
             return .failure(.commandFailed(message))
         }
 
+        if action.requiresApplicationRefresh {
+            // IBinder.SYSPROPS_TRANSACTION ('_SPR') tells ActivityManager to
+            // forward the property-change notification to running applications.
+            let refresh = await processRunner.run(
+                executablePath: adbPath,
+                arguments: ["-s", deviceSerial, "shell", "service", "call", "activity", "1599295570"]
+            )
+            let output = String(decoding: refresh.standardOutput, as: UTF8.self)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            // This transaction has no reply payload. Android versions print
+            // either NULL or BAD_TYPE ("Not a data message") for the empty parcel.
+            let hasEmptyReply = output == "Result: Parcel(NULL)" ||
+                output == "Result: Parcel(Error: 0xffffffffffffffb6 \"Not a data message\")"
+            guard refresh.succeeded, hasEmptyReply else {
+                let message = "Setting saved, but running apps could not be refreshed. Restart the app to apply it. \(failureMessage(from: refresh))"
+                AppLogger.deviceSettings.error("Application refresh failed: \(message, privacy: .public)")
+                return .failure(.commandFailed(message))
+            }
+        }
+
         if let navigation {
             let verification = await processRunner.run(
                 executablePath: adbPath,
@@ -185,6 +205,15 @@ public struct AndroidDeviceSettingsService: Sendable {
 }
 
 private extension AndroidDeviceSettingAction {
+    var requiresApplicationRefresh: Bool {
+        switch self {
+        case .showLayoutBounds, .hideLayoutBounds, .showGPURenderingBars, .hideGPURenderingBars:
+            true
+        default:
+            false
+        }
+    }
+
     var navigationConfiguration: (package: String, mode: String)? {
         switch self {
         case .enableGestureNavigation:
