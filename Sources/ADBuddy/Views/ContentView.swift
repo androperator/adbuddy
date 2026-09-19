@@ -217,11 +217,13 @@ struct ContentView: View {
     private var deviceContent: some View {
         switch deviceStore.status {
         case .loading:
-            ContentUnavailableView(
-                "Refreshing Devices",
-                systemImage: "arrow.triangle.2.circlepath",
-                description: Text("Checking the Android SDK and connected devices.")
-            )
+            HStack(spacing: 10) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Finding devices…")
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         case .sdkUnavailable, .adbFailure:
             ContentUnavailableView {
                 Label(deviceStore.status.title, systemImage: deviceStore.status.symbolName)
