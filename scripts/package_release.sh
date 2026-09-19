@@ -79,11 +79,14 @@ fi
 
 cd "$ROOT_DIR"
 
-swift build -c release --arch arm64
-ARM64_BUILD_DIRECTORY="$(swift build -c release --arch arm64 --show-bin-path)"
+ARM64_SCRATCH_DIRECTORY="$ROOT_DIR/.build/release-arm64"
+X86_64_SCRATCH_DIRECTORY="$ROOT_DIR/.build/release-x86_64"
+# Swift Build can share output paths across architectures within one scratch directory.
+swift build -c release --arch arm64 --scratch-path "$ARM64_SCRATCH_DIRECTORY"
+ARM64_BUILD_DIRECTORY="$(swift build -c release --arch arm64 --scratch-path "$ARM64_SCRATCH_DIRECTORY" --show-bin-path)"
 
-swift build -c release --arch x86_64
-X86_64_BUILD_DIRECTORY="$(swift build -c release --arch x86_64 --show-bin-path)"
+swift build -c release --arch x86_64 --scratch-path "$X86_64_SCRATCH_DIRECTORY"
+X86_64_BUILD_DIRECTORY="$(swift build -c release --arch x86_64 --scratch-path "$X86_64_SCRATCH_DIRECTORY" --show-bin-path)"
 
 ARM64_APP_BINARY="$ARM64_BUILD_DIRECTORY/$APP_NAME"
 X86_64_APP_BINARY="$X86_64_BUILD_DIRECTORY/$APP_NAME"
