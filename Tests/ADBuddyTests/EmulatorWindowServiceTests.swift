@@ -4,6 +4,21 @@ import XCTest
 @testable import ADBuddyCore
 
 final class EmulatorWindowServiceTests: XCTestCase {
+    func testRecognizesAVDShorthandForEveryWindowPresentation() {
+        let presentations = EmulatorHostProcessParser.parse("""
+        15497 /SDK/emulator/qemu/darwin-aarch64/qemu-system-aarch64 @clawperator-pixel-12gb -no-snapshot-load -no-boot-anim
+        15498 /SDK/emulator/qemu/darwin-aarch64/qemu-system-aarch64 @Studio_Device -qt-hide-window
+        15499 /SDK/emulator/qemu/darwin-aarch64/qemu-system-aarch64 @CI_Device -no-window
+        15500 /SDK/emulator/qemu/darwin-aarch64/qemu-system-aarch64 @
+        """)
+
+        XCTAssertEqual(presentations, [
+            "clawperator-pixel-12gb": .standalone(processIdentifier: 15497),
+            "Studio_Device": .embeddedInAndroidStudio,
+            "CI_Device": .headless,
+        ])
+    }
+
     func testMapsStandaloneEmbeddedAndHeadlessEmulatorProcesses() async {
         let runner = EmulatorWindowProcessRunner(
             result: successfulResult(

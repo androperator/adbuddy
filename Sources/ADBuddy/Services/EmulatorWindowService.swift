@@ -17,7 +17,7 @@ enum EmulatorWindowPresentation: Equatable, Sendable {
         case .headless:
             "Headless"
         case .unknown:
-            "Window unavailable"
+            "Window not identified"
         }
     }
 
@@ -105,12 +105,15 @@ enum EmulatorHostProcessParser {
 
     private static func virtualDeviceName(in command: String) -> String? {
         let arguments = command.split(whereSeparator: \.isWhitespace)
-        guard let avdIndex = arguments.firstIndex(of: "-avd"),
-              arguments.indices.contains(arguments.index(after: avdIndex)) else {
-            return nil
+        if let avdIndex = arguments.firstIndex(of: "-avd"),
+           arguments.indices.contains(arguments.index(after: avdIndex)) {
+            return String(arguments[arguments.index(after: avdIndex)])
         }
 
-        return String(arguments[arguments.index(after: avdIndex)])
+        guard let shorthand = arguments.dropFirst().first(where: { $0.hasPrefix("@") && $0.count > 1 }) else {
+            return nil
+        }
+        return String(shorthand.dropFirst())
     }
 
     private static func presentation(
