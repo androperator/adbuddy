@@ -135,9 +135,9 @@ The first implementation is a complete vertical slice, not a visual mockup.
 
 - Offer a compact per-device **Device Settings** menu from both the main window
   and menu bar utility.
-- Support explicit Dark Theme and Light Theme actions, Gesture and 3-Button
-  navigation, and developer rendering overlays for layout bounds and GPU
-  rendering bars.
+- Support explicit Dark Theme and Light Theme actions, Gesture and
+  3-Button navigation, and developer rendering overlays for layout
+  bounds and GPU rendering bars.
 - Keep rendering overlays reversible with separate Show and Hide actions.
 - Use fixed ADB arguments and show an actionable failure when a device or OEM
   does not permit one of the Android setting writes.

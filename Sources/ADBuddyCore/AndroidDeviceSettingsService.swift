@@ -71,6 +71,26 @@ public struct AndroidDeviceSettingsService: Sendable {
         _ action: AndroidDeviceSettingAction,
         to deviceSerial: String
     ) async -> AndroidDeviceSettingsServiceResult {
+        let navigation = action.navigationConfiguration
+        if let navigation {
+            let availability = await processRunner.run(
+                executablePath: adbPath,
+                arguments: ["-s", deviceSerial, "shell", "cmd", "overlay", "list", "--user", "current", navigation.package]
+            )
+            guard availability.succeeded else {
+                return .failure(.commandFailed(failureMessage(from: availability)))
+            }
+            let overlays = String(decoding: availability.standardOutput, as: UTF8.self)
+                .split(whereSeparator: \.isNewline)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            guard overlays.contains("[ ] \(navigation.package)") ||
+                    overlays.contains("[x] \(navigation.package)") else {
+                return .failure(.commandFailed(
+                    "This Android image does not provide the requested navigation mode. Choose another navigation mode."
+                ))
+            }
+        }
+
         let result = await processRunner.run(
             executablePath: adbPath,
             arguments: arguments(for: action, deviceSerial: deviceSerial)
@@ -82,6 +102,28 @@ public struct AndroidDeviceSettingsService: Sendable {
             return .failure(.commandFailed(message))
         }
 
+        if let navigation {
+            let verification = await processRunner.run(
+                executablePath: adbPath,
+                arguments: [
+                    "-s", deviceSerial, "shell", "cmd", "overlay", "lookup", "--user", "current",
+                    "android", "android:integer/config_navBarInteractionMode",
+                ]
+            )
+            guard verification.succeeded else {
+                return .failure(.commandFailed(
+                    "The navigation change was sent, but could not be verified: \(failureMessage(from: verification))"
+                ))
+            }
+            let activeMode = String(decoding: verification.standardOutput, as: UTF8.self)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard activeMode == navigation.mode else {
+                return .failure(.commandFailed(
+                    "Android did not activate the requested navigation mode. Try changing System navigation in Android Settings."
+                ))
+            }
+        }
+
         AppLogger.deviceSettings.info("Android device setting updated")
         return .success(AndroidDeviceSettingOutcome(action: action, deviceSerial: deviceSerial))
     }
@@ -91,6 +133,7 @@ public struct AndroidDeviceSettingsService: Sendable {
         deviceSerial: String
     ) -> [String] {
         let deviceArguments = ["-s", deviceSerial, "shell"]
+        let navigationArguments = deviceArguments + ["cmd", "overlay", "enable-exclusive", "--user", "current", "--category"]
 
         return switch action {
         case .enableDarkTheme:
@@ -98,9 +141,9 @@ public struct AndroidDeviceSettingsService: Sendable {
         case .enableLightTheme:
             deviceArguments + ["cmd", "uimode", "night", "no"]
         case .enableGestureNavigation:
-            deviceArguments + ["settings", "put", "secure", "navigation_mode", "2"]
+            navigationArguments + ["com.android.internal.systemui.navbar.gestural"]
         case .enableThreeButtonNavigation:
-            deviceArguments + ["settings", "put", "secure", "navigation_mode", "0"]
+            navigationArguments + ["com.android.internal.systemui.navbar.threebutton"]
         case .showLayoutBounds:
             deviceArguments + ["setprop", "debug.layout", "true"]
         case .hideLayoutBounds:
@@ -138,5 +181,18 @@ public struct AndroidDeviceSettingsService: Sendable {
         }
 
         return "ADB did not return a result."
+    }
+}
+
+private extension AndroidDeviceSettingAction {
+    var navigationConfiguration: (package: String, mode: String)? {
+        switch self {
+        case .enableGestureNavigation:
+            ("com.android.internal.systemui.navbar.gestural", "2")
+        case .enableThreeButtonNavigation:
+            ("com.android.internal.systemui.navbar.threebutton", "0")
+        default:
+            nil
+        }
     }
 }

@@ -141,8 +141,11 @@ independently, so each device receives its own outcome.
 `AndroidDeviceSettingsService` applies one explicit system setting to a usable
 device with fixed ADB arguments. It covers dark or light system theme, gesture
 or 3-button navigation, Show or Hide Layout Bounds, and Show or Hide GPU
-Rendering Bars. It does not run with device discovery polling: the menu starts
-one short-lived operation and `DeviceStore` presents the result.
+Rendering Bars. It switches navigation using the current Android user's installed
+navigation overlays and verifies the effective mode before reporting success.
+Unsupported navigation modes produce an explanatory failure
+without changing the device. It does not run with device discovery polling: the menu starts one
+short-lived operation and `DeviceStore` presents the result.
 
 `EmulatorStore` loads installed AVD names at startup and every five seconds, without
 resetting the visible list during refresh. It maps usable ADB emulator
