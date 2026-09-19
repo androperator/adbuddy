@@ -20,6 +20,7 @@ APP_ICON="$ROOT_DIR/Assets/AppIcon.icns"
 MENU_BAR_GLYPH="$ROOT_DIR/Assets/ADBuddyMenuBarGlyph.svg"
 
 cd "$ROOT_DIR"
+source "$ROOT_DIR/scripts/local_toolchain.sh"
 
 [[ -f "$VERSION_FILE" ]] || {
   echo "error: release version file is missing: $VERSION_FILE" >&2
@@ -41,8 +42,8 @@ VERSION="$(<"$VERSION_FILE")"
 
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
-swift build
-BUILD_DIRECTORY="$(swift build --show-bin-path)"
+adbuddy_swift build
+BUILD_DIRECTORY="$(adbuddy_swift build --show-bin-path)"
 BUILD_BINARY="$BUILD_DIRECTORY/$APP_NAME"
 BUILD_MCP_BINARY="$BUILD_DIRECTORY/adbuddy-mcp"
 

@@ -45,10 +45,28 @@ shell, where common shell initialization and `PATH` entries may be absent.
 Run the smallest relevant check after each coherent change:
 
 ```sh
-swift build
-swift test
+scripts/test.sh
 scripts/build_and_run.sh
 ```
+
+The local scripts use the selected Xcode installation when it is ready. If
+Xcode setup is incomplete, they can use the separately installed Command Line
+Tools with the macOS 26.5 SDK. This avoids the macOS 27 command-line SDK's
+missing SwiftUI macro plugin. Full Xcode must still be installed for its XCTest
+frameworks and runner. The scripts do not accept Xcode licenses or change the
+system's developer-directory selection. Release packaging continues to require
+a fully configured Xcode installation.
+
+Run selected test classes with a comma-separated XCTest selector:
+
+```sh
+scripts/test.sh ADBuddyTests.AndroidVirtualDeviceDetailsServiceTests,ADBuddyTests.AndroidEmulatorServiceTests
+```
+
+The test script builds the tests and invokes XCTest directly, avoiding SwiftPM
+test discovery's dependency on full Xcode platform metadata. With a fully
+configured Xcode installation, ordinary `swift build` and `swift test` remain
+available.
 
 Once the script exists, prefer it for end-to-end local launches. Do not claim
 that live screenshot capture was verified unless an actual connected device or
