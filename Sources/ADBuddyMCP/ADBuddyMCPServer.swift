@@ -209,7 +209,7 @@ private extension ADBuddyMCPServer {
         ],
         [
             "name": "stop_screen_recording",
-            "description": "Stop an active Android screen recording and save its MP4 to ADBuddy's shared media folder.",
+            "description": "Stop an active Android screen recording and save its MP4 clips to ADBuddy's shared media folder. Returns clips in capture order; path remains the first clip.",
             "inputSchema": objectSchema(properties: ["recordingId": stringSchema], required: ["recordingId"]),
         ],
     ] }

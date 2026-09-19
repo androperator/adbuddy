@@ -25,8 +25,18 @@ final class MediaClipboardServiceTests: XCTestCase {
         let pasteboard = TestMediaPasteboard()
         let service = MediaClipboardService(pasteboard: pasteboard)
 
-        XCTAssertEqual(service.copyRecording(at: recordingURL), .copied)
+        XCTAssertEqual(service.copyRecordings(at: [recordingURL]), .copied)
         XCTAssertEqual(pasteboard.fileURL, recordingURL)
+    }
+
+    func testCopiesAllRecordingClipsTogether() throws {
+        let first = try makeTemporaryFile(named: "clip_01.mp4", data: Data([0]))
+        let second = first.deletingLastPathComponent().appendingPathComponent("clip_02.mp4")
+        try Data([1]).write(to: second)
+        defer { try? FileManager.default.removeItem(at: first.deletingLastPathComponent()) }
+        let pasteboard = TestMediaPasteboard()
+        XCTAssertEqual(MediaClipboardService(pasteboard: pasteboard).copyRecordings(at: [first, second]), .copied)
+        XCTAssertEqual(pasteboard.fileURLs, [first, second])
     }
 
     func testReportsAUsefulFailureWhenTheRecordingIsMissing() {
@@ -34,7 +44,7 @@ final class MediaClipboardServiceTests: XCTestCase {
         let service = MediaClipboardService(pasteboard: pasteboard)
         let missingRecordingURL = URL(fileURLWithPath: "/tmp/adbuddy-missing-recording.mp4")
 
-        guard case .failed(let message) = service.copyRecording(at: missingRecordingURL) else {
+        guard case .failed(let message) = service.copyRecordings(at: [missingRecordingURL]) else {
             return XCTFail("Expected the missing recording to fail clipboard copy")
         }
 
@@ -67,10 +77,11 @@ final class MediaClipboardServiceTests: XCTestCase {
 
 @MainActor
 private final class TestMediaPasteboard: MediaPasteboardWriting {
-    private(set) var fileURL: URL?
+    private(set) var fileURLs: [URL] = []
+    var fileURL: URL? { fileURLs.first }
 
-    func writeFileURL(_ fileURL: URL) -> Bool {
-        self.fileURL = fileURL
+    func writeFileURLs(_ fileURLs: [URL]) -> Bool {
+        self.fileURLs = fileURLs
         return true
     }
 }

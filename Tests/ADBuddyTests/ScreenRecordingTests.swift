@@ -70,6 +70,105 @@ final class ScreenRecordingTests: XCTestCase {
         ])
     }
 
+    func testSavesAndFramesEveryClipWithOneSessionAndRestoresTapsOnce() async {
+        let runner = ScriptedScreenRecordingProcessRunner(results: [
+            successfulResult(standardOutput: "0\n"), successfulResult(), successfulResult(),
+        ])
+        let files = RecordingScreenFileManager()
+        let framer = ScriptedScreenRecordingFramer(result: .success)
+        let capture = TestScreenRecordingCapture(clipCount: 3)
+        let result = await ScreenRecordingService(
+            adbPath: "/SDK/adb", processRunner: runner, fileManager: files,
+            recordingFramer: framer, capture: capture
+        ).record(
+            session: ScreenRecordingSession(device: connectedDevice),
+            options: ScreenRecordingOptions(bitRateMegabitsPerSecond: 8, resolution: .native, showsTaps: true),
+            destination: URL(fileURLWithPath: "/tmp/media"),
+            framing: ScreenRecordingFramingOptions(addsFrame: true, overlaysDeviceDetails: false),
+            onScreenRecorderStarted: {}
+        )
+        guard case .success(let output, let warning) = result else {
+            return XCTFail("Expected all recording clips")
+        }
+        XCTAssertNil(warning)
+        XCTAssertEqual(output.clips.count, 3)
+        XCTAssertEqual(output.savedFileURLs.count, 6)
+        for (index, clip) in output.clips.enumerated() {
+            XCTAssertTrue(clip.primaryFileURL.lastPathComponent.hasSuffix(String(format: "_%02d_framed.mp4", index + 1)))
+            XCTAssertTrue(clip.originalFileURL?.lastPathComponent.hasSuffix(String(format: "_%02d.mp4", index + 1)) == true)
+        }
+        let frameRequests = await framer.requests()
+        XCTAssertEqual(frameRequests.map(\.outputURL), output.primaryFileURLs)
+        let captureRequests = await capture.requests
+        XCTAssertEqual(captureRequests.count, 1)
+        let commands = await runner.invocations
+        XCTAssertEqual(commands.count, 3)
+    }
+
+    func testRetainsCompletedClipsWhenRecordingFailsLater() async {
+        let result = await ScreenRecordingService(
+            adbPath: "/SDK/adb", processRunner: ScriptedScreenRecordingProcessRunner(results: []),
+            fileManager: RecordingScreenFileManager(),
+            capture: TestScreenRecordingCapture(fails: true, clipCount: 2, retainsClipsOnFailure: true)
+        ).record(
+            session: ScreenRecordingSession(device: connectedDevice), options: .default,
+            destination: URL(fileURLWithPath: "/tmp/media"), onScreenRecorderStarted: {}
+        )
+        guard case .success(let output, let warning) = result else {
+            return XCTFail("Expected completed footage to survive")
+        }
+        XCTAssertEqual(output.clips.count, 2)
+        XCTAssertTrue(warning?.contains("Completed clips were retained") == true)
+    }
+
+    func testAvoidsCollisionsAcrossTheWholeClipGroup() async {
+        let files = RecordingScreenFileManager()
+        files.collidingSuffix = "_02_framed.mp4"
+        let result = await ScreenRecordingService(
+            adbPath: "/SDK/adb", processRunner: ScriptedScreenRecordingProcessRunner(results: []),
+            fileManager: files, recordingFramer: ScriptedScreenRecordingFramer(result: .success),
+            capture: TestScreenRecordingCapture(clipCount: 2)
+        ).record(
+            session: ScreenRecordingSession(device: connectedDevice), options: .default,
+            destination: URL(fileURLWithPath: "/tmp/media"),
+            framing: ScreenRecordingFramingOptions(addsFrame: true, overlaysDeviceDetails: false),
+            onScreenRecorderStarted: {}
+        )
+        guard case .success(let output, _) = result else { return XCTFail("Expected clips") }
+        XCTAssertTrue(output.clips[0].primaryFileURL.lastPathComponent.hasSuffix("-2_01_framed.mp4"))
+        XCTAssertTrue(output.clips[1].primaryFileURL.lastPathComponent.hasSuffix("-2_02_framed.mp4"))
+    }
+
+    func testBackendReturnsCompletedClipsAfterFailureAndRemovesUnfinishedClip() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ADBuddyBackendTest-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let executable = directory.appendingPathComponent("scrcpy")
+        let script = """
+        #!/bin/sh
+        for argument in "$@"; do
+          case "$argument" in --record=*) output="${argument#--record=}" ;; esac
+        done
+        test "$ADBUDDY_RECORDING_SEGMENTS" = 1 || exit 2
+        printf 'completed clip' > "$output.0001.mp4"
+        printf 'completed clip' > "$output.0002.mp4"
+        printf 'unfinished clip' > "$output.0003.mp4.inprogress"
+        exit 1
+        """
+        try Data(script.utf8).write(to: executable)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
+        try Data().write(to: directory.appendingPathComponent("scrcpy-server"))
+        let output = directory.appendingPathComponent("capture.partial")
+        let result = await ScrcpyScreenRecordingCapture(adbPath: "/unused", backendDirectory: directory).record(
+            session: ScreenRecordingSession(device: connectedDevice), bitRateBitsPerSecond: 8_000_000,
+            outputSize: nil, outputURL: output, onStarted: {}
+        )
+        XCTAssertEqual(result.processResult.exitStatus, 1)
+        XCTAssertEqual(result.clipURLs.map(\.lastPathComponent), ["capture.partial.0001.mp4", "capture.partial.0002.mp4"])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path + ".0003.mp4.inprogress"))
+    }
+
     func testStopsOnlyTheRequestedCaptureSession() async {
         let capture = TestScreenRecordingCapture()
         let service = ScreenRecordingService(
@@ -134,8 +233,8 @@ final class ScreenRecordingTests: XCTestCase {
             outputURL: URL(fileURLWithPath: "/tmp/unused-recording.mp4"),
             onStarted: { XCTFail("A missing recorder cannot start") }
         )
-        XCTAssertFalse(result.succeeded)
-        XCTAssertTrue(result.failureDescription?.contains("Rebuild or reinstall") == true)
+        XCTAssertFalse(result.processResult.succeeded)
+        XCTAssertTrue(result.processResult.failureDescription?.contains("Rebuild or reinstall") == true)
     }
 
     func testCopiedRecordingFeedbackIncludesClipboardDetail() {
@@ -512,13 +611,16 @@ private final class RecordingScreenFileManager: ScreenRecordingFileManaging, @un
     private(set) var createdDirectories: [URL] = []
     private(set) var movedDestination: URL?
     private(set) var removedURLs: [URL] = []
+    var collidingSuffix: String?
 
     func ensureDirectoryExists(at directoryURL: URL) throws {
         createdDirectories.append(directoryURL)
     }
 
     func fileExists(at fileURL: URL) -> Bool {
-        false
+        guard let collidingSuffix else { return false }
+        return fileURL.lastPathComponent.hasSuffix(collidingSuffix)
+            && !fileURL.lastPathComponent.contains("-2_")
     }
 
     func moveItem(at sourceURL: URL, to destinationURL: URL) throws {

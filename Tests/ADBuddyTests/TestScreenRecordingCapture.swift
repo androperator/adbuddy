@@ -10,10 +10,14 @@ actor TestScreenRecordingCapture: ScreenRecordingCapturing {
     private(set) var stoppedSessions: [ScreenRecordingSession] = []
     private let writesFile: Bool
     private let fails: Bool
+    private let clipCount: Int
+    private let retainsClipsOnFailure: Bool
 
-    init(writesFile: Bool = false, fails: Bool = false) {
+    init(writesFile: Bool = false, fails: Bool = false, clipCount: Int = 1, retainsClipsOnFailure: Bool = false) {
         self.writesFile = writesFile
         self.fails = fails
+        self.clipCount = clipCount
+        self.retainsClipsOnFailure = retainsClipsOnFailure
     }
 
     func record(
@@ -22,14 +26,19 @@ actor TestScreenRecordingCapture: ScreenRecordingCapturing {
         outputSize: AndroidDisplaySize?,
         outputURL: URL,
         onStarted: @escaping @MainActor @Sendable () -> Void
-    ) async -> ProcessResult {
+    ) async -> ScreenRecordingBackendResult {
         requests.append(Request(outputSize: outputSize, bitRate: bitRateBitsPerSecond))
         await onStarted()
-        if writesFile { try? Data("test recording".utf8).write(to: outputURL) }
-        return ProcessResult(
+        let clips = (0..<clipCount).map { index in
+            clipCount == 1 ? outputURL : outputURL.appendingPathExtension("\(index).mp4")
+        }
+        if writesFile {
+            for url in clips { try? Data("test recording".utf8).write(to: url) }
+        }
+        return ScreenRecordingBackendResult(processResult: ProcessResult(
             standardOutput: Data(), standardError: Data(), exitStatus: fails ? 1 : 0,
             durationMilliseconds: 1, failureDescription: nil, wasCancelled: false
-        )
+        ), clipURLs: fails && !retainsClipsOnFailure ? [] : clips)
     }
 
     func stop(session: ScreenRecordingSession) async -> ScreenRecordingStopResult {

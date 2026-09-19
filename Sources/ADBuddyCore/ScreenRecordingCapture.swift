@@ -1,6 +1,16 @@
 import Foundation
 
-/// Captures into a local temporary MP4. The service owns naming, taps, and framing.
+public struct ScreenRecordingBackendResult: Sendable {
+    public let processResult: ProcessResult
+    public let clipURLs: [URL]
+
+    public init(processResult: ProcessResult, clipURLs: [URL]) {
+        self.processResult = processResult
+        self.clipURLs = clipURLs
+    }
+}
+
+/// Captures completed temporary MP4 clips. The service owns naming, taps, and framing.
 public protocol ScreenRecordingCapturing: Sendable {
     func record(
         session: ScreenRecordingSession,
@@ -8,7 +18,7 @@ public protocol ScreenRecordingCapturing: Sendable {
         outputSize: AndroidDisplaySize?,
         outputURL: URL,
         onStarted: @escaping @MainActor @Sendable () -> Void
-    ) async -> ProcessResult
+    ) async -> ScreenRecordingBackendResult
     func stop(session: ScreenRecordingSession) async -> ScreenRecordingStopResult
 }
 
@@ -41,23 +51,24 @@ public struct ScrcpyScreenRecordingCapture: ScreenRecordingCapturing {
         outputSize: AndroidDisplaySize?,
         outputURL: URL,
         onStarted: @escaping @MainActor @Sendable () -> Void
-    ) async -> ProcessResult {
+    ) async -> ScreenRecordingBackendResult {
         let executable = executableURL
         let server = serverURL
         guard FileManager.default.isExecutableFile(atPath: executable.path),
               FileManager.default.fileExists(atPath: server.path) else {
-            return ProcessResult(
+            return ScreenRecordingBackendResult(processResult: ProcessResult(
                 standardOutput: Data(), standardError: Data(), exitStatus: nil,
                 durationMilliseconds: 0,
                 failureDescription: "The bundled screen recorder is missing. Rebuild or reinstall ADBuddy.",
                 wasCancelled: false
-            )
+            ), clipURLs: [])
         }
         var environment = ProcessInfo.processInfo.environment
         environment["ADB"] = adbPath
         environment["SCRCPY_SERVER_PATH"] = server.path
+        environment["ADBUDDY_RECORDING_SEGMENTS"] = "1"
         AppLogger.recording.info("Starting rotation-aware screen capture")
-        return await Self.processRunner.run(
+        let result = await Self.processRunner.run(
             executablePath: executable.path,
             arguments: Self.arguments(
                 serial: session.device.serial,
@@ -69,6 +80,16 @@ public struct ScrcpyScreenRecordingCapture: ScreenRecordingCapturing {
             environment: environment,
             onStarted: onStarted
         )
+        var clips: [URL] = []
+        var index = 1
+        while true {
+            let clipURL = URL(fileURLWithPath: outputURL.path + String(format: ".%04d.mp4", index))
+            try? FileManager.default.removeItem(at: clipURL.appendingPathExtension("inprogress"))
+            guard FileManager.default.fileExists(atPath: clipURL.path) else { break }
+            clips.append(clipURL)
+            index += 1
+        }
+        return ScreenRecordingBackendResult(processResult: result, clipURLs: clips)
     }
 
     static func arguments(

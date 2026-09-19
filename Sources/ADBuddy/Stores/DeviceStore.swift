@@ -205,7 +205,7 @@ final class DeviceStore {
                 let mediaNotifier = mediaNotifier
                 Task {
                     await mediaNotifier.notifyAboutSavedMedia(
-                        at: output.primaryFileURL,
+                        at: [output.primaryFileURL],
                         kind: .screenshot(copiedToClipboard: copiedToClipboard)
                     )
                 }
@@ -686,18 +686,18 @@ final class DeviceStore {
 
         switch result {
         case .success(let output, let warning):
-            let copiedToClipboard = copyRecordingToClipboardIfNeeded(at: output.primaryFileURL)
+            let copiedToClipboard = copyRecordingToClipboardIfNeeded(at: output.primaryFileURLs)
             revealMediaInFinderIfNeeded(at: output.savedFileURLs)
             AppLogger.recording.info("Screen recording saved")
             showScreenRecordingFeedback(
-                .success(output.primaryFileURL, warning: warning, copiedToClipboard: copiedToClipboard)
+                .success(output.primaryFileURL, warning: warning, copiedToClipboard: copiedToClipboard, clipCount: output.clips.count)
             )
 
             let mediaNotifier = mediaNotifier
             Task {
                 await mediaNotifier.notifyAboutSavedMedia(
-                    at: output.primaryFileURL,
-                    kind: .recording(copiedToClipboard: copiedToClipboard)
+                    at: output.primaryFileURLs,
+                    kind: .recording(copiedToClipboard: copiedToClipboard, clipCount: output.clips.count)
                 )
             }
         case .failure(let error):
@@ -793,12 +793,12 @@ final class DeviceStore {
         }
     }
 
-    private func copyRecordingToClipboardIfNeeded(at fileURL: URL) -> Bool {
+    private func copyRecordingToClipboardIfNeeded(at fileURLs: [URL]) -> Bool {
         guard preferences.automaticallyCopyMedia else {
             return false
         }
 
-        switch mediaClipboard.copyRecording(at: fileURL) {
+        switch mediaClipboard.copyRecordings(at: fileURLs) {
         case .copied:
             AppLogger.recording.info("Copied recording to clipboard")
             return true

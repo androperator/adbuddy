@@ -292,6 +292,11 @@ actor ADBuddyMCPService {
             if let originalFileURL = output.originalFileURL {
                 response["originalPath"] = originalFileURL.path
             }
+            response["clips"] = output.clips.map { clip in
+                var item = ["path": clip.primaryFileURL.path]
+                if let original = clip.originalFileURL { item["originalPath"] = original.path }
+                return item
+            }
             if let warning {
                 response["warning"] = warning
             }

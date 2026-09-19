@@ -4,7 +4,7 @@ import Foundation
 @MainActor
 protocol MediaClipboardCopying {
     func copyScreenshot(at fileURL: URL) -> MediaClipboardCopyResult
-    func copyRecording(at fileURL: URL) -> MediaClipboardCopyResult
+    func copyRecordings(at fileURLs: [URL]) -> MediaClipboardCopyResult
 }
 
 enum MediaClipboardCopyResult: Equatable {
@@ -14,7 +14,7 @@ enum MediaClipboardCopyResult: Equatable {
 
 @MainActor
 protocol MediaPasteboardWriting {
-    func writeFileURL(_ fileURL: URL) -> Bool
+    func writeFileURLs(_ fileURLs: [URL]) -> Bool
 }
 
 @MainActor
@@ -25,9 +25,9 @@ struct SystemMediaPasteboard: MediaPasteboardWriting {
         self.pasteboard = pasteboard
     }
 
-    func writeFileURL(_ fileURL: URL) -> Bool {
+    func writeFileURLs(_ fileURLs: [URL]) -> Bool {
         pasteboard.clearContents()
-        return pasteboard.writeObjects([fileURL as NSURL])
+        return pasteboard.writeObjects(fileURLs.map { $0 as NSURL })
     }
 }
 
@@ -43,18 +43,18 @@ struct MediaClipboardService: MediaClipboardCopying {
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             return .failed("Could not find the saved screenshot to copy it to the clipboard.")
         }
-        guard pasteboard.writeFileURL(fileURL) else {
+        guard pasteboard.writeFileURLs([fileURL]) else {
             return .failed("macOS could not write the screenshot file to the clipboard.")
         }
 
         return .copied
     }
 
-    func copyRecording(at fileURL: URL) -> MediaClipboardCopyResult {
-        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+    func copyRecordings(at fileURLs: [URL]) -> MediaClipboardCopyResult {
+        guard !fileURLs.isEmpty, fileURLs.allSatisfy({ FileManager.default.fileExists(atPath: $0.path) }) else {
             return .failed("Could not find the saved recording to copy it to the clipboard.")
         }
-        guard pasteboard.writeFileURL(fileURL) else {
+        guard pasteboard.writeFileURLs(fileURLs) else {
             return .failed("macOS could not write the recording to the clipboard.")
         }
 

@@ -97,6 +97,22 @@ final class MediaNotificationServiceTests: XCTestCase {
         )
     }
 
+    func testRecordingClipSummaryIsSilent() {
+        let request = MediaNotificationService.makeNotificationRequest(
+            for: URL(fileURLWithPath: "/tmp/clip_01.mp4"),
+            kind: .recording(copiedToClipboard: true, clipCount: 3),
+            relatedFileURLs: ["/tmp/clip_01.mp4", "/tmp/clip_02.mp4", "/tmp/clip_03.mp4"].map { URL(fileURLWithPath: $0) }
+        )
+        XCTAssertEqual(
+            request.content.userInfo[MediaNotificationIdentifier.savedMediaPaths] as? [String],
+            ["/tmp/clip_01.mp4", "/tmp/clip_02.mp4", "/tmp/clip_03.mp4"]
+        )
+        XCTAssertEqual(request.content.title, "Recording Clips Saved")
+        XCTAssertEqual(request.content.body, "Saved 3 recording clips and copied them to the clipboard.")
+        XCTAssertNil(request.content.sound)
+        XCTAssertFalse(MediaNotificationService.presentationOptions.contains(.sound))
+    }
+
     func testUsesTheFirstVideoFrameForRecordingNotificationThumbnail() {
         let options = MediaNotificationService.notificationAttachmentOptions(
             for: .recording(copiedToClipboard: false)

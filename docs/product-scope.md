@@ -78,8 +78,13 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Capture through a bundled headless recorder with fixed arguments, passing a
   bit rate and scaled size when selected. Keep one video in the device's natural
   orientation, allowing content to rotate inside it at full display size.
+- Keep one recording session across fold transitions. When the encoded display
+  dimensions change, finish the current MP4 and begin the next at a keyframe.
+  Ordinary rotation within the locked capture canvas does not split a clip.
+- Name multi-clip sessions with one shared timestamp and ordered `_01`, `_02`
+  suffixes. A session without a dimension change keeps its ordinary filename.
 - Stop the selected recording with a targeted interrupt and finalize its local
-  MP4.
+  MP4 clips. Preserve completed clips if recording fails later.
 - Save MP4s into the same configured destination as screenshots. Do not create
   a separate recording directory or a destination picker in this phase.
 - Offer an opt-in Settings preference to add a device frame to saved screen
@@ -87,8 +92,10 @@ The first implementation is a complete vertical slice, not a visual mockup.
   available and compatible; otherwise use a generic black device frame. Keep
   the original MP4 and save the processed recording as a collision-safe
   `_framed.mp4` sibling.
-- Deliver a native success notification for each saved MP4, including a
-  first-frame preview and a **Reveal in Finder** action.
+- Deliver one silent success notification when the recording session finishes,
+  including the clip count when split, a first-frame preview, and a **Reveal in
+  Finder** action that selects all primary clips. Copy all primary clips together
+  when clipboard copying is enabled. Frame each clip using its own dimensions.
 - When Show taps is enabled, preserve the existing Android setting and restore
   it when the recording finishes.
 

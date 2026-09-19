@@ -35,6 +35,7 @@ metadata, so local and release app bundles report the same version.
 - macOS 14 or newer;
 - Xcode command-line tools and a selected Xcode installation;
 - Swift toolchain compatible with the package manifest;
+- CMake, pkg-config, and Python 3 for the first bundled recorder build;
 - Android SDK with `platform-tools/adb` for live-device checks.
 
 The app must still locate ADB successfully when launched outside an interactive
@@ -102,6 +103,10 @@ Manual verification should cover, where locally available:
     Start a recording in portrait, enter fullscreen landscape playback, then
     return to portrait. Confirm content rotates within the same video canvas
     without shrinking into a portrait letterbox, with and without framing.
+    On a foldable emulator, also record open, closed, then open again. Confirm
+    three numbered clips with fixed dimensions, independent playback, and the
+    right frame for each. Rotate without folding and confirm it stays one clip.
+    Verify one final silent notification and all primary clips on the clipboard.
 12. Installed AVDs appearing in the **Android Emulators** section with correct
     stopped or running status.
 13. Quick Boot and Cold Boot opening an AVD in the Android Emulator's own

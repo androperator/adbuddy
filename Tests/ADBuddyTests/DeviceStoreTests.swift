@@ -279,6 +279,61 @@ final class DeviceStoreTests: XCTestCase {
         )
     }
 
+    func testReportsMultipleClipsOnceAndCopiesAllPrimaryFiles() async throws {
+        let suiteName = "DeviceStoreTests.\(UUID().uuidString)"
+        guard let userDefaults = UserDefaults(suiteName: suiteName) else {
+            return XCTFail("Could not create isolated user defaults")
+        }
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let mediaDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ADBuddyDeviceStoreTests-\(UUID().uuidString)", isDirectory: true)
+        defer {
+            try? FileManager.default.removeItem(at: mediaDirectory)
+        }
+        let preferences = AppPreferences(
+            userDefaults: userDefaults,
+            defaultScreenshotDirectory: mediaDirectory
+        )
+        let mediaClipboard = RecordingMediaClipboard()
+        let notifier = RecordingSessionNotifier()
+        let store = DeviceStore(
+            preferences: preferences,
+            sdkLocator: sdkLocator,
+            processRunner: RecordingDeviceStoreProcessRunner(),
+            mediaClipboard: mediaClipboard,
+            mediaNotifier: notifier,
+            recordingCapture: TestScreenRecordingCapture(writesFile: true, clipCount: 3)
+        )
+        store.refreshFromPolling()
+        await waitForDeviceRefresh()
+        let device = try XCTUnwrap(store.devices.first)
+
+        store.startScreenRecording(of: device, options: .default)
+        await waitForScreenRecordingFeedback(in: store)
+
+        XCTAssertEqual(mediaClipboard.recordingURLs.count, 3)
+        XCTAssertEqual(mediaClipboard.recordingURLs.first?.pathExtension, "mp4")
+        XCTAssertEqual(
+            store.screenRecordingFeedback,
+            .success(
+                try XCTUnwrap(mediaClipboard.recordingURLs.first),
+                warning: nil,
+                copiedToClipboard: true,
+                clipCount: 3
+            )
+        )
+        for _ in 0..<100 {
+            if await notifier.fileGroups.count > 0 { break }
+            await Task.yield()
+        }
+        let groups = await notifier.fileGroups
+        XCTAssertEqual(groups, [mediaClipboard.recordingURLs])
+        XCTAssertNil(store.screenRecordingActivity)
+    }
+
     func testRevealsSavedScreenshotsAndRecordingsWhenEnabled() async throws {
         let suiteName = "DeviceStoreTests.\(UUID().uuidString)"
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {
@@ -466,7 +521,7 @@ private struct TestMediaClipboard: MediaClipboardCopying {
         .copied
     }
 
-    func copyRecording(at fileURL: URL) -> MediaClipboardCopyResult {
+    func copyRecordings(at fileURLs: [URL]) -> MediaClipboardCopyResult {
         .copied
     }
 }
@@ -479,8 +534,8 @@ private final class RecordingMediaClipboard: MediaClipboardCopying {
         .copied
     }
 
-    func copyRecording(at fileURL: URL) -> MediaClipboardCopyResult {
-        recordingURLs.append(fileURL)
+    func copyRecordings(at fileURLs: [URL]) -> MediaClipboardCopyResult {
+        recordingURLs.append(contentsOf: fileURLs)
         return .copied
     }
 }
@@ -562,5 +617,12 @@ private actor RecordingDeviceStoreProcessRunner: ProcessRunning {
 }
 
 private struct TestMediaNotifier: SavedMediaNotifying {
-    func notifyAboutSavedMedia(at fileURL: URL, kind: SavedMediaNotificationKind) async {}
+    func notifyAboutSavedMedia(at fileURLs: [URL], kind: SavedMediaNotificationKind) async {}
+}
+
+private actor RecordingSessionNotifier: SavedMediaNotifying {
+    private(set) var fileGroups: [[URL]] = []
+    func notifyAboutSavedMedia(at fileURLs: [URL], kind: SavedMediaNotificationKind) async {
+        fileGroups.append(fileURLs)
+    }
 }

@@ -4,14 +4,14 @@ import Foundation
 
 enum SavedMediaNotificationKind: Sendable {
     case screenshot(copiedToClipboard: Bool)
-    case recording(copiedToClipboard: Bool)
+    case recording(copiedToClipboard: Bool, clipCount: Int = 1)
 
     var title: String {
         switch self {
         case .screenshot:
             "Screenshot Saved"
-        case .recording:
-            "Recording Saved"
+        case .recording(_, let clipCount):
+            clipCount > 1 ? "Recording Clips Saved" : "Recording Saved"
         }
     }
 
@@ -21,22 +21,29 @@ enum SavedMediaNotificationKind: Sendable {
             copiedToClipboard
                 ? "\(fileURL.lastPathComponent) was copied to the clipboard."
                 : fileURL.lastPathComponent
-        case .recording(let copiedToClipboard):
-            copiedToClipboard
-                ? "\(fileURL.lastPathComponent) was copied to the clipboard."
-                : fileURL.lastPathComponent
+        case .recording(let copiedToClipboard, let clipCount):
+            if clipCount > 1 {
+                copiedToClipboard
+                    ? "Saved \(clipCount) recording clips and copied them to the clipboard."
+                    : "Saved \(clipCount) recording clips."
+            } else {
+                copiedToClipboard
+                    ? "\(fileURL.lastPathComponent) was copied to the clipboard."
+                    : fileURL.lastPathComponent
+            }
         }
     }
 }
 
 protocol SavedMediaNotifying: Sendable {
-    func notifyAboutSavedMedia(at fileURL: URL, kind: SavedMediaNotificationKind) async
+    func notifyAboutSavedMedia(at fileURLs: [URL], kind: SavedMediaNotificationKind) async
 }
 
 enum MediaNotificationIdentifier {
     static let category = "saved-media"
     static let revealInFinderAction = "reveal-saved-media-in-finder"
     static let savedMediaPath = "saved-media-path"
+    static let savedMediaPaths = "saved-media-paths"
 }
 
 final class MediaNotificationService: NSObject, SavedMediaNotifying, @unchecked Sendable {
@@ -63,7 +70,8 @@ final class MediaNotificationService: NSObject, SavedMediaNotifying, @unchecked 
         )
     }
 
-    func notifyAboutSavedMedia(at fileURL: URL, kind: SavedMediaNotificationKind) async {
+    func notifyAboutSavedMedia(at fileURLs: [URL], kind: SavedMediaNotificationKind) async {
+        guard let fileURL = fileURLs.first else { return }
         AppLogger.notifications.info("Preparing saved media notification")
         guard await isAuthorizedToPostNotifications() else {
             AppLogger.notifications.info("Saved media notification was not authorized")
@@ -71,7 +79,7 @@ final class MediaNotificationService: NSObject, SavedMediaNotifying, @unchecked 
         }
 
         do {
-            try await notificationCenter.add(Self.makeNotificationRequest(for: fileURL, kind: kind))
+            try await notificationCenter.add(Self.makeNotificationRequest(for: fileURL, kind: kind, relatedFileURLs: fileURLs))
             AppLogger.notifications.info("Posted saved media notification")
         } catch {
             AppLogger.notifications.error("Could not post saved media notification: \(error.localizedDescription, privacy: .public)")
@@ -81,14 +89,18 @@ final class MediaNotificationService: NSObject, SavedMediaNotifying, @unchecked 
     static func makeNotificationRequest(
         for fileURL: URL,
         kind: SavedMediaNotificationKind,
-        identifier: String = UUID().uuidString
+        identifier: String = UUID().uuidString,
+        relatedFileURLs: [URL] = []
     ) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.title = kind.title
         content.body = kind.body(for: fileURL)
         content.sound = nil
         content.categoryIdentifier = MediaNotificationIdentifier.category
-        content.userInfo = [MediaNotificationIdentifier.savedMediaPath: fileURL.path]
+        content.userInfo = [
+            MediaNotificationIdentifier.savedMediaPath: fileURL.path,
+            MediaNotificationIdentifier.savedMediaPaths: (relatedFileURLs.isEmpty ? [fileURL] : relatedFileURLs).map(\.path),
+        ]
         if let attachment = makeMediaAttachment(for: fileURL, kind: kind) {
             content.attachments = [attachment]
         }
@@ -166,10 +178,11 @@ extension MediaNotificationService: UNUserNotificationCenterDelegate {
             return
         }
 
-        let savedMediaURL = URL(fileURLWithPath: savedMediaPath)
+        let paths = response.notification.request.content.userInfo[MediaNotificationIdentifier.savedMediaPaths] as? [String]
+        let savedMediaURLs = (paths ?? [savedMediaPath]).map { URL(fileURLWithPath: $0) }
         completionHandler()
         DispatchQueue.main.async {
-            NSWorkspace.shared.activateFileViewerSelecting([savedMediaURL])
+            NSWorkspace.shared.activateFileViewerSelecting(savedMediaURLs)
         }
     }
 

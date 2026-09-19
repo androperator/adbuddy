@@ -329,8 +329,15 @@ The encoder may round dimensions to its supported alignment.
 
 The helper streams directly into a temporary local MP4 in the shared media
 folder. Stop sends SIGINT to the registered process for that session so the
-muxer can finish the file. The completed file moves to a collision-resistant
-final name. Both GUI and MCP use the same backend. Missing backend resources
+muxer can finish the file. The recorder inspects H.264 frame dimensions and finalizes a separate MP4 at
+an incoming keyframe whenever those dimensions change. It retains one process
+and session across fold transitions. Each clip has its own dimensions, codec
+configuration, and timestamp origin. Ordinary rotation within the locked canvas
+does not split a clip. Only finalized clips are handed to Swift; a later failure
+returns completed clips with a warning. The service moves these to
+collision-resistant final names, adding ordered suffixes for multi-clip sessions.
+The clipboard receives all primary clips and one silent notification summarizes
+the session. Its Finder action selects all primary clips. Both GUI and MCP use the same backend. Missing backend resources
 produce a visible failure; there is no fallback to the rotation-broken recorder.
 See [recording-backend.md](recording-backend.md) for dependency rationale,
 packaging, matching sources, and third-party notices.

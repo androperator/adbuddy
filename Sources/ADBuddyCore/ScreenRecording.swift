@@ -33,7 +33,7 @@ public struct ScreenRecordingOptions: Equatable, Sendable {
     }
 }
 
-public struct ScreenRecordingCaptureOutput: Equatable, Sendable {
+public struct ScreenRecordingClip: Equatable, Sendable {
     public let primaryFileURL: URL
     public let originalFileURL: URL?
 
@@ -49,6 +49,24 @@ public struct ScreenRecordingCaptureOutput: Equatable, Sendable {
             [primaryFileURL]
         }
     }
+}
+
+public struct ScreenRecordingCaptureOutput: Equatable, Sendable {
+    public let clips: [ScreenRecordingClip]
+
+    public init(clips: [ScreenRecordingClip]) {
+        precondition(!clips.isEmpty)
+        self.clips = clips
+    }
+
+    public init(primaryFileURL: URL, originalFileURL: URL?) {
+        self.init(clips: [ScreenRecordingClip(primaryFileURL: primaryFileURL, originalFileURL: originalFileURL)])
+    }
+
+    public var primaryFileURL: URL { clips[0].primaryFileURL }
+    public var originalFileURL: URL? { clips[0].originalFileURL }
+    public var primaryFileURLs: [URL] { clips.map(\.primaryFileURL) }
+    public var savedFileURLs: [URL] { clips.flatMap(\.savedFileURLs) }
 }
 
 public enum ScreenRecordingResolution: Int, CaseIterable, Equatable, Identifiable, Sendable {
@@ -152,7 +170,7 @@ public enum ScreenRecordingActivity: Equatable {
 }
 
 public enum ScreenRecordingFeedback: Equatable {
-    case success(URL, warning: String?, copiedToClipboard: Bool)
+    case success(URL, warning: String?, copiedToClipboard: Bool, clipCount: Int = 1)
     case failure(String)
 
     public var isSuccess: Bool {
@@ -164,8 +182,12 @@ public enum ScreenRecordingFeedback: Equatable {
 
     public var title: String {
         switch self {
-        case .success(_, let warning, _):
-            warning == nil ? "Recording Saved" : "Recording Saved with Warning"
+        case .success(_, let warning, _, let clipCount):
+            if clipCount > 1 {
+                warning == nil ? "Recording Clips Saved" : "Recording Clips Saved with Warning"
+            } else {
+                warning == nil ? "Recording Saved" : "Recording Saved with Warning"
+            }
         case .failure:
             "Recording Failed"
         }
@@ -173,7 +195,11 @@ public enum ScreenRecordingFeedback: Equatable {
 
     public var detail: String {
         switch self {
-        case .success(let fileURL, let warning, let copiedToClipboard):
+        case .success(let fileURL, let warning, let copiedToClipboard, let clipCount):
+            if clipCount > 1 {
+                let summary = "Saved \(clipCount) recording clips." + (copiedToClipboard ? " Copied to the clipboard." : "")
+                return warning.map { summary + " " + $0 } ?? summary
+            }
             let copyDetail = copiedToClipboard
                 ? "\(fileURL.lastPathComponent) copied to the clipboard."
                 : fileURL.lastPathComponent

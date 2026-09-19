@@ -160,7 +160,7 @@ public struct ScreenRecordingService: Sendable {
             originalShowTapsSetting = nil
         }
 
-        let screenRecordResult = await capture.record(
+        let backendResult = await capture.record(
             session: session,
             bitRateBitsPerSecond: options.bitRateBitsPerSecond,
             outputSize: outputSize,
@@ -173,67 +173,84 @@ public struct ScreenRecordingService: Sendable {
             for: session.device
         )
 
-        guard screenRecordResult.succeeded else {
+        let screenRecordResult = backendResult.processResult
+        guard !backendResult.clipURLs.isEmpty else {
             fileManager.removeItemIfPresent(at: destinationURLs.temporaryURL)
-            var message = adbFailureMessage(from: screenRecordResult)
+            var message = screenRecordResult.succeeded
+                ? "The recorder did not produce a complete video clip."
+                : adbFailureMessage(from: screenRecordResult)
             if let showTapsRestoreFailure {
                 message += " Show taps could not be restored: \(showTapsRestoreFailure)"
             }
             return .failure(.adbFailed(message))
         }
 
-        do {
-            try fileManager.moveItem(at: destinationURLs.temporaryURL, to: destinationURLs.originalURL)
-        } catch {
-            fileManager.removeItemIfPresent(at: destinationURLs.temporaryURL)
-            return .failure(.unableToSave(error.localizedDescription))
+        var warnings: [String] = []
+        if !screenRecordResult.succeeded {
+            warnings.append("Recording ended early: \(adbFailureMessage(from: screenRecordResult)) Completed clips were retained.")
         }
-
-        var warnings = showTapsRestoreFailure.map {
-            ["\(destinationURLs.originalURL.lastPathComponent) was saved, but Show taps could not be restored: \($0)"]
-        } ?? []
-
-        guard let framedURL = destinationURLs.framedURL else {
-            return .success(
-                ScreenRecordingCaptureOutput(
-                    primaryFileURL: destinationURLs.originalURL,
-                    originalFileURL: nil
-                ),
-                warning: warnings.isEmpty ? nil : warnings.joined(separator: " ")
-            )
+        if let showTapsRestoreFailure {
+            warnings.append("Show taps could not be restored: \(showTapsRestoreFailure)")
         }
-
-        switch await recordingFramer.frame(
-            recordingAt: destinationURLs.originalURL,
-            outputURL: framedURL,
-            device: session.device,
-            overlaysDeviceDetails: framing.overlaysDeviceDetails
-        ) {
-        case .success:
-            return .success(
-                ScreenRecordingCaptureOutput(
-                    primaryFileURL: framedURL,
-                    originalFileURL: destinationURLs.originalURL
-                ),
-                warning: warnings.isEmpty ? nil : warnings.joined(separator: " ")
-            )
-        case .failure(let message):
-            warnings.append(
-                "\(destinationURLs.originalURL.lastPathComponent) was saved, but ADBuddy could not add a device frame: \(message)"
-            )
-        case .cancelled:
-            warnings.append(
-                "\(destinationURLs.originalURL.lastPathComponent) was saved, but device framing was cancelled."
-            )
+        let destinations = clipDestinations(for: destinationURLs, count: backendResult.clipURLs.count)
+        var clips: [ScreenRecordingClip] = []
+        for (temporaryURL, urls) in zip(backendResult.clipURLs, destinations) {
+            do {
+                try fileManager.moveItem(at: temporaryURL, to: urls.originalURL)
+            } catch {
+                // Keep completed footage recoverable even if final naming fails.
+                warnings.append("Could not move a completed clip to \(urls.originalURL.lastPathComponent): \(error.localizedDescription). It remains at \(temporaryURL.path).")
+                clips.append(ScreenRecordingClip(primaryFileURL: temporaryURL, originalFileURL: nil))
+                continue
+            }
+            var clip = ScreenRecordingClip(primaryFileURL: urls.originalURL, originalFileURL: nil)
+            if let framedURL = urls.framedURL {
+                switch await recordingFramer.frame(
+                    recordingAt: urls.originalURL,
+                    outputURL: framedURL,
+                    device: session.device,
+                    overlaysDeviceDetails: framing.overlaysDeviceDetails
+                ) {
+                case .success:
+                    clip = ScreenRecordingClip(primaryFileURL: framedURL, originalFileURL: urls.originalURL)
+                case .failure(let message):
+                    warnings.append("\(urls.originalURL.lastPathComponent) was saved, but ADBuddy could not add a device frame: \(message)")
+                case .cancelled:
+                    warnings.append("\(urls.originalURL.lastPathComponent) was saved, but device framing was cancelled.")
+                }
+            }
+            clips.append(clip)
         }
-
         return .success(
-            ScreenRecordingCaptureOutput(
-                primaryFileURL: destinationURLs.originalURL,
-                originalFileURL: nil
-            ),
-            warning: warnings.joined(separator: " ")
+            ScreenRecordingCaptureOutput(clips: clips),
+            warning: warnings.isEmpty ? nil : warnings.joined(separator: " ")
         )
+    }
+
+    private func clipDestinations(
+        for urls: RecordingDestinationURLs,
+        count: Int
+    ) -> [(originalURL: URL, framedURL: URL?)] {
+        guard count > 1 else { return [(urls.originalURL, urls.framedURL)] }
+        let base = urls.originalURL.deletingPathExtension()
+        var attempt = 1
+        while true {
+            let collisionSuffix = attempt == 1 ? "" : "-\(attempt)"
+            let destinations = (1...count).map { index in
+                let path = base.path + collisionSuffix + String(format: "_%02d", index)
+                return (
+                    originalURL: URL(fileURLWithPath: path + ".mp4"),
+                    framedURL: urls.framedURL == nil ? nil : URL(fileURLWithPath: path + "_framed.mp4")
+                )
+            }
+            if destinations.allSatisfy({
+                !fileManager.fileExists(at: $0.originalURL)
+                    && ($0.framedURL.map { !fileManager.fileExists(at: $0) } ?? true)
+            }) {
+                return destinations
+            }
+            attempt += 1
+        }
     }
 
     public func stop(session: ScreenRecordingSession) async -> ScreenRecordingStopResult {

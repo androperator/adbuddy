@@ -36,7 +36,9 @@ install_architecture() {
   tar -xzf "$archive" -C "$extracted"
   mkdir -p "$DESTINATION/MacOS" "$DESTINATION/Resources/Recording/$architecture"
   # Use the user's resolved Android SDK ADB, not the release's bundled ADB.
-  cp "$extracted/scrcpy-macos-$upstream_architecture-v$VERSION/scrcpy" "$DESTINATION/MacOS/scrcpy-$architecture"
+  local patched_client
+  patched_client="$("$ROOT_DIR/scripts/recording/build_backend.sh" "$architecture")"
+  cp "$patched_client" "$DESTINATION/MacOS/scrcpy-$architecture"
   cp "$extracted/scrcpy-macos-$upstream_architecture-v$VERSION/"{scrcpy-server,LICENSE} "$DESTINATION/Resources/Recording/$architecture/"
   rm -rf "$extracted"
 }
