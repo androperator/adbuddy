@@ -71,3 +71,22 @@ re-sign your local app with an ad-hoc signature after replacement.
 
 Do not update a helper binary without updating its version, checksum, matching
 sources, and these notices. The app does not bundle the release's ADB executable.
+
+## Manual verification
+
+Use a connected device or emulator. Verify these checks with framing enabled
+and disabled where applicable:
+
+- a screen recording with each selected option reaching the same media folder
+  as screenshots, followed by a successful Stop Recording action;
+  confirm an emulator capture uses its configured AVD name rather than a
+  system-image model such as `sdk-gphone64-arm64` in the saved filename;
+- a successful recording notification offering **Reveal in Finder**;
+- Show taps returning to its original Android setting after recording.
+  Start a recording in portrait, enter fullscreen landscape playback, then
+  return to portrait. Confirm content rotates within the same video canvas
+  without shrinking into a portrait letterbox, with and without framing.
+  On a foldable emulator, also record open, closed, then open again. Confirm
+  three numbered clips with fixed dimensions, independent playback, and the
+  right frame for each. Rotate without folding and confirm it stays one clip.
+  Verify one final silent notification and all primary clips on the clipboard.

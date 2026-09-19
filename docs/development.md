@@ -1,144 +1,74 @@
-# Development workflow
+# Development
 
-## Development model
-
-ADBuddy uses SwiftPM and a shell-first macOS development loop. The GUI
-binary must be packaged and launched as an `.app` bundle, not only run as a raw
-SwiftPM executable, so local testing reflects normal macOS activation and
-bundle behavior.
-
-The project includes:
-
-```text
-scripts/build_and_run.sh
-scripts/package_release.sh
-VERSION
-.codex/environments/environment.toml
-```
-
-`scripts/build_and_run.sh` stops a prior local app instance, builds the project,
-packages and ad-hoc signs the `.app`, launches it, and reports the app location
-or failure. The local signature binds the bundle identity for services such as
-macOS user notifications; it is not a substitute for the Developer ID signing
-required for release.
-
-`scripts/package_release.sh` is a separate release-only command. It builds
-universal release binaries, signs them with the configured Developer ID
-identity, and notarizes a versioned ZIP archive. It reads the release version
-from the repository's `VERSION` file and never launches the app.
-
-Both packaging scripts use `VERSION` when writing the app bundle's version
-metadata, so local and release app bundles report the same version.
-
-## Local prerequisites
+## Setup
 
 - macOS 14 or newer;
-- Xcode command-line tools and a selected Xcode installation;
-- Swift toolchain compatible with the package manifest;
-- CMake, pkg-config, and Python 3 for the first bundled recorder build;
-- Android SDK with `platform-tools/adb` for live-device checks.
+- Xcode, its command-line tools, and a Swift toolchain compatible with
+  `Package.swift`;
+- CMake, pkg-config, Python 3, and network access for the first bundled recorder
+  build; see [recording-backend.md](recording-backend.md);
+- an Android SDK containing `platform-tools/adb` for live-device checks.
 
-The app must still locate ADB successfully when launched outside an interactive
-shell, where common shell initialization and `PATH` entries may be absent.
+The local scripts use the selected Xcode installation. If Xcode setup is
+incomplete, they can use separately installed Command Line Tools with the
+macOS 26.5 SDK. Full Xcode must still be installed for the XCTest frameworks
+and runner. The scripts do not accept Xcode licenses or change the system's
+developer-directory selection. Release builds require fully configured Xcode.
 
-## Validation loop
+## Build and run
 
-Run the smallest relevant check after each coherent change:
+From the repository root:
+
+```sh
+scripts/build_and_run.sh
+```
+
+This stops the previous local app instance, builds the SwiftPM package, packages
+and ad-hoc signs `dist/ADBuddy.app`, and launches it. Use the packaged app for
+GUI testing so bundle identity and macOS activation match normal app usage.
+The bundle version comes from `VERSION`.
+
+For a launch smoke check:
+
+```sh
+scripts/build_and_run.sh --verify
+```
+
+This performs the same build and launch, then checks that the app process is
+running after one second. It does not verify UI behavior or device operations.
+For public signing, notarization, and packaging, see [release.md](release.md).
+
+## Tests
+
+Run the suite or select relevant test classes:
 
 ```sh
 scripts/test.sh
-scripts/build_and_run.sh
-```
-
-The local scripts use the selected Xcode installation when it is ready. If
-Xcode setup is incomplete, they can use the separately installed Command Line
-Tools with the macOS 26.5 SDK. This avoids the macOS 27 command-line SDK's
-missing SwiftUI macro plugin. Full Xcode must still be installed for its XCTest
-frameworks and runner. The scripts do not accept Xcode licenses or change the
-system's developer-directory selection. Release packaging continues to require
-a fully configured Xcode installation.
-
-Run selected test classes with a comma-separated XCTest selector:
-
-```sh
 scripts/test.sh ADBuddyTests.AndroidVirtualDeviceDetailsServiceTests,ADBuddyTests.AndroidEmulatorServiceTests
 ```
 
-The test script builds the tests and invokes XCTest directly, avoiding SwiftPM
-test discovery's dependency on full Xcode platform metadata. With a fully
-configured Xcode installation, ordinary `swift build` and `swift test` remain
-available.
+The script builds the tests and invokes XCTest directly. With fully configured
+Xcode, ordinary `swift build` and `swift test` are also available. Unit tests use
+fake process runners and do not require an Android SDK or connected device;
+passing them does not prove live ADB behavior.
 
-Once the script exists, prefer it for end-to-end local launches. Do not claim
-that live screenshot capture was verified unless an actual connected device or
-emulator produced a valid PNG.
+Manual checks live with the features they verify:
 
-For runtime diagnostics, use unified logging with an app subsystem and inspect
-only the targeted messages. Add logs around SDK resolution, device refresh,
-process failures, menu actions, and screenshot outcomes.
+- [Product workflows](product-scope.md#manual-verification): discovery,
+  screenshots, emulators, app actions, installation, and Settings.
+- [Recording](recording-backend.md#manual-verification): options, rotation,
+  fold transitions, saved clips, and Show taps restoration.
+- [Logcat](logcat.md#verification): streaming, filtering, inspection, and layout.
+- [MCP](mcp.md#verification): protocol smoke checks and agent media capture.
 
-## Testing boundaries
+## Debugging
 
-Unit tests should cover deterministic code and use fake process runners for
-service behavior. They must not require a real Android SDK or device.
+Each mode rebuilds and packages the app before starting:
 
-Manual verification should cover, where locally available:
+| Command | Purpose |
+| --- | --- |
+| `scripts/build_and_run.sh --debug` | Run the packaged executable under LLDB. |
+| `scripts/build_and_run.sh --logs` | Launch and stream logs for the ADBuddy process. |
+| `scripts/build_and_run.sh --telemetry` | Launch and stream logs for the `com.clawperator.adbuddy` subsystem. |
 
-1. SDK found through each supported discovery path;
-2. no-device and non-usable-device UI states;
-3. a physical device or emulator becoming visible after a refresh;
-4. direct screenshot capture creating a valid PNG;
-5. a successful screenshot notification offering **Reveal in Finder**;
-6. automatic clipboard copy for successful screenshots and recordings when
-   that preference is enabled;
-7. automatic Finder reveal for successful screenshots and recordings when that
-   preference is enabled;
-8. a failed ADB invocation presenting an actionable error.
-9. a screen recording with each selected option reaching the same media folder
-   as screenshots, followed by a successful Stop Recording action;
-   confirm an emulator capture uses its configured AVD name rather than a
-   system-image model such as `sdk-gphone64-arm64` in the saved filename;
-10. a successful recording notification offering **Reveal in Finder**;
-11. Show taps returning to its original Android setting after recording.
-    Start a recording in portrait, enter fullscreen landscape playback, then
-    return to portrait. Confirm content rotates within the same video canvas
-    without shrinking into a portrait letterbox, with and without framing.
-    On a foldable emulator, also record open, closed, then open again. Confirm
-    three numbered clips with fixed dimensions, independent playback, and the
-    right frame for each. Rotate without folding and confirm it stays one clip.
-    Verify one final silent notification and all primary clips on the clipboard.
-12. Installed AVDs appearing in the **Android Emulators** section with correct
-    stopped or running status.
-13. Quick Boot and Cold Boot opening an AVD in the Android Emulator's own
-    standalone window, with its ADB serial shown after discovery.
-14. A running AVD stopping through its control. Exercise **Wipe Data and
-    Start** only as far as its confirmation in routine manual testing; do not
-    erase a developer's AVD unless that reset is intentional.
-15. Each foreground-app action resolves the active package on the selected
-    device, shows success or actionable failure feedback, and uses the resolved
-    package in the uninstall confirmation. Do not confirm an uninstall during
-    routine verification unless that removal is intentional.
-16. Open the Link sheet, select a usable device, and launch a URI. Verify an
-    optional package target such as `com.android.chrome` receives
-    `https://techmeme.com` when Chrome is installed on the selected device.
-17. On an emulator, apply each Device Settings action, check the corresponding
-    Android system value, then restore light mode, gesture navigation, and
-    disabled rendering overlays. Do not change a physical device's system
-    settings during routine verification unless that is intentional.
-18. Check a standalone emulator displays **Open Emulator Window** and brings
-    that window to the front. Check Android Studio-managed and headless
-    emulators clearly state that no standalone window can be opened.
-19. Choose **Install APK**, select a single APK and one or more usable devices,
-    then verify each device reports its own installation outcome. If `aapt2` is
-    available and the APK has a launcher activity, verify **Open after install**
-    opens the installed app. Also drag an APK onto a usable device row and open
-    the packaged app from Finder using **Open With ADBuddy**.
-
-## Change discipline
-
-- Keep platform process work in services, not views.
-- Preserve unrelated work in a dirty worktree.
-- Run `git status --short` before staging and stage files explicitly.
-- Use a Conventional Commit message for each coherent completed change.
-- Do not push, tag, create a GitHub release, notarize, or update a Homebrew tap
-  unless explicitly requested.
+Contribution and agent workflow rules are in [AGENTS.md](../AGENTS.md).

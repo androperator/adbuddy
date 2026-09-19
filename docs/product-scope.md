@@ -9,11 +9,12 @@ feel fast, small, reliable, and obvious.
 The app is not an Android Studio replacement. It should remain a focused tool
 for a small number of high-value workflows.
 
-## Phase 0 and Phase 1
+## Supported workflows
 
-The first implementation is a complete vertical slice, not a visual mockup.
+The following capabilities are implemented. These requirements describe the
+current product contract; they are not an outstanding implementation plan.
 
-### Phase 0 - Foundation
+### Device discovery and app surfaces
 
 - Build and launch a native macOS app.
 - Provide both a `MenuBarExtra` and a conventional app window.
@@ -28,7 +29,7 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - Show clear UI states for a missing SDK, missing ADB, no devices,
   unauthorized devices, offline devices, and usable devices.
 
-### Phase 1 - Screenshots
+### Screenshots and shared media
 
 - Offer **Take Screenshot** for each usable connected device from the menu bar
   and basic main window.
@@ -60,13 +61,13 @@ The first implementation is a complete vertical slice, not a visual mockup.
   preview of the saved PNG and a **Reveal in Finder** action.
 - Copy successful screenshots and saved MP4 recordings to the clipboard as file
   URLs by default, so clipboard managers can reveal the saved media. This
-  behavior is a persisted preference exposed by the app's Settings sheet.
+  behavior is a persisted preference exposed by the app's Settings window.
 - Optionally reveal each saved screenshot and MP4 recording in Finder through a
   persisted Settings preference.
-- Let users choose the shared media destination from the Settings sheet. The
+- Let users choose the shared media destination from the Settings window. The
   selected folder is used for both screenshots and recordings.
 
-### Phase 2 - Screen recording
+### Screen recording
 
 - Offer **Record Screen** for each usable connected device from the menu bar
   and main window.
@@ -83,10 +84,11 @@ The first implementation is a complete vertical slice, not a visual mockup.
   Ordinary rotation within the locked capture canvas does not split a clip.
 - Name multi-clip sessions with one shared timestamp and ordered `_01`, `_02`
   suffixes. A session without a dimension change keeps its ordinary filename.
+- Limit each recording session to three minutes.
 - Stop the selected recording with a targeted interrupt and finalize its local
   MP4 clips. Preserve completed clips if recording fails later.
 - Save MP4s into the same configured destination as screenshots. Do not create
-  a separate recording directory or a destination picker in this phase.
+  a separate recording directory or a per-recording destination picker.
 - Offer an opt-in Settings preference to add a device frame to saved screen
   recordings. For an emulator, use its configured Android SDK skin when it is
   available and compatible; otherwise use a generic black device frame. Keep
@@ -99,7 +101,7 @@ The first implementation is a complete vertical slice, not a visual mockup.
 - When Show taps is enabled, preserve the existing Android setting and restore
   it when the recording finishes.
 
-### Phase 3 - Emulator management
+### Emulator management
 
 - Show all connected Android devices, physical and emulator, together in the
   compact main-window list. A connected emulator is shown once, with its AVD
@@ -187,7 +189,7 @@ The first implementation is a complete vertical slice, not a visual mockup.
   the newest available Android SDK `aapt2`, then use an explicit ADB activity
   launch. A missing `aapt2` or non-launchable APK must not turn a successful
   installation into a failure.
-- The first version supports one ordinary APK at a time. Defer split APKs,
+- Installation supports one ordinary APK at a time. Defer split APKs,
   `.apks` archives, and Android App Bundles until their install behavior can be
   presented clearly.
 
@@ -195,32 +197,107 @@ The first implementation is a complete vertical slice, not a visual mockup.
 
 - Provide a local stdio MCP server for agents that need the completed device,
   emulator, screenshot, and recording actions without automating the macOS UI.
-- Expose discovery before actions, and require an explicit ADB serial for every
-  device-targeting action.
+- Expose discovery before actions. Require an ADB serial for screenshots,
+  recording start, and emulator stop; use an AVD name for emulator start and
+  the returned recording ID for recording stop.
 - Reuse the app's configured shared media folder and recording defaults.
-- Keep the first server local-only. Do not add HTTP, SSE, or a network listener.
+- Keep the server local-only. Do not add HTTP, SSE, or a network listener.
 - Allow Quick Boot and Cold Boot AVD launch plus stopping by serial. Do not
   expose destructive wipe-data startup through MCP.
 
-## Initial acceptance flow
+### Logcat
+
+- Open one native streaming Logcat window per device, with recent history,
+  application and minimum-level filters, text search, and crash filtering.
+- Support pause, follow, clear, copy, optional columns, and message wrapping.
+- Retain at most 50,000 entries per window and reconnect after a device returns.
+- Persist shared table layout and severity colors; keep filters and retained
+  logs local to each window session.
+- See [`logcat.md`](logcat.md) for the complete behavior and validation contract.
+
+## Screenshot acceptance flow
 
 1. Launch ADBuddy.
-2. See its menu bar item.
+2. See its menu bar item with the default settings.
 3. Connect one or more Android devices or launch an emulator.
 4. See device state refresh in the menu and main window.
 5. Choose **Take Screenshot** for a usable device.
-6. Receive a valid PNG promptly in `~/Screenshots`.
+6. Receive a valid PNG promptly in the configured folder (`~/Screenshots` by
+   default).
 7. Repeat without Android Studio running.
 
-## Explicitly deferred work
+## Manual verification
 
-Do not create placeholder interfaces or implementation for these until their
-respective preceding slices are complete:
+Use a local device or emulator where available. Run checks relevant to the
+changed behavior and record which device-dependent checks were performed.
+Check SDK discovery when launching outside an interactive shell as well.
+
+### Discovery and screenshots
+
+- SDK found through each supported discovery path;
+- no-device and non-usable-device UI states;
+- a physical device or emulator becoming visible after a refresh;
+- direct screenshot capture creating a valid PNG;
+- a successful screenshot notification offering **Reveal in Finder**;
+- automatic clipboard copy for successful screenshots and recordings when
+  that preference is enabled;
+- automatic Finder reveal for successful screenshots and recordings when that
+  preference is enabled;
+- a failed ADB invocation presenting an actionable error.
+
+### Emulator lifecycle and windows
+
+- Stopped and transitional AVDs appearing in **Android Emulators**, with
+  running AVDs represented once in **Connected Android Devices**.
+- Quick Boot and Cold Boot opening an AVD in the Android Emulator's own
+  standalone window, with its ADB serial shown after discovery.
+- A running AVD stopping through its control. Exercise **Wipe Data and
+  Start** only as far as its confirmation in routine manual testing; do not
+  erase a developer's AVD unless that reset is intentional.
+- Double-click a connected standalone emulator to reveal its window. For
+  an Android Studio-managed emulator, verify the Android Studio host opens.
+  Headless or unidentified hosts must not offer a window-reveal action.
+  Check device-ID copying and AVD-folder reveal from contextual menus.
+
+### App actions, links, and installation
+
+- Each foreground-app action resolves the active package on the selected
+  device, shows success or actionable failure feedback, and uses the resolved
+  package in the uninstall confirmation. Do not confirm an uninstall during
+  routine verification unless that removal is intentional.
+- Open the Link sheet, select a usable device, and launch a URI. Verify an
+  optional package target such as `com.android.chrome` receives
+  `https://techmeme.com` when Chrome is installed on the selected device.
+- On an emulator, apply each Device Settings action, check the corresponding
+  Android system value, then restore light mode, gesture navigation, and
+  disabled rendering overlays. Do not change a physical device's system
+  settings during routine verification unless that is intentional.
+- Choose **Install APK**, select a single APK and one or more usable devices,
+  then verify each device reports its own installation outcome. If `aapt2` is
+  available and the APK has a launcher activity, verify **Open after install**
+  opens the installed app. Also drag an APK onto a usable device row and open
+  the packaged app from Finder using **Open With ADBuddy**.
+
+### Settings
+
+- Check Settings tabs, shared media destination, framing, original retention,
+  device-details overlay, half-size PNG output, menu bar visibility, and
+  success-banner preferences. Relaunch to verify persistence.
+
+Recording checks are in [recording-backend.md](recording-backend.md#manual-verification).
+Use the dedicated [Logcat](logcat.md#verification) and [MCP](mcp.md#verification)
+checks when changing those features.
+
+## Outside the current scope
+
+The following capabilities are not implemented. Add them only as deliberate
+scope changes, without placeholder interfaces:
 
 - AVD creation, configuration, and snapshot management;
-- Logcat implementation, whose first standalone window target is specified in
-  [`logcat.md`](logcat.md);
+- saved Logcat filter presets, log export, advanced field or regex filters,
+  device-buffer mutation, and multiple Logcat tabs per window;
+- split APKs, `.apks` archives, and Android App Bundles;
 - in-app automatic updates.
 
-The source structure should accommodate later phases without prebuilding their
-features or abstractions.
+Keep the source structure focused on implemented behavior rather than
+prebuilding abstractions for these possible extensions.

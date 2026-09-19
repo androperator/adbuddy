@@ -8,8 +8,9 @@ protocol hierarchy.
 
 The app targets macOS 14 or newer and uses SwiftUI for scenes, window chrome,
 and controls. AppKit is reserved for narrow platform needs that SwiftUI cannot
-handle cleanly: the editable Logcat application picker and virtualized native
-Logcat table.
+handle cleanly, including window behavior, the editable Logcat application
+picker, the virtualized native Logcat table, file panels, clipboard access,
+and Finder integration.
 
 ## Scenes
 
@@ -26,14 +27,15 @@ MenuBarExtra
 
 Settings window
   General menu bar visibility, shared media destination, media clipboard-copy,
-  Finder reveal, screenshot framing, and Logcat colors
+  Finder reveal, screenshot and recording framing, additional PNG output,
+  device-details overlays, and Logcat colors
 
 Logcat WindowGroup (one window per device serial)
   Dedicated streaming viewer with window-scoped filters, follow state, and retention
 ```
 
 The app uses normal application behavior while any ADBuddy window is open, with
-a visible main window and Dock presence. After the user closes the final ADBuddy
+Dock and Command-Tab presence. After the user closes the final ADBuddy
 window, the app remains available from its menu-bar utility but transitions to
 the accessory activation policy, removing its Dock and Command-Tab presence
 until another ADBuddy window opens.
@@ -49,7 +51,7 @@ actions bring that existing window forward rather than creating another.
 The per-device Logcat scene is specified in [`logcat.md`](logcat.md). Its state
 remains isolated from the shared device-discovery store.
 
-## Initial source layout
+## Source layout
 
 ```text
 Sources/
@@ -192,8 +194,8 @@ return a name, media falls back to the parsed ADB device name.
 
 `LogcatStore` owns only one Logcat window's retained entries, application,
 minimum-level, crash-and-exception, and text-search filters, pause/follow
-state, and reconnect lifecycle. Column visibility is likewise local to the
-window session. The store observes the shared `DeviceStore` result by serial,
+state, and reconnect lifecycle. Table layout and wrapping are shared persisted
+preferences in `AppPreferences`. The store observes the shared `DeviceStore` result by serial,
 cancels its stream when that device is unavailable, and resumes it when the
 same serial is usable again. It keeps at most 50,000 typed entries and derives
 the visible list incrementally
@@ -206,7 +208,7 @@ retain a second 50,000-entry array.
 
 ## Android SDK discovery
 
-`AndroidSDKLocator` should check candidates in this order:
+`AndroidSDKLocator` checks candidates in this order:
 
 1. `ANDROID_HOME`;
 2. `ANDROID_SDK_ROOT`;
@@ -214,7 +216,7 @@ retain a second 50,000-entry array.
 
 For each candidate, it verifies that `platform-tools/adb` exists and is
 executable. A later preference can offer an explicit SDK path, but that is not
-needed for the first milestone.
+currently implemented.
 
 ## Device model
 
@@ -225,7 +227,7 @@ feeds Logcat titles and headers, menus, pickers, recording options, confirmation
 feedback, and MCP device discovery. Serial and raw model metadata stay unchanged.
 If the console cannot resolve a name, discovery uses the serial rather than the
 SDK model name. The GUI retains the last resolved name through a temporary
-console failure or offline state, until that serial disconnects. It should contain:
+console failure or offline state, until that serial disconnects. The model contains:
 
 - a stable serial identifier;
 - an optional human-friendly name;
@@ -284,8 +286,8 @@ macOS consumes writable attachment files.
 
 `AppPreferences` is an application-owned wrapper around `UserDefaults`.
 It persists a screenshot destination path, screenshot framing and
-original-retention preferences, the optional device-details overlay, recording
-framing, and whether successful screenshots and recordings are automatically
+original-retention preferences, the optional half-size PNG copy, device-details
+overlay, recording framing, and whether successful screenshots and recordings are automatically
 copied to the clipboard. The same path is the shared media destination for
 screenshots and MP4 recordings. It also persists whether media is automatically
 revealed in Finder, and stores a recording bit rate, resolution percentage, and
@@ -301,8 +303,10 @@ itself.
 
 The same store persists six serializable sRGB component values for global
 Logcat severity colors. Settings changes update every open Logcat window
-immediately; application filters, pause/follow state, retained rows, and
-column visibility remain window-session state.
+immediately. It also persists Logcat column visibility, order, widths, and
+message wrapping, shared by all Logcat windows. Application, minimum-level,
+search, and crash filters, pause/follow state, retained rows, and scroll position
+remain window-session state.
 
 Because the app is non-sandboxed, store a regular absolute path. If future
 distribution requires sandboxing, replace this storage with a security-scoped
@@ -310,7 +314,10 @@ bookmark through a deliberate migration.
 
 The app presents a dedicated SwiftUI Settings window. It receives the existing
 `AppPreferences` instance and uses a native folder importer to update the
-shared media destination.
+shared media destination. Its tabs are General (menu bar and feedback),
+Screenshots (shared media and capture output), and Theme (Logcat colors).
+Recording bit rate, resolution, and Show taps are selected in the recording
+options sheet.
 
 The app writes shared media and recording settings through its standard
 `com.clawperator.adbuddy` application defaults domain. The bundled MCP helper
@@ -328,10 +335,11 @@ For native resolution it leaves out the size limit; reduced percentages scale
 the physical dimensions reported by `wm size` and limit the longest dimension.
 The encoder may round dimensions to its supported alignment.
 
-The helper streams directly into a temporary local MP4 in the shared media
-folder. Stop sends SIGINT to the registered process for that session so the
-muxer can finish the file. The recorder inspects H.264 frame dimensions and finalizes a separate MP4 at
-an incoming keyframe whenever those dimensions change. It retains one process
+The helper streams into numbered temporary local MP4 clips in the shared media
+folder, with a three-minute session limit. Stop sends SIGINT to the registered
+process for that session so the muxer can finish the file. The recorder inspects
+H.264 frame dimensions and finalizes a separate MP4 at an incoming keyframe
+whenever those dimensions change. It retains one process
 and session across fold transitions. Each clip has its own dimensions, codec
 configuration, and timestamp origin. Ordinary rotation within the locked canvas
 does not split a clip. Only finalized clips are handed to Swift; a later failure
@@ -344,7 +352,7 @@ See [recording-backend.md](recording-backend.md) for dependency rationale,
 packaging, matching sources, and third-party notices.
 
 When recording framing is enabled, the original MP4 is retained. The service
-reserves an original and `_framed.mp4` pair before capture, then uses
+reserves collision-safe names for each finalized clip and uses
 AVFoundation and Core Animation to export the framed sibling without external
 executables. It preserves the video timing, preferred orientation, and source
 audio tracks. An emulator recording uses the same locally discovered SDK skin
@@ -374,7 +382,7 @@ Test pure behavior without a device:
 - SDK skin layout matching, generic-frame fallback, and PNG composition;
 - process result to user-facing error mapping.
 - display-size parsing, recording argument construction, Show taps restoration,
-  non-overwriting MP4 retrieval, recording-frame filename pairs, frame geometry,
+  non-overwriting MP4 finalization, recording-frame filename pairs, frame geometry,
   and video-composition transforms.
 - incremental Logcat parsing, filtering, retention, process cancellation,
   reconnect policy, preferences, and window-scoped inspection controls.

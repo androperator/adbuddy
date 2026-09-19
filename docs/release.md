@@ -1,25 +1,24 @@
 # Release strategy
 
-## Distribution goal
+## Distribution
 
-ADBuddy will ship as a non-Mac-App-Store application. The initial public
-distribution channels are:
+ADBuddy is distributed outside the Mac App Store. Universal app ZIPs are
+available from [GitHub Releases](https://github.com/clawperator/adbuddy/releases).
+Download and extract the ZIP, then move `ADBuddy.app` to Applications.
 
-1. a signed, notarized universal app ZIP attached to a GitHub Release;
-2. a Homebrew cask in a Clawperator-maintained tap.
-
-The intended installation command is:
+A Clawperator-maintained Homebrew cask remains a planned distribution channel.
+The proposed command, once that cask is published, is:
 
 ```sh
 brew install --cask clawperator/tap/adbuddy
 ```
 
-Use the bundle identifier `com.clawperator.adbuddy`. The initial target is
+Use the bundle identifier `com.clawperator.adbuddy`. The supported target is
 macOS 14 or newer on Apple silicon and Intel Macs.
 
 ## Release artifact
 
-The release build should create a universal `ADBuddy.app` containing `arm64`
+The release build creates a universal `ADBuddy.app` containing `arm64`
 and `x86_64` slices. It must include the `adbuddy-mcp` stdio helper in
 `Contents/MacOS` alongside the GUI executable. Package it in a versioned archive
 such as:
@@ -39,8 +38,9 @@ licenses. See [recording-backend.md](recording-backend.md).
 
 ## Packaging command
 
-`VERSION` is the source of truth for the release version. Update it before a
-release, then commit that change with the release notes. The current version is
+`VERSION` is the source of truth for the release version. Use the repository
+release helper to synchronize the MCP version, document examples, and packaging
+example, then commit the version change before packaging. The current version is
 `0.2.0`.
 
 `scripts/package_release.sh` creates the universal application bundle and
@@ -65,18 +65,24 @@ scripts/package_release.sh --skip-notarization
 
 An archive created with `--skip-notarization` is not a public release artifact.
 
-## Initial release flow
+## Release flow
 
-1. Update the app version and user-facing changelog.
-2. Build and test both architectures.
+1. Follow the version-bump procedure in the repository
+   [release skill](../.agents/skills/release-adbuddy/SKILL.md).
+2. Run `scripts/test.sh` on the host and build both release architectures.
+   A universal build does not itself prove runtime behavior on both Mac types.
 3. Package the `.app` with its `Info.plist`, icon, and resources.
 4. Sign all bundled code with Developer ID and Hardened Runtime enabled.
 5. Submit the ZIP to Apple's notarization service, wait for acceptance, and
    staple the notarization ticket to the app.
 6. Verify the artifact with `codesign`, `spctl`, and `stapler`.
-7. Upload the final ZIP and release notes to GitHub Releases.
-8. Update the cask URL, version, and SHA-256 in the tap.
-9. Install the cask on a clean test machine or user profile and launch the app.
+7. With explicit publication authorization, tag the validated release commit
+   and upload the final ZIP and release notes to GitHub Releases. Follow the
+   release skill for tag and upload recovery rules.
+8. If a Homebrew tap update is explicitly requested, publish or update its cask
+   URL, version, and SHA-256 after the matching asset exists.
+9. Validate the published ZIP on a clean test machine or user profile. Validate
+   cask installation separately when that distribution channel is available.
 
 Typical final checks include:
 
@@ -89,7 +95,7 @@ stapler validate ADBuddy.app
 Use `ditto` when extracting release ZIPs during validation to avoid introducing
 AppleDouble files that can invalidate a signed bundle.
 
-## Homebrew cask
+## Planned Homebrew cask
 
 The cask should point at the immutable GitHub Release ZIP and declare the app
 bundle, macOS minimum version, homepage, and app data cleanup paths. A minimal
@@ -114,8 +120,9 @@ Do not publish this cask until its matching release asset and SHA-256 exist.
 
 ## Updates
 
-Version 0.1 should rely on `brew upgrade --cask` for cask installations and
-manual replacement for direct-download installations. Do not add Sparkle yet:
+Direct-download installations use manual replacement with a newer release.
+Once Homebrew distribution is available, its installations should use
+`brew upgrade --cask`. There is no in-app updater. Do not add Sparkle yet:
 it adds a dependency and a second update channel before the core product is
 proven.
 
@@ -127,4 +134,4 @@ for Homebrew installations so users do not receive conflicting update paths.
 Developer ID signing certificates, notarization credentials, and App Store
 Connect API keys are release secrets. Keep them out of the repository, app
 bundle, logs, shell history, and issue trackers. Do not add publishing
-automation until the local signed-and-notarized flow has been proven.
+automation or change release credentials without an explicit request.
