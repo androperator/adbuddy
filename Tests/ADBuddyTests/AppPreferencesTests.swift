@@ -131,7 +131,7 @@ final class AppPreferencesTests: XCTestCase {
         XCTAssertFalse(reloadedPreferences.showInMenuBar)
     }
 
-    func testShowSuccessFeedbackBannersDefaultsToTrueAndPersistsChanges() {
+    func testShowSuccessFeedbackBannersDefaultsToFalseAndPersistsChanges() {
         let suiteName = "AppPreferencesTests.\(UUID().uuidString)"
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {
             return XCTFail("Could not create isolated user defaults")
@@ -146,16 +146,16 @@ final class AppPreferencesTests: XCTestCase {
             defaultScreenshotDirectory: fallbackDirectory
         )
 
-        XCTAssertTrue(preferences.showSuccessFeedbackBanners)
+        XCTAssertFalse(preferences.showSuccessFeedbackBanners)
 
-        preferences.showSuccessFeedbackBanners = false
+        preferences.showSuccessFeedbackBanners = true
 
         let reloadedPreferences = AppPreferences(
             userDefaults: userDefaults,
             defaultScreenshotDirectory: fallbackDirectory
         )
 
-        XCTAssertFalse(reloadedPreferences.showSuccessFeedbackBanners)
+        XCTAssertTrue(reloadedPreferences.showSuccessFeedbackBanners)
     }
 
     func testScreenshotFramingPreferencesDefaultToFalseAndPersistChanges() {

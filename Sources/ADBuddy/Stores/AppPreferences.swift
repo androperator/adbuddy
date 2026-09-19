@@ -164,7 +164,7 @@ final class AppPreferences {
         screenshotOverlaysDeviceDetails = userDefaults.object(forKey: Key.screenshotOverlaysDeviceDetails) as? Bool ?? false
         revealMediaInFinder = userDefaults.object(forKey: Key.revealMediaInFinder) as? Bool ?? false
         showInMenuBar = userDefaults.object(forKey: Key.showInMenuBar) as? Bool ?? true
-        showSuccessFeedbackBanners = userDefaults.object(forKey: Key.showSuccessFeedbackBanners) as? Bool ?? true
+        showSuccessFeedbackBanners = userDefaults.object(forKey: Key.showSuccessFeedbackBanners) as? Bool ?? false
         screenRecordingBitRateMegabitsPerSecond = userDefaults.object(forKey: Key.screenRecordingBitRateMegabitsPerSecond) as? Int
             ?? ScreenRecordingOptions.default.bitRateMegabitsPerSecond
         screenRecordingResolutionPercentage = userDefaults.object(forKey: Key.screenRecordingResolutionPercentage) as? Int

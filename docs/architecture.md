@@ -294,7 +294,8 @@ user's `~/Screenshots` directory, automatic copying defaults to enabled,
 screenshot framing, recording framing, and the device-details overlay default
 to disabled, and automatic Finder reveal defaults to disabled. It also persists
 whether ADBuddy is shown in the menu bar and whether successful action feedback
-banners are shown, both of which default to enabled. The service layer
+banners are shown. Menu bar visibility defaults to enabled, while success
+banners default to disabled. The service layer
 receives values from the preferences store rather than accessing `UserDefaults`
 itself.
 
