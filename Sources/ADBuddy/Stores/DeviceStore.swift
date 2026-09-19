@@ -9,6 +9,7 @@ final class DeviceStore {
     private let preferences: AppPreferences
     private let sdkLocator: AndroidSDKLocator
     private let processRunner: any ProcessRunning
+    private let recordingCapture: (any ScreenRecordingCapturing)?
     private let mediaClipboard: any MediaClipboardCopying
     private let mediaFinderRevealer: any MediaFinderRevealing
     private let mediaNotifier: any SavedMediaNotifying
@@ -43,7 +44,8 @@ final class DeviceStore {
         processRunner: any ProcessRunning = ProcessRunner(),
         mediaClipboard: any MediaClipboardCopying = MediaClipboardService(),
         mediaFinderRevealer: any MediaFinderRevealing = MediaFinderRevealService(),
-        mediaNotifier: any SavedMediaNotifying = MediaNotificationService()
+        mediaNotifier: any SavedMediaNotifying = MediaNotificationService(),
+        recordingCapture: (any ScreenRecordingCapturing)? = nil
     ) {
         self.preferences = preferences
         self.sdkLocator = sdkLocator
@@ -51,6 +53,7 @@ final class DeviceStore {
         self.mediaClipboard = mediaClipboard
         self.mediaFinderRevealer = mediaFinderRevealer
         self.mediaNotifier = mediaNotifier
+        self.recordingCapture = recordingCapture
     }
 
     func start() {
@@ -279,7 +282,8 @@ final class DeviceStore {
         let screenRecordingService = ScreenRecordingService(
             adbPath: resolvedSDK.adbPath,
             sdkRootPath: resolvedSDK.rootPath,
-            processRunner: processRunner
+            processRunner: processRunner,
+            capture: recordingCapture
         )
         let emulatorService = AndroidEmulatorService(
             sdk: resolvedSDK,
@@ -295,7 +299,7 @@ final class DeviceStore {
             let mediaDevice = await emulatorService.deviceWithUserFacingName(device)
             let mediaSession = ScreenRecordingSession(
                 device: mediaDevice,
-                remoteFilePath: session.remoteFilePath
+                identifier: session.identifier
             )
             let result = await screenRecordingService.record(
                 session: mediaSession,
@@ -363,7 +367,8 @@ final class DeviceStore {
         AppLogger.recording.info("Stopping screen recording")
         let screenRecordingService = ScreenRecordingService(
             adbPath: resolvedSDK.adbPath,
-            processRunner: processRunner
+            processRunner: processRunner,
+            capture: recordingCapture
         )
 
         Task { [weak self] in

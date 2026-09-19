@@ -32,6 +32,11 @@ Do not treat an ad-hoc signed developer build as a public release. Public
 artifacts require a Developer ID Application identity, Hardened Runtime,
 notarization, and stapling.
 
+The package also includes architecture-specific scrcpy recording helpers and
+matching Android server resources. The release script verifies pinned checksums,
+signs both helpers, and includes matching third-party source archives and
+licenses. See [recording-backend.md](recording-backend.md).
+
 ## Packaging command
 
 `VERSION` is the source of truth for the release version. Update it before a

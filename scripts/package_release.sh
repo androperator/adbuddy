@@ -177,6 +177,12 @@ cat >"$INFO_PLIST" <<PLIST
 </plist>
 PLIST
 
+"$ROOT_DIR/scripts/prepare_recording_backend.sh" "$APP_CONTENTS" universal
+"$ROOT_DIR/scripts/prepare_recording_sources.sh" "$APP_CONTENTS/Resources/Recording/Sources"
+for architecture in arm64 x86_64; do
+  /usr/bin/codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" \
+    "$APP_MACOS/scrcpy-$architecture"
+done
 /usr/bin/codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$MCP_BINARY"
 /usr/bin/codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$APP_BUNDLE"
 

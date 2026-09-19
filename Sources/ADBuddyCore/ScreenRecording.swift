@@ -136,12 +136,12 @@ public enum AndroidDisplaySizeParser {
 
 public struct ScreenRecordingSession: Equatable, Sendable {
     public let device: AndroidDevice
-    public let remoteFilePath: String
+    public let identifier: String
 
-    public init(device: AndroidDevice, remoteFilePath: String? = nil) {
+    public init(device: AndroidDevice, identifier: String? = nil) {
         self.device = device
-        self.remoteFilePath = remoteFilePath
-            ?? "/data/local/tmp/adbuddy-recording-\(UUID().uuidString).mp4"
+        self.identifier = identifier
+            ?? UUID().uuidString
     }
 }
 

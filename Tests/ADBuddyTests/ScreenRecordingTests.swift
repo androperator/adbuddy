@@ -29,36 +29,28 @@ final class ScreenRecordingTests: XCTestCase {
             successfulResult(standardOutput: "0\n"),
             successfulResult(),
             successfulResult(),
-            successfulResult(),
-            successfulResult(),
-            successfulResult(),
         ])
         let fileManager = RecordingScreenFileManager()
+        let capture = TestScreenRecordingCapture()
         let service = ScreenRecordingService(
             adbPath: "/SDK/platform-tools/adb",
             processRunner: processRunner,
-            fileManager: fileManager
+            fileManager: fileManager,
+            capture: capture
         )
-        let session = ScreenRecordingSession(
-            device: connectedDevice,
-            remoteFilePath: "/data/local/tmp/adbuddy-recording-test.mp4"
-        )
+        let session = ScreenRecordingSession(device: connectedDevice)
         let destination = URL(fileURLWithPath: "/tmp/media", isDirectory: true)
-
         let result = await service.record(
             session: session,
             options: ScreenRecordingOptions(
-                bitRateMegabitsPerSecond: 8,
-                resolution: .fiftyPercent,
-                showsTaps: true
+                bitRateMegabitsPerSecond: 8, resolution: .fiftyPercent, showsTaps: true
             ),
             destination: destination,
             date: Date(timeIntervalSince1970: 0),
             onScreenRecorderStarted: {}
         )
-
         guard case .success(let output, let warning) = result else {
-            return XCTFail("Expected a saved recording")
+            return XCTFail("Expected a saved recording: \(result)")
         }
         XCTAssertNil(warning)
         XCTAssertTrue(output.primaryFileURL.lastPathComponent.hasPrefix("Pixel-9-Pro_1970-01-01_"))
@@ -66,87 +58,84 @@ final class ScreenRecordingTests: XCTestCase {
         XCTAssertNil(output.originalFileURL)
         XCTAssertEqual(fileManager.createdDirectories, [destination])
         XCTAssertEqual(fileManager.movedDestination, output.primaryFileURL)
-
+        let requests = await capture.requests
+        XCTAssertEqual(requests.first?.outputSize, AndroidDisplaySize(width: 540, height: 1206))
+        XCTAssertEqual(requests.first?.bitRate, 8_000_000)
         let arguments = await processRunner.invocations.map(\.arguments)
-        XCTAssertEqual(arguments[0], ["-s", connectedDevice.serial, "shell", "wm", "size"])
-        XCTAssertEqual(arguments[1], ["-s", connectedDevice.serial, "shell", "settings", "get", "system", "show_touches"])
-        XCTAssertEqual(arguments[2], ["-s", connectedDevice.serial, "shell", "settings", "put", "system", "show_touches", "1"])
-        XCTAssertEqual(
-            arguments[3],
-            [
-                "-s", connectedDevice.serial,
-                "shell", "screenrecord",
-                "--bit-rate", "8000000",
-                "--size", "540x1206",
-                session.remoteFilePath,
-            ]
-        )
-        XCTAssertEqual(arguments[4], ["-s", connectedDevice.serial, "shell", "settings", "put", "system", "show_touches", "0"])
-        XCTAssertEqual(arguments[5].prefix(4), ["-s", connectedDevice.serial, "pull", session.remoteFilePath])
-        XCTAssertEqual(arguments[6], ["-s", connectedDevice.serial, "shell", "rm", "-f", session.remoteFilePath])
+        XCTAssertEqual(arguments, [
+            ["-s", connectedDevice.serial, "shell", "wm", "size"],
+            ["-s", connectedDevice.serial, "shell", "settings", "get", "system", "show_touches"],
+            ["-s", connectedDevice.serial, "shell", "settings", "put", "system", "show_touches", "1"],
+            ["-s", connectedDevice.serial, "shell", "settings", "put", "system", "show_touches", "0"],
+        ])
     }
 
-    func testStopsTheSpecificRemoteRecordingWithInterruptSignal() async {
-        let processRunner = ScriptedScreenRecordingProcessRunner(results: [successfulResult()])
+    func testStopsOnlyTheRequestedCaptureSession() async {
+        let capture = TestScreenRecordingCapture()
         let service = ScreenRecordingService(
             adbPath: "/SDK/platform-tools/adb",
-            processRunner: processRunner
+            processRunner: ScriptedScreenRecordingProcessRunner(results: []),
+            capture: capture
         )
-        let session = ScreenRecordingSession(
-            device: connectedDevice,
-            remoteFilePath: "/data/local/tmp/adbuddy-recording-test.mp4"
-        )
-
+        let session = ScreenRecordingSession(device: connectedDevice)
         let stopResult = await service.stop(session: session)
         XCTAssertEqual(stopResult, .stopped)
-        let invocations = await processRunner.invocations
-        XCTAssertEqual(
-            invocations,
-            [
-                ProcessInvocation(
-                    executablePath: "/SDK/platform-tools/adb",
-                    arguments: [
-                        "-s", connectedDevice.serial,
-                        "shell", "pkill", "-INT", "-f", session.remoteFilePath,
-                    ]
-                ),
-            ]
-        )
+        let sessions = await capture.stoppedSessions
+        XCTAssertEqual(sessions, [session])
     }
 
-    func testUsesDeviceNativeResolutionWithoutSizeArgument() async {
-        let processRunner = ScriptedScreenRecordingProcessRunner(results: [
-            successfulResult(),
-            successfulResult(),
-            successfulResult(),
+    func testLocksCaptureToPhysicalDeviceWithoutControllingItsOrientation() {
+        let arguments = ScrcpyScreenRecordingCapture.arguments(
+            serial: "device-serial", bitRateBitsPerSecond: 8_000_000,
+            outputSize: AndroidDisplaySize(width: 540, height: 1200),
+            outputURL: URL(fileURLWithPath: "/tmp/media folder/capture.mp4")
+        )
+        XCTAssertTrue(arguments.contains("--capture-orientation=@0"))
+        XCTAssertTrue(arguments.contains("--no-control"))
+        XCTAssertTrue(arguments.contains("--no-window"))
+        XCTAssertTrue(arguments.contains("--no-audio"))
+        XCTAssertTrue(arguments.contains("--max-size=1200"))
+        XCTAssertTrue(arguments.contains("--record=/tmp/media folder/capture.mp4"))
+        let nativeArguments = ScrcpyScreenRecordingCapture.arguments(
+            serial: "device-serial", bitRateBitsPerSecond: 8_000_000,
+            outputSize: nil, outputURL: URL(fileURLWithPath: "/tmp/native.mp4")
+        )
+        XCTAssertFalse(nativeArguments.contains { $0.hasPrefix("--max-size") })
+    }
+
+    func testRestoresTapsAndRemovesPartialCaptureAfterFailure() async {
+        let runner = ScriptedScreenRecordingProcessRunner(results: [
+            successfulResult(standardOutput: "null\n"), successfulResult(), successfulResult(),
         ])
+        let files = RecordingScreenFileManager()
         let service = ScreenRecordingService(
-            adbPath: "/SDK/platform-tools/adb",
-            processRunner: processRunner,
-            fileManager: RecordingScreenFileManager()
+            adbPath: "/SDK/adb", processRunner: runner, fileManager: files,
+            capture: TestScreenRecordingCapture(fails: true)
         )
-        let session = ScreenRecordingSession(
-            device: connectedDevice,
-            remoteFilePath: "/data/local/tmp/adbuddy-recording-test.mp4"
+        let result = await service.record(
+            session: ScreenRecordingSession(device: connectedDevice),
+            options: ScreenRecordingOptions(bitRateMegabitsPerSecond: 8, resolution: .native, showsTaps: true),
+            destination: URL(fileURLWithPath: "/tmp/media"), onScreenRecorderStarted: {}
         )
+        guard case .failure = result else { return XCTFail("Expected capture failure") }
+        let invocations = await runner.invocations
+        XCTAssertEqual(invocations.last?.arguments.suffix(3), ["delete", "system", "show_touches"].suffix(3))
+        XCTAssertNil(files.movedDestination)
+        XCTAssertEqual(files.removedURLs.count, 1)
+    }
 
-        _ = await service.record(
-            session: session,
-            options: .default,
-            destination: URL(fileURLWithPath: "/tmp/media", isDirectory: true),
-            onScreenRecorderStarted: {}
+    func testMissingBundledRecorderFailsWithoutReportingStarted() async {
+        let capture = ScrcpyScreenRecordingCapture(
+            adbPath: "/SDK/adb", backendDirectory: URL(fileURLWithPath: "/missing-adbuddy-recorder")
         )
-
-        let invocations = await processRunner.invocations
-        XCTAssertEqual(
-            invocations[0].arguments,
-            [
-                "-s", connectedDevice.serial,
-                "shell", "screenrecord",
-                "--bit-rate", "8000000",
-                session.remoteFilePath,
-            ]
+        let result = await capture.record(
+            session: ScreenRecordingSession(device: connectedDevice),
+            bitRateBitsPerSecond: 8_000_000, outputSize: nil,
+            outputURL: URL(fileURLWithPath: "/tmp/unused-recording.mp4"),
+            onStarted: { XCTFail("A missing recorder cannot start") }
         )
+        XCTAssertFalse(result.succeeded)
+        XCTAssertTrue(result.failureDescription?.contains("Rebuild or reinstall") == true)
     }
 
     func testCopiedRecordingFeedbackIncludesClipboardDetail() {
@@ -173,7 +162,8 @@ final class ScreenRecordingTests: XCTestCase {
             adbPath: "/SDK/platform-tools/adb",
             processRunner: processRunner,
             fileManager: fileManager,
-            recordingFramer: framer
+            recordingFramer: framer,
+            capture: TestScreenRecordingCapture()
         )
         let destination = URL(fileURLWithPath: "/tmp/media", isDirectory: true)
 
@@ -217,7 +207,8 @@ final class ScreenRecordingTests: XCTestCase {
             adbPath: "/SDK/platform-tools/adb",
             processRunner: processRunner,
             fileManager: RecordingScreenFileManager(),
-            recordingFramer: framer
+            recordingFramer: framer,
+            capture: TestScreenRecordingCapture()
         )
 
         _ = await service.record(
@@ -246,7 +237,8 @@ final class ScreenRecordingTests: XCTestCase {
             adbPath: "/SDK/platform-tools/adb",
             processRunner: processRunner,
             fileManager: RecordingScreenFileManager(),
-            recordingFramer: framer
+            recordingFramer: framer,
+            capture: TestScreenRecordingCapture()
         )
 
         let result = await service.record(
@@ -276,7 +268,8 @@ final class ScreenRecordingTests: XCTestCase {
             adbPath: "/SDK/platform-tools/adb",
             processRunner: processRunner,
             fileManager: RecordingScreenFileManager(),
-            recordingFramer: framer
+            recordingFramer: framer,
+            capture: TestScreenRecordingCapture()
         )
 
         let result = await service.record(
@@ -518,6 +511,7 @@ private actor ScriptedScreenRecordingProcessRunner: ProcessRunning {
 private final class RecordingScreenFileManager: ScreenRecordingFileManaging, @unchecked Sendable {
     private(set) var createdDirectories: [URL] = []
     private(set) var movedDestination: URL?
+    private(set) var removedURLs: [URL] = []
 
     func ensureDirectoryExists(at directoryURL: URL) throws {
         createdDirectories.append(directoryURL)
@@ -531,7 +525,7 @@ private final class RecordingScreenFileManager: ScreenRecordingFileManaging, @un
         movedDestination = destinationURL
     }
 
-    func removeItemIfPresent(at fileURL: URL) {}
+    func removeItemIfPresent(at fileURL: URL) { removedURLs.append(fileURL) }
 }
 
 private struct ScreenRecordingFramingRequest: Equatable {

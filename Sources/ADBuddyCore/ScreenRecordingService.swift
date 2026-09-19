@@ -69,17 +69,20 @@ public struct ScreenRecordingService: Sendable {
     private let processRunner: any ProcessRunning
     private let fileManager: any ScreenRecordingFileManaging
     private let recordingFramer: any ScreenRecordingFraming
+    private let capture: any ScreenRecordingCapturing
 
     public init(
         adbPath: String,
         sdkRootPath: String? = nil,
         processRunner: any ProcessRunning,
         fileManager: any ScreenRecordingFileManaging = LocalScreenRecordingFileManager(),
-        recordingFramer: (any ScreenRecordingFraming)? = nil
+        recordingFramer: (any ScreenRecordingFraming)? = nil,
+        capture: (any ScreenRecordingCapturing)? = nil
     ) {
         self.adbPath = adbPath
         self.processRunner = processRunner
         self.fileManager = fileManager
+        self.capture = capture ?? ScrcpyScreenRecordingCapture(adbPath: adbPath)
         self.recordingFramer = recordingFramer ?? AVFoundationScreenRecordingFramer(
             adbPath: adbPath,
             sdkRootPath: sdkRootPath,
@@ -157,14 +160,12 @@ public struct ScreenRecordingService: Sendable {
             originalShowTapsSetting = nil
         }
 
-        await onScreenRecorderStarted()
-        let screenRecordResult = await processRunner.run(
-            executablePath: adbPath,
-            arguments: screenRecordArguments(
-                for: session,
-                bitRateBitsPerSecond: options.bitRateBitsPerSecond,
-                outputSize: outputSize
-            )
+        let screenRecordResult = await capture.record(
+            session: session,
+            bitRateBitsPerSecond: options.bitRateBitsPerSecond,
+            outputSize: outputSize,
+            outputURL: destinationURLs.temporaryURL,
+            onStarted: onScreenRecorderStarted
         )
 
         let showTapsRestoreFailure = await restoreShowTapsIfNeeded(
@@ -173,22 +174,12 @@ public struct ScreenRecordingService: Sendable {
         )
 
         guard screenRecordResult.succeeded else {
-            await removeRemoteRecording(for: session)
-            return .failure(.adbFailed(adbFailureMessage(from: screenRecordResult)))
-        }
-
-        let pullResult = await processRunner.run(
-            executablePath: adbPath,
-            arguments: [
-                "-s", session.device.serial,
-                "pull", session.remoteFilePath, destinationURLs.temporaryURL.path,
-            ]
-        )
-        await removeRemoteRecording(for: session)
-
-        guard pullResult.succeeded else {
             fileManager.removeItemIfPresent(at: destinationURLs.temporaryURL)
-            return .failure(.unableToSave(adbFailureMessage(from: pullResult)))
+            var message = adbFailureMessage(from: screenRecordResult)
+            if let showTapsRestoreFailure {
+                message += " Show taps could not be restored: \(showTapsRestoreFailure)"
+            }
+            return .failure(.adbFailed(message))
         }
 
         do {
@@ -246,18 +237,7 @@ public struct ScreenRecordingService: Sendable {
     }
 
     public func stop(session: ScreenRecordingSession) async -> ScreenRecordingStopResult {
-        let result = await processRunner.run(
-            executablePath: adbPath,
-            arguments: [
-                "-s", session.device.serial,
-                "shell", "pkill", "-INT", "-f", session.remoteFilePath,
-            ]
-        )
-
-        if result.succeeded {
-            return .stopped
-        }
-        return .failure(adbFailureMessage(from: result))
+        await capture.stop(session: session)
     }
 
     private func makeDestinationURLs(
@@ -298,23 +278,6 @@ public struct ScreenRecordingService: Sendable {
         )
     }
 
-    private func screenRecordArguments(
-        for session: ScreenRecordingSession,
-        bitRateBitsPerSecond: Int,
-        outputSize: AndroidDisplaySize?
-    ) -> [String] {
-        var arguments = [
-            "-s", session.device.serial,
-            "shell", "screenrecord",
-            "--bit-rate", "\(bitRateBitsPerSecond)",
-        ]
-        if let outputSize {
-            arguments.append(contentsOf: ["--size", outputSize.adbArgument])
-        }
-        arguments.append(session.remoteFilePath)
-        return arguments
-    }
-
     private func restoreShowTapsIfNeeded(
         _ originalSetting: ShowTapsSetting?,
         for device: AndroidDevice
@@ -323,18 +286,13 @@ public struct ScreenRecordingService: Sendable {
             return nil
         }
 
-        let result = await processRunner.run(
-            executablePath: adbPath,
-            arguments: originalSetting.restoreArguments(for: device.serial)
-        )
+        let result = await Task.detached {
+            await processRunner.run(
+                executablePath: adbPath,
+                arguments: originalSetting.restoreArguments(for: device.serial)
+            )
+        }.value
         return result.succeeded ? nil : adbFailureMessage(from: result)
-    }
-
-    private func removeRemoteRecording(for session: ScreenRecordingSession) async {
-        _ = await processRunner.run(
-            executablePath: adbPath,
-            arguments: ["-s", session.device.serial, "shell", "rm", "-f", session.remoteFilePath]
-        )
     }
 
     private func adbFailureMessage(from result: ProcessResult) -> String {
@@ -343,7 +301,7 @@ public struct ScreenRecordingService: Sendable {
         }
 
         if let failureDescription = result.failureDescription, !failureDescription.isEmpty {
-            return "Could not start ADB: \(failureDescription)"
+            return failureDescription
         }
 
         let standardError = String(decoding: result.standardError, as: UTF8.self)
@@ -353,10 +311,10 @@ public struct ScreenRecordingService: Sendable {
         }
 
         if let exitStatus = result.exitStatus {
-            return "ADB exited with status \(exitStatus)."
+            return "The recording command exited with status \(exitStatus)."
         }
 
-        return "ADB did not return a result."
+        return "The recording command did not return a result."
     }
 }
 

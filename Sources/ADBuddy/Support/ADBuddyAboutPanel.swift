@@ -21,6 +21,11 @@ enum ADBuddyAboutPanel {
                 ]
             )
         )
+        value.append(NSAttributedString(string: "\nScreen recording by "))
+        value.append(NSAttributedString(
+            string: "scrcpy",
+            attributes: [.link: URL(string: "https://github.com/Genymobile/scrcpy")!]
+        ))
         return value
     }()
 }

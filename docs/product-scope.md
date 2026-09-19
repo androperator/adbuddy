@@ -74,10 +74,11 @@ The first implementation is a complete vertical slice, not a visual mockup.
   - resolution as 100%, 75%, 50%, or 25% of physical display size, defaulting
     to 100%;
   - Show taps, defaulting to disabled.
-- Use `adb shell screenrecord` with a fixed argument array, passing a bit rate
-  and scaled size when selected.
-- Stop the selected device's recording with a targeted interrupt, retrieve its
-  MP4, and remove its temporary device-side file.
+- Capture through a bundled headless recorder with fixed arguments, passing a
+  bit rate and scaled size when selected. Keep one video in the device's natural
+  orientation, allowing content to rotate inside it at full display size.
+- Stop the selected recording with a targeted interrupt and finalize its local
+  MP4.
 - Save MP4s into the same configured destination as screenshots. Do not create
   a separate recording directory or a destination picker in this phase.
 - Offer an opt-in Settings preference to add a device frame to saved screen

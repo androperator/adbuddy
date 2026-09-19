@@ -255,7 +255,8 @@ final class DeviceStoreTests: XCTestCase {
             sdkLocator: sdkLocator,
             processRunner: RecordingDeviceStoreProcessRunner(),
             mediaClipboard: mediaClipboard,
-            mediaNotifier: TestMediaNotifier()
+            mediaNotifier: TestMediaNotifier(),
+            recordingCapture: TestScreenRecordingCapture(writesFile: true)
         )
         store.refreshFromPolling()
         await waitForDeviceRefresh()
@@ -302,7 +303,8 @@ final class DeviceStoreTests: XCTestCase {
             processRunner: RecordingDeviceStoreProcessRunner(),
             mediaClipboard: TestMediaClipboard(),
             mediaFinderRevealer: finderRevealer,
-            mediaNotifier: TestMediaNotifier()
+            mediaNotifier: TestMediaNotifier(),
+            recordingCapture: TestScreenRecordingCapture(writesFile: true)
         )
         store.refreshFromPolling()
         await waitForDeviceRefresh()

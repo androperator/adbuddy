@@ -84,7 +84,7 @@ AppPreferences -> clipboard preference -> MediaClipboardService
 AppPreferences -> Finder reveal preference -> MediaFinderRevealService
 DeviceStore -> MediaNotificationService -> macOS notification center
 AppPreferences -> recording options -> ScreenRecordingService
-DeviceStore -> ScreenRecordingService -> ADB screenrecord, pull, cleanup
+DeviceStore -> ScreenRecordingService -> bundled scrcpy capture -> local MP4
 ScreenRecordingService -> AVFoundation -> framed MP4 export
 DeviceStore discovery by serial -> LogcatWindowView -> LogcatStore
 DeviceStore emulator entries -> EmulatorStore -> AndroidEmulatorService
@@ -318,16 +318,22 @@ settings without the GUI using its own bundle identifier as a defaults suite.
 
 ## Screen recording
 
-`ScreenRecordingService` constructs direct ADB calls through `ProcessRunner`.
-For native resolution it leaves out `--size`; for a reduced percentage it asks
-ADB for `wm size`, parses the physical dimensions, and supplies an even-sized
-scaled `--size` value. It passes `--bit-rate` in bits per second.
+`ScreenRecordingService` uses a bundled headless scrcpy capture helper through
+`ProcessRunner`, with a fixed argument array and the resolved SDK ADB path.
+The capture canvas stays in the device's natural orientation while screen
+content rotates within it, preserving fullscreen content through portrait and
+landscape transitions. It does not lock the device's own orientation.
+For native resolution it leaves out the size limit; reduced percentages scale
+the physical dimensions reported by `wm size` and limit the longest dimension.
+The encoder may round dimensions to its supported alignment.
 
-The recording itself writes to a generated file in `/data/local/tmp`. The
-service asks `pkill` to send `SIGINT` only to the process that contains that
-generated path, allowing Android's recorder to finish the MP4. It pulls to a
-temporary local file in the shared media directory, then moves that file to a
-collision-resistant final name. This avoids replacing an existing media file.
+The helper streams directly into a temporary local MP4 in the shared media
+folder. Stop sends SIGINT to the registered process for that session so the
+muxer can finish the file. The completed file moves to a collision-resistant
+final name. Both GUI and MCP use the same backend. Missing backend resources
+produce a visible failure; there is no fallback to the rotation-broken recorder.
+See [recording-backend.md](recording-backend.md) for dependency rationale,
+packaging, matching sources, and third-party notices.
 
 When recording framing is enabled, the original MP4 is retained. The service
 reserves an original and `_framed.mp4` pair before capture, then uses

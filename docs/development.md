@@ -99,6 +99,9 @@ Manual verification should cover, where locally available:
    system-image model such as `sdk-gphone64-arm64` in the saved filename;
 10. a successful recording notification offering **Reveal in Finder**;
 11. Show taps returning to its original Android setting after recording.
+    Start a recording in portrait, enter fullscreen landscape playback, then
+    return to portrait. Confirm content rotates within the same video canvas
+    without shrinking into a portrait letterbox, with and without framing.
 12. Installed AVDs appearing in the **Android Emulators** section with correct
     stopped or running status.
 13. Quick Boot and Cold Boot opening an AVD in the Android Emulator's own

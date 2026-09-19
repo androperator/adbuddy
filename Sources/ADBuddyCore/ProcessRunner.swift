@@ -40,9 +40,28 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
     public init() {}
 
     public func run(executablePath: String, arguments: [String]) async -> ProcessResult {
-        let executionID = UUID()
+        return await run(
+            executablePath: executablePath,
+            arguments: arguments,
+            identifier: UUID().uuidString,
+            environment: nil,
+            onStarted: nil
+        )
+    }
+
+    public func interrupt(identifier: String) -> Bool {
+        activeProcesses.interrupt(id: identifier)
+    }
+
+    public func run(
+        executablePath: String,
+        arguments: [String],
+        identifier executionID: String,
+        environment: [String: String]?,
+        onStarted: (@MainActor @Sendable () -> Void)?
+    ) async -> ProcessResult {
         let cancellationFlag = CancellationFlag()
-        let request = ProcessRequest(executablePath: executablePath, arguments: arguments)
+        let request = ProcessRequest(executablePath: executablePath, arguments: arguments, environment: environment)
 
         return await withTaskCancellationHandler(operation: {
             await withCheckedContinuation { continuation in
@@ -51,7 +70,8 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
                         request,
                         executionID: executionID,
                         activeProcesses: self.activeProcesses,
-                        cancellationFlag: cancellationFlag
+                        cancellationFlag: cancellationFlag,
+                        onStarted: onStarted
                     )
                     continuation.resume(returning: result)
                 }
@@ -64,9 +84,10 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
 
     private static func execute(
         _ request: ProcessRequest,
-        executionID: UUID,
+        executionID: String,
         activeProcesses: ActiveProcessRegistry,
-        cancellationFlag: CancellationFlag
+        cancellationFlag: CancellationFlag,
+        onStarted: (@MainActor @Sendable () -> Void)?
     ) -> ProcessResult {
         guard !cancellationFlag.isCancelled else {
             return ProcessResult(
@@ -102,10 +123,20 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
 
             process.executableURL = URL(fileURLWithPath: request.executablePath)
             process.arguments = request.arguments
+            process.environment = request.environment
             process.standardOutput = standardOutputHandle
             process.standardError = standardErrorHandle
             try process.run()
             activeProcesses.insert(process, id: executionID)
+            if let onStarted {
+                // Deliver readiness before returning even for a short-lived process.
+                let notificationDelivered = DispatchSemaphore(value: 0)
+                Task {
+                    await onStarted()
+                    notificationDelivered.signal()
+                }
+                notificationDelivered.wait()
+            }
 
             if cancellationFlag.isCancelled {
                 process.terminate()
@@ -144,6 +175,7 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
 private struct ProcessRequest: Sendable {
     let executablePath: String
     let arguments: [String]
+    let environment: [String: String]?
 }
 
 private final class CancellationFlag: @unchecked Sendable {
@@ -165,21 +197,31 @@ private final class CancellationFlag: @unchecked Sendable {
 
 private final class ActiveProcessRegistry: @unchecked Sendable {
     private let lock = NSLock()
-    private var processes: [UUID: Process] = [:]
+    private var processes: [String: Process] = [:]
 
-    func insert(_ process: Process, id: UUID) {
+    func insert(_ process: Process, id: String) {
         lock.lock()
         processes[id] = process
         lock.unlock()
     }
 
-    func remove(id: UUID) {
+    func remove(id: String) {
         lock.lock()
         processes[id] = nil
         lock.unlock()
     }
 
-    func terminate(id: UUID) {
+    func interrupt(id: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let process = processes[id], process.isRunning else {
+            return false
+        }
+        process.interrupt()
+        return true
+    }
+
+    func terminate(id: String) {
         lock.lock()
         let process = processes[id]
         lock.unlock()
