@@ -32,6 +32,51 @@ final class ScreenshotServiceTests: XCTestCase {
         XCTAssertNil(output.originalFileURL)
     }
 
+    func testSavesPNGWithoutLeadingDisplayWarning() async throws {
+        let screenshotData = try ScreenshotFrameFixture.pngData(
+            width: 100, height: 200, red: 0, green: 0, blue: 1
+        )
+        let warning = Data("[Warning] Multiple displays were found, but no display id was specified!\n".utf8)
+        let fileManager = RecordingScreenshotFileManager()
+        let result = await ScreenshotService(
+            adbPath: "/SDK/platform-tools/adb",
+            processRunner: StubScreenshotProcessRunner(
+                result: successfulProcessResult(standardOutput: warning + screenshotData)
+            ),
+            fileManager: fileManager
+        ).capture(
+            device: emulatorDevice,
+            destination: URL(fileURLWithPath: "/tmp/screenshots"),
+            framing: ScreenshotFramingOptions(addsFrame: true, alsoSavesOriginal: true),
+            output: ScreenshotOutputOptions(alsoSavesFiftyPercentCopy: true)
+        )
+
+        guard case .success(let output) = result else {
+            return XCTFail("Expected capture to succeed despite the display warning")
+        }
+        let originalURL = try XCTUnwrap(output.originalFileURL)
+        XCTAssertEqual(fileManager.writtenFiles[originalURL], screenshotData)
+        for url in output.savedFileURLs {
+            XCTAssertNotNil(imageSize(in: try XCTUnwrap(fileManager.writtenFiles[url])))
+        }
+    }
+
+    func testRejectsWarningFollowedByTruncatedPNG() async {
+        let fileManager = RecordingScreenshotFileManager()
+        let result = await ScreenshotService(
+            adbPath: "/SDK/platform-tools/adb",
+            processRunner: StubScreenshotProcessRunner(
+                result: successfulProcessResult(
+                    standardOutput: Data("[Warning] Multiple displays\n".utf8) + validPNG.prefix(16)
+                )
+            ),
+            fileManager: fileManager
+        ).capture(device: emulatorDevice, destination: URL(fileURLWithPath: "/tmp/screenshots"))
+
+        XCTAssertEqual(result, .failure(.invalidPNG))
+        XCTAssertTrue(fileManager.writtenFiles.isEmpty)
+    }
+
     func testRejectsNonPNGOutputWithoutWritingAFile() async {
         let fileManager = RecordingScreenshotFileManager()
         let result = await ScreenshotService(

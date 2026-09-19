@@ -97,7 +97,7 @@ public struct ScreenshotService: Sendable {
             return .failure(.adbFailed(adbFailureMessage(from: processResult)))
         }
 
-        guard isPNG(processResult.standardOutput) else {
+        guard let screenshotData = pngData(from: processResult.standardOutput) else {
             return .failure(.invalidPNG)
         }
 
@@ -118,13 +118,13 @@ public struct ScreenshotService: Sendable {
         if let deviceDetails {
             guard let overlayData = ScreenshotDeviceDetailsOverlayRenderer.overlay(
                 deviceDetails: deviceDetails,
-                on: processResult.standardOutput
+                on: screenshotData
             ) else {
                 return .failure(.unableToAddDeviceDetails)
             }
             annotatedScreenshotData = overlayData
         } else {
-            annotatedScreenshotData = processResult.standardOutput
+            annotatedScreenshotData = screenshotData
         }
 
         let framingData: Data?
@@ -133,7 +133,7 @@ public struct ScreenshotService: Sendable {
                 adbPath: adbPath,
                 sdkRootPath: sdkRootPath,
                 processRunner: processRunner
-            ).framedPNG(from: processResult.standardOutput, for: device) else {
+            ).framedPNG(from: screenshotData, for: device) else {
                 return .failure(.unableToAddFrame)
             }
 
@@ -196,16 +196,23 @@ public struct ScreenshotService: Sendable {
         }
     }
 
-    private func isPNG(_ data: Data) -> Bool {
-        let signature: [UInt8] = [137, 80, 78, 71, 13, 10, 26, 10]
+    private func pngData(from output: Data) -> Data? {
+        let signature = Data([137, 80, 78, 71, 13, 10, 26, 10])
         let IHDR: [UInt8] = [73, 72, 68, 82]
 
-        guard data.count >= 24 else {
-            return false
+        // ADB exec-out can merge screencap's diagnostic text with its binary output.
+        guard let signatureRange = output.range(of: signature),
+              String(data: output[..<signatureRange.lowerBound], encoding: .utf8) != nil else {
+            return nil
         }
-
-        return Array(data.prefix(signature.count)) == signature
-            && Array(data[12..<16]) == IHDR
+        let data = Data(output[signatureRange.lowerBound...])
+        guard data.count >= 24, Array(data[12..<16]) == IHDR else {
+            return nil
+        }
+        if signatureRange.lowerBound > output.startIndex {
+            AppLogger.screenshot.info("Removed leading screencap diagnostics before PNG data")
+        }
+        return data
     }
 
     private func adbFailureMessage(from result: ProcessResult) -> String {
