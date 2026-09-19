@@ -145,19 +145,19 @@ public struct AndroidVirtualDeviceDetailsService {
                   in: virtualDeviceDirectory.appendingPathComponent("config.ini")
               ),
               let apiLevel = systemImageAPILevel(at: systemImagePath),
-              let androidVersion = AndroidPlatformVersion.version(forAPILevel: apiLevel) else {
+              let androidVersion = AndroidPlatformVersion.version(forAPILevel: apiLevel.major) else {
             return nil
         }
 
         let configurationURL = virtualDeviceDirectory.appendingPathComponent("config.ini")
         return AndroidDeviceDetails(
             androidVersion: androidVersion,
-            apiLevel: String(apiLevel),
+            apiLevel: apiLevel.text,
             screen: screen(in: configurationURL)
         )
     }
 
-    private func systemImageAPILevel(at systemImagePath: String) -> Int? {
+    private func systemImageAPILevel(at systemImagePath: String) -> (text: String, major: Int)? {
         let systemImageURL: URL
         if systemImagePath.hasPrefix("/") {
             systemImageURL = URL(fileURLWithPath: systemImagePath, isDirectory: true)
@@ -172,7 +172,13 @@ public struct AndroidVirtualDeviceDetailsService {
             return nil
         }
 
-        return Int(apiLevelText)
+        let components = apiLevelText.split(separator: ".", omittingEmptySubsequences: false)
+        guard (1...2).contains(components.count),
+              components.allSatisfy({ !$0.isEmpty && $0.allSatisfy({ $0.isASCII && $0.isNumber }) }),
+              let major = Int(components[0]), major > 0 else {
+            return nil
+        }
+        return (apiLevelText, major)
     }
 
     private func configurationValue(named name: String, in fileURL: URL) -> String? {

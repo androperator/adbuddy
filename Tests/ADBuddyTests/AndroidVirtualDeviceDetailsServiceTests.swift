@@ -11,7 +11,11 @@ final class AndroidVirtualDeviceDetailsServiceTests: XCTestCase {
         try assertReadsDetails(separator: " = ")
     }
 
-    private func assertReadsDetails(separator: String) throws {
+    func testReadsMinorAPILevelWithoutDroppingDeviceDetails() throws {
+        try assertReadsDetails(separator: "=", apiLevel: "37.2", androidVersion: "17")
+    }
+
+    private func assertReadsDetails(separator: String, apiLevel: String = "36", androidVersion: String = "16") throws {
         let temporaryDirectory = try makeTemporaryDirectory()
         defer {
             try? FileManager.default.removeItem(at: temporaryDirectory)
@@ -46,7 +50,7 @@ final class AndroidVirtualDeviceDetailsServiceTests: XCTestCase {
             atomically: true,
             encoding: .utf8
         )
-        try "AndroidVersion.ApiLevel\(separator)36\n".write(
+        try "AndroidVersion.ApiLevel\(separator)\(apiLevel)\n".write(
             to: systemImageDirectory.appendingPathComponent("source.properties"),
             atomically: true,
             encoding: .utf8
@@ -62,15 +66,15 @@ final class AndroidVirtualDeviceDetailsServiceTests: XCTestCase {
         XCTAssertEqual(
             details,
             AndroidDeviceDetails(
-                androidVersion: "16",
-                apiLevel: "36",
+                androidVersion: androidVersion,
+                apiLevel: apiLevel,
                 screen: AndroidDeviceScreen(
                     physicalPixelSize: try XCTUnwrap(AndroidDisplaySize(width: 1080, height: 2400)),
                     logicalDensityDPI: 420
                 )
             )
         )
-        XCTAssertEqual(details?.displayText, "Android 16 / API 36")
+        XCTAssertEqual(details?.displayText, "Android \(androidVersion) / API \(apiLevel)")
         XCTAssertEqual(details?.screen?.displayText, "1080 × 2400 px · 411 × 914 dp")
     }
 
