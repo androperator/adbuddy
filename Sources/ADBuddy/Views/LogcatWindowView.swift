@@ -80,7 +80,7 @@ struct LogcatWindowView: View {
             maxHeight: .infinity,
             alignment: .topLeading
         )
-        .navigationTitle("Logcat - \(deviceName)")
+        .navigationTitle("Logcat")
         .searchable(
             text: $logcatStore.searchText,
             isPresented: $isSearchPresented,
