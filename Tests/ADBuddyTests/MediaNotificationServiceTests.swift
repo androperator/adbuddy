@@ -26,7 +26,7 @@ final class MediaNotificationServiceTests: XCTestCase {
         )
         XCTAssertNil(request.content.sound)
         XCTAssertFalse(
-            MediaNotificationService.presentationOptions(for: request.content).contains(.sound)
+            MediaNotificationService.presentationOptions.contains(.sound)
         )
 
         let category = MediaNotificationService.makeNotificationCategory()
@@ -91,9 +91,9 @@ final class MediaNotificationServiceTests: XCTestCase {
             request.content.userInfo[MediaNotificationIdentifier.savedMediaPath] as? String,
             recordingURL.path
         )
-        XCTAssertNotNil(request.content.sound)
-        XCTAssertTrue(
-            MediaNotificationService.presentationOptions(for: request.content).contains(.sound)
+        XCTAssertNil(request.content.sound)
+        XCTAssertFalse(
+            MediaNotificationService.presentationOptions.contains(.sound)
         )
     }
 

@@ -27,15 +27,6 @@ enum SavedMediaNotificationKind: Sendable {
                 : fileURL.lastPathComponent
         }
     }
-
-    var notificationSound: UNNotificationSound? {
-        switch self {
-        case .screenshot:
-            nil
-        case .recording:
-            .default
-        }
-    }
 }
 
 protocol SavedMediaNotifying: Sendable {
@@ -95,7 +86,7 @@ final class MediaNotificationService: NSObject, SavedMediaNotifying, @unchecked 
         let content = UNMutableNotificationContent()
         content.title = kind.title
         content.body = kind.body(for: fileURL)
-        content.sound = kind.notificationSound
+        content.sound = nil
         content.categoryIdentifier = MediaNotificationIdentifier.category
         content.userInfo = [MediaNotificationIdentifier.savedMediaPath: fileURL.path]
         if let attachment = makeMediaAttachment(for: fileURL, kind: kind) {
@@ -116,15 +107,7 @@ final class MediaNotificationService: NSObject, SavedMediaNotifying, @unchecked 
         }
     }
 
-    static func presentationOptions(
-        for content: UNNotificationContent
-    ) -> UNNotificationPresentationOptions {
-        var options: UNNotificationPresentationOptions = [.banner, .list]
-        if content.sound != nil {
-            options.insert(.sound)
-        }
-        return options
-    }
+    static let presentationOptions: UNNotificationPresentationOptions = [.banner, .list]
 
     private static func makeMediaAttachment(
         for fileURL: URL,
@@ -158,7 +141,7 @@ final class MediaNotificationService: NSObject, SavedMediaNotifying, @unchecked 
         case .notDetermined:
             do {
                 AppLogger.notifications.info("Requesting saved media notification authorization")
-                return try await notificationCenter.requestAuthorization(options: [.alert, .sound])
+                return try await notificationCenter.requestAuthorization(options: [.alert])
             } catch {
                 AppLogger.notifications.error("Could not request saved media notification authorization: \(error.localizedDescription, privacy: .public)")
                 return false
@@ -196,6 +179,6 @@ extension MediaNotificationService: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         AppLogger.notifications.info("Presenting saved media notification")
-        completionHandler(Self.presentationOptions(for: notification.request.content))
+        completionHandler(Self.presentationOptions)
     }
 }

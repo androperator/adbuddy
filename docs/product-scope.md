@@ -55,6 +55,7 @@ The first implementation is a complete vertical slice, not a visual mockup.
   final screenshot. It must use the same one-device capture and preserve any
   optional frame and device-details label.
 - Report a concise native success state and a useful failure if capture fails.
+- All app notifications must be silent.
 - Deliver a native system notification for a successful capture, including a
   preview of the saved PNG and a **Reveal in Finder** action.
 - Copy successful screenshots and saved MP4 recordings to the clipboard as file
