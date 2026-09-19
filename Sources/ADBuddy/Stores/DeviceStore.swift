@@ -502,7 +502,9 @@ final class DeviceStore {
             deviceSettingDeviceSerials.remove(device.serial)
             switch result {
             case .success(let outcome):
-                showDeviceSettingFeedback(.success(outcome, deviceName: device.displayName))
+                if action != .openSystemSettings {
+                    showDeviceSettingFeedback(.success(outcome, deviceName: device.displayName))
+                }
             case .failure(let failure):
                 showDeviceSettingFeedback(.failure(failure.message))
             }
