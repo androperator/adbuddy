@@ -155,33 +155,8 @@ public struct AndroidEmulatorService: Sendable {
     /// `sdk_gphone64_arm64`) rather than the name the developer gave the AVD.
     /// Saved media uses this value when it is available.
     public func virtualDeviceName(for device: AndroidDevice) async -> String? {
-        guard device.kind == .emulator, device.isUsable else {
-            return nil
-        }
-
-        let result = await processRunner.run(
-            executablePath: adbPath,
-            arguments: ["-s", device.serial, "emu", "avd", "name"]
-        )
-
-        guard result.succeeded else {
-            let message = failureMessage(from: result)
-            AppLogger.emulator.debug(
-                "Could not identify running Android Emulator \(device.serial, privacy: .public): \(message, privacy: .public)"
-            )
-            return nil
-        }
-
-        guard let virtualDeviceName = AndroidEmulatorConsoleParser.virtualDeviceName(
-            from: String(decoding: result.standardOutput, as: UTF8.self)
-        ) else {
-            AppLogger.emulator.debug(
-                "Android Emulator \(device.serial, privacy: .public) did not report an AVD name"
-            )
-            return nil
-        }
-
-        return virtualDeviceName
+        await ADBClient(adbPath: adbPath, processRunner: processRunner)
+            .virtualDeviceName(for: device)
     }
 
     /// Replaces an emulator's system-image model name with its configured AVD

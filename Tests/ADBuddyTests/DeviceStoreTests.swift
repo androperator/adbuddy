@@ -6,6 +6,22 @@ import XCTest
 
 @MainActor
 final class DeviceStoreTests: XCTestCase {
+    func testEmulatorNameSurvivesOfflineStateButClearsOnDisconnect() async {
+        let runner = ScriptedDeviceStoreProcessRunner(results: [
+            successfulResult(standardOutput: "List of devices attached\nemulator-5556 device model:sdk_gphone64_arm64\n"),
+            successfulResult(standardOutput: "Pixel_9\nOK\n"),
+            successfulResult(standardOutput: "List of devices attached\nemulator-5556 offline\n"),
+            successfulResult(standardOutput: "List of devices attached\n"),
+            successfulResult(standardOutput: "List of devices attached\nemulator-5556 offline\n"),
+        ])
+        let store = makeDeviceStore(processRunner: runner)
+        for expectedNames in [["Pixel_9"], ["Pixel_9"], [], ["emulator-5556"]] {
+            store.refreshFromPolling()
+            for _ in 0..<100 { await Task.yield() }
+            XCTAssertEqual(store.devices.map(\.displayName), expectedNames)
+        }
+    }
+
     func testUsesOneSecondAutomaticRefreshInterval() {
         XCTAssertEqual(DeviceStore.automaticRefreshInterval, .seconds(1))
     }

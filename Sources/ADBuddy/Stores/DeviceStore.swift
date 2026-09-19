@@ -598,9 +598,20 @@ final class DeviceStore {
                 status: .sdkUnavailable(failure)
             )
         case .adbResult(let sdk, .success(let devices)):
+            // Keep the last resolved name through a brief console failure or
+            // offline state. A disconnected serial is removed from this cache.
+            let previousDevices = Dictionary(uniqueKeysWithValues: self.devices.map { ($0.serial, $0) })
+            let namedDevices = devices.map { device in
+                guard resolvedSDK == sdk, device.kind == .emulator,
+                      device.displayName == device.serial,
+                      let previous = previousDevices[device.serial] else {
+                    return device
+                }
+                return device.replacingDisplayName(with: previous.displayName)
+            }
             applyDeviceState(
                 sdk: sdk,
-                devices: devices,
+                devices: namedDevices,
                 status: devices.isEmpty ? .noDevices : .devicesAvailable
             )
         case .adbResult(let sdk, .failure(let error)):

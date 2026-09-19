@@ -219,7 +219,13 @@ needed for the first milestone.
 ## Device model
 
 `AndroidDevice` is derived from `adb devices -l`, never exposed as raw command
-output. It should contain:
+output. Before publishing discovery results, `ADBClient` resolves each usable
+emulator's configured AVD name through `emu avd name`. This shared display name
+feeds Logcat titles and headers, menus, pickers, recording options, confirmations,
+feedback, and MCP device discovery. Serial and raw model metadata stay unchanged.
+If the console cannot resolve a name, discovery uses the serial rather than the
+SDK model name. The GUI retains the last resolved name through a temporary
+console failure or offline state, until that serial disconnects. It should contain:
 
 - a stable serial identifier;
 - an optional human-friendly name;

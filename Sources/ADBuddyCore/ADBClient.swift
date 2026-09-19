@@ -28,9 +28,48 @@ public struct ADBClient: Sendable {
         }
 
         let output = String(decoding: result.standardOutput, as: UTF8.self)
-        let devices = ADBDeviceParser.parse(output)
+        var devices: [AndroidDevice] = []
+        for device in ADBDeviceParser.parse(output) {
+            if device.kind == .emulator {
+                let name = await virtualDeviceName(for: device)
+                devices.append(device.replacingDisplayName(with: name ?? device.serial))
+            } else {
+                devices.append(device)
+            }
+        }
         AppLogger.devices.debug("ADB device refresh returned \(devices.count, privacy: .public) devices")
         return .success(devices)
+    }
+
+    /// Resolves the configured AVD name without changing any ADB identity fields.
+    func virtualDeviceName(for device: AndroidDevice) async -> String? {
+        guard device.kind == .emulator, device.isUsable else {
+            return nil
+        }
+
+        let result = await processRunner.run(
+            executablePath: adbPath,
+            arguments: ["-s", device.serial, "emu", "avd", "name"]
+        )
+
+        guard result.succeeded else {
+            let message = failureMessage(from: result)
+            AppLogger.emulator.debug(
+                "Could not identify running Android Emulator \(device.serial, privacy: .public): \(message, privacy: .public)"
+            )
+            return nil
+        }
+
+        guard let virtualDeviceName = AndroidEmulatorConsoleParser.virtualDeviceName(
+            from: String(decoding: result.standardOutput, as: UTF8.self)
+        ) else {
+            AppLogger.emulator.debug(
+                "Android Emulator \(device.serial, privacy: .public) did not report an AVD name"
+            )
+            return nil
+        }
+
+        return virtualDeviceName
     }
 
     private func failureMessage(from result: ProcessResult) -> String {
