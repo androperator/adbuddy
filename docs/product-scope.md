@@ -133,6 +133,13 @@ The first implementation is a complete vertical slice, not a visual mockup.
   uninstalling it.
 - Keep all ADB invocation in a typed service using fixed argument arrays.
 
+### Device information
+
+- Show both internal displays for connected foldables, with separate physical
+  pixel and default logical sizes for the larger inner and smaller outer screen.
+  Refresh device information when its popover opens. If Android does not expose
+  multiple internal displays, retain the default-screen information.
+
 ### Device settings
 
 - Offer a gear button beside the connected-device information button to open

@@ -116,10 +116,10 @@ final class DeviceStore {
         deviceDetailsBySerial[device.serial]
     }
 
-    func loadDeviceDetails(for device: AndroidDevice) {
+    func loadDeviceDetails(for device: AndroidDevice, refresh: Bool = false) {
         guard device.isUsable,
               let resolvedSDK,
-              deviceDetailsBySerial[device.serial] == nil,
+              (refresh || deviceDetailsBySerial[device.serial] == nil),
               loadingDeviceDetailSerials.insert(device.serial).inserted else {
             return
         }

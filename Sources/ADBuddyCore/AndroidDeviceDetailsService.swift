@@ -5,17 +5,20 @@ public struct AndroidDeviceDetails: Equatable, Sendable {
     public let apiLevel: String
     public let screen: AndroidDeviceScreen?
     public let languageIdentifier: String?
+    public let displays: [AndroidDeviceDisplay]
 
     public init(
         androidVersion: String,
         apiLevel: String,
         screen: AndroidDeviceScreen? = nil,
-        languageIdentifier: String? = nil
+        languageIdentifier: String? = nil,
+        displays: [AndroidDeviceDisplay] = []
     ) {
         self.androidVersion = androidVersion
         self.apiLevel = apiLevel
         self.screen = screen
         self.languageIdentifier = languageIdentifier
+        self.displays = displays
     }
 
     public var displayText: String {
@@ -104,8 +107,18 @@ public struct AndroidDeviceDetailsService: Sendable {
             screen: includesExtendedDetails ? await screen(for: device) : nil,
             languageIdentifier: includesExtendedDetails
                 ? await languageIdentifier(for: device)
-                : nil
+                : nil,
+            displays: includesExtendedDetails ? await displays(for: device) : []
         )
+    }
+
+    private func displays(for device: AndroidDevice) async -> [AndroidDeviceDisplay] {
+        let result = await processRunner.run(
+            executablePath: adbPath,
+            arguments: ["-s", device.serial, "shell", "dumpsys", "display"]
+        )
+        guard result.succeeded else { return [] }
+        return AndroidDeviceDisplayParser.parse(String(decoding: result.standardOutput, as: UTF8.self))
     }
 
     private func deviceProperty(_ name: String, for device: AndroidDevice) async -> String? {

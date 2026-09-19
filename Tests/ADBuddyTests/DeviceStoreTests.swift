@@ -62,6 +62,7 @@ final class DeviceStoreTests: XCTestCase {
             successfulResult(standardOutput: "Physical size: 1080x2400\n"),
             successfulResult(standardOutput: "Physical density: 420\n"),
             successfulResult(standardOutput: "en-AU\n"),
+            successfulResult(),
         ])
         let store = makeDeviceStore(processRunner: runner)
         store.refreshFromPolling()
@@ -93,6 +94,7 @@ final class DeviceStoreTests: XCTestCase {
                 ["-s", "serial", "shell", "wm", "size"],
                 ["-s", "serial", "shell", "wm", "density"],
                 ["-s", "serial", "shell", "getprop", "persist.sys.locale"],
+                ["-s", "serial", "shell", "dumpsys", "display"],
             ]
         )
     }

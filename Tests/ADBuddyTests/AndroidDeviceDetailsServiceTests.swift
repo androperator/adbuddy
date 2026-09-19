@@ -10,6 +10,7 @@ final class AndroidDeviceDetailsServiceTests: XCTestCase {
             successfulResult("Physical size: 1080x2400\n"),
             successfulResult("Physical density: 420\n"),
             successfulResult("en-AU\n"),
+            successfulResult(""),
         ])
         let service = AndroidDeviceDetailsService(
             adbPath: "/SDK/platform-tools/adb",
@@ -40,6 +41,7 @@ final class AndroidDeviceDetailsServiceTests: XCTestCase {
             ["-s", "device-serial", "shell", "wm", "size"],
             ["-s", "device-serial", "shell", "wm", "density"],
             ["-s", "device-serial", "shell", "getprop", "persist.sys.locale"],
+            ["-s", "device-serial", "shell", "dumpsys", "display"],
         ])
     }
 
@@ -50,6 +52,7 @@ final class AndroidDeviceDetailsServiceTests: XCTestCase {
             successfulResult("Physical size: 1080x2400\nOverride size: 720x1600\n"),
             successfulResult("Physical density: 420\nOverride density: 320\n"),
             successfulResult("en-US\n"),
+            successfulResult(""),
         ])
         let service = AndroidDeviceDetailsService(
             adbPath: "/SDK/platform-tools/adb",
@@ -73,6 +76,7 @@ final class AndroidDeviceDetailsServiceTests: XCTestCase {
             successfulResult("Physical density: 420\n"),
             successfulResult("\n"),
             successfulResult("en-US\n"),
+            successfulResult(""),
         ])
         let service = AndroidDeviceDetailsService(
             adbPath: "/SDK/platform-tools/adb",
@@ -84,7 +88,7 @@ final class AndroidDeviceDetailsServiceTests: XCTestCase {
 
         XCTAssertEqual(details?.languageIdentifier, "en-US")
         XCTAssertEqual(
-            requests.suffix(2),
+            requests.dropLast().suffix(2),
             [
                 ["-s", "device-serial", "shell", "getprop", "persist.sys.locale"],
                 ["-s", "device-serial", "shell", "getprop", "ro.product.locale"],

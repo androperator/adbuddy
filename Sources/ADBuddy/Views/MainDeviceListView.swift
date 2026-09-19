@@ -172,7 +172,9 @@ private struct ConnectedDeviceRow: View {
             }
 
             if let deviceDetails {
-                DeviceInformationButton(deviceDetails: deviceDetails)
+                DeviceInformationButton(deviceDetails: deviceDetails) {
+                    deviceStore.loadDeviceDetails(for: device, refresh: true)
+                }
             }
 
             Button {
@@ -450,11 +452,13 @@ private struct DeviceNameWithDetails: View {
 
 private struct DeviceInformationButton: View {
     let deviceDetails: AndroidDeviceDetails
+    var refresh: () -> Void = {}
 
     @State private var isPresentingDeviceInformation = false
 
     var body: some View {
         Button {
+            refresh()
             isPresentingDeviceInformation = true
         } label: {
             Label("Show Device Information", systemImage: "info.circle")
@@ -473,6 +477,18 @@ private struct DeviceInformationButton: View {
 private struct DeviceInformationPopover: View {
     let deviceDetails: AndroidDeviceDetails
 
+    @ViewBuilder
+    private func screenRows(_ screen: AndroidDeviceScreen) -> some View {
+        GridRow {
+            Text("Physical pixels").foregroundStyle(.secondary)
+            Text("\(screen.physicalPixelSize.width) × \(screen.physicalPixelSize.height) px")
+        }
+        GridRow {
+            Text("Logical size").foregroundStyle(.secondary)
+            Text("\(screen.dpSize.width) × \(screen.dpSize.height) dp")
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Device Information")
@@ -487,23 +503,26 @@ private struct DeviceInformationPopover: View {
                     }
                 }
 
-                if let screen = deviceDetails.screen {
-                    GridRow {
-                        Text("Physical pixels")
-                            .foregroundStyle(.secondary)
-                        Text("\(screen.physicalPixelSize.width) × \(screen.physicalPixelSize.height) px")
+                if deviceDetails.displays.count > 1 {
+                    ForEach(Array(deviceDetails.displays.enumerated()), id: \.element.id) { index, display in
+                        GridRow {
+                            Text(deviceDetails.displays.count == 2
+                                 ? (index == 0 ? "Inner screen (unfolded)" : "Outer screen (folded)")
+                                 : "Screen \(index + 1)")
+                                .fontWeight(.medium)
+                            Text("")
+                        }
+                        screenRows(display.screen)
                     }
-
-                    GridRow {
-                        Text("Logical size")
-                            .foregroundStyle(.secondary)
-                        Text("\(screen.dpSize.width) × \(screen.dpSize.height) dp")
-                    }
+                } else if let screen = deviceDetails.screen {
+                    screenRows(screen)
                 }
             }
 
             if deviceDetails.screen?.usesDisplayOverride == true {
-                Text("Android display overrides are active.")
+                Text(deviceDetails.displays.count > 1
+                     ? "Android display overrides are active. Screen sizes above use the built-in display defaults."
+                     : "Android display overrides are active.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
