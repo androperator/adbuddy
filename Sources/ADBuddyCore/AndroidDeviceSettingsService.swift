@@ -1,6 +1,7 @@
 import Foundation
 
 public enum AndroidDeviceSettingAction: CaseIterable, Equatable, Sendable {
+    case openSystemSettings
     case enableDarkTheme
     case enableLightTheme
     case enableGestureNavigation
@@ -12,6 +13,8 @@ public enum AndroidDeviceSettingAction: CaseIterable, Equatable, Sendable {
 
     public var completedDescription: String {
         switch self {
+        case .openSystemSettings:
+            "Android Settings opened"
         case .enableDarkTheme:
             "Dark theme enabled"
         case .enableLightTheme:
@@ -102,6 +105,16 @@ public struct AndroidDeviceSettingsService: Sendable {
             return .failure(.commandFailed(message))
         }
 
+        if action == .openSystemSettings {
+            let output = String(decoding: result.standardOutput + result.standardError, as: UTF8.self)
+            if let error = output.split(whereSeparator: \.isNewline)
+                .map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
+                .first(where: { $0.hasPrefix("Error:") || $0.hasPrefix("Error type") }) {
+                AppLogger.deviceSettings.error("Opening Android Settings failed: \(error, privacy: .public)")
+                return .failure(.commandFailed(error))
+            }
+        }
+
         if action.requiresApplicationRefresh {
             // IBinder.SYSPROPS_TRANSACTION ('_SPR') tells ActivityManager to
             // forward the property-change notification to running applications.
@@ -156,6 +169,8 @@ public struct AndroidDeviceSettingsService: Sendable {
         let navigationArguments = deviceArguments + ["cmd", "overlay", "enable-exclusive", "--user", "current", "--category"]
 
         return switch action {
+        case .openSystemSettings:
+            deviceArguments + ["am", "start", "-W", "-a", "android.settings.SETTINGS"]
         case .enableDarkTheme:
             deviceArguments + ["cmd", "uimode", "night", "yes"]
         case .enableLightTheme:

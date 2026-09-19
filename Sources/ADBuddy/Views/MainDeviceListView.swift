@@ -175,6 +175,18 @@ private struct ConnectedDeviceRow: View {
                 DeviceInformationButton(deviceDetails: deviceDetails)
             }
 
+            Button {
+                deviceStore.performDeviceSetting(.openSystemSettings, for: device)
+            } label: {
+                Label("Open Android Settings", systemImage: "gearshape")
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.small)
+            .accessibilityLabel("Open Android Settings")
+            .help("Open Android Settings")
+            .disabled(!device.isUsable || deviceStore.isPerformingDeviceSetting(for: device))
+
             if device.isUsable {
                 HStack(spacing: 8) {
                     DeviceActionControls(

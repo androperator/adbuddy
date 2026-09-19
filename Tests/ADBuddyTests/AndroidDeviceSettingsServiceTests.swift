@@ -5,7 +5,7 @@ import XCTest
 final class AndroidDeviceSettingsServiceTests: XCTestCase {
     func testUsesFixedArgumentsForNonNavigationSettings() async {
         let actions: [AndroidDeviceSettingAction] = [
-            .enableDarkTheme, .enableLightTheme,
+            .openSystemSettings, .enableDarkTheme, .enableLightTheme,
         ]
         let runner = ScriptedDeviceSettingsProcessRunner(
             results: actions.map { _ in successfulResult() }
@@ -27,10 +27,22 @@ final class AndroidDeviceSettingsServiceTests: XCTestCase {
         XCTAssertEqual(
             invocations,
             [
+                ["-s", "device-serial", "shell", "am", "start", "-W", "-a", "android.settings.SETTINGS"],
                 ["-s", "device-serial", "shell", "cmd", "uimode", "night", "yes"],
                 ["-s", "device-serial", "shell", "cmd", "uimode", "night", "no"],
             ]
         )
+    }
+
+    func testReportsSettingsActivityFailureDespiteSuccessfulExit() async {
+        let runner = ScriptedDeviceSettingsProcessRunner(results: [
+            successfulResult(output: "Error: Activity not started, unable to resolve Intent"),
+        ])
+        let service = AndroidDeviceSettingsService(adbPath: "/SDK/adb", processRunner: runner)
+
+        let result = await service.apply(.openSystemSettings, to: "serial")
+
+        XCTAssertEqual(result, .failure(.commandFailed("Error: Activity not started, unable to resolve Intent")))
     }
 
     func testReportsADBFailureWithStandardError() async {

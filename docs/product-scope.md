@@ -135,6 +135,10 @@ The first implementation is a complete vertical slice, not a visual mockup.
 
 ### Device settings
 
+- Offer a gear button beside the connected-device information button to open
+  Android system Settings on that device. Disable it while the device is unavailable
+  or a device-setting action is running.
+
 - Offer a compact per-device **Device Settings** menu from both the main window
   and menu bar utility.
 - Support explicit Dark Theme and Light Theme actions, Gesture and
