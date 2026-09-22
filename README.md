@@ -112,10 +112,13 @@ same folder selected in Settings and the app's saved recording defaults. See
 
 ## Installation
 
-Download the universal macOS app ZIP from
+Download the macOS app ZIP from
 [GitHub Releases](https://github.com/clawperator/adbuddy/releases/latest),
 extract it, and move `ADBuddy.app` to Applications. Release builds support
-Apple silicon and Intel Macs. Install the Android SDK separately.
+Apple silicon and Intel Macs. Choose the download for your Mac: `arm64` for
+Apple Silicon or `x86_64` for Intel. The universal ZIP supports both architectures.
+The recording-source ZIP is only needed to rebuild the recorder.
+Install the Android SDK separately.
 
 Homebrew distribution is planned; use the published ZIP for installation.
 See [`docs/release.md`](docs/release.md) for packaging and distribution details.

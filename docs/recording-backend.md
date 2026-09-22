@@ -27,7 +27,8 @@ Show taps, file naming, framing, and success notifications remain owned by ADBud
 
 `scripts/prepare_recording_backend.sh` downloads pinned, SHA-256-verified
 macOS archives into the ignored `.build/recording-backend` cache. Local app
-builds include the host architecture; release builds include both architectures.
+builds include the host architecture. Release ZIPs for Apple Silicon or Intel
+include only that architecture; the universal ZIP includes both.
 `scripts/recording/build_backend.sh` builds the patched client for each target
 architecture from the pinned sources, with static SDL and FFmpeg libraries.
 Initial builds require CMake, pkg-config, Python 3, and Apple command-line tools;
@@ -55,8 +56,13 @@ H.264 parser, and MP4 muxer needed by this workflow. It does not link dav1d or
 libusb. Their upstream source archives remain included with the original source
 bundle for reference.
 
-Release packaging includes the matching source archives, license texts inside
-those archives, and this document in `Contents/Resources/Recording/Sources`.
+Release packaging puts the matching sources and this document in a separate
+`ADBuddy-recording-sources-<version>.zip`, published alongside the app ZIP on
+[the same GitHub Release](https://github.com/clawperator/adbuddy/releases).
+The app keeps this document and the license texts in
+`Contents/Resources/Recording/README.md` and `Licenses/`. Its `Sources.txt`
+contains the download URL for the matching source archive. All app ZIPs and the shared source ZIP
+must remain available together. The source archive is not needed to run the app.
 The pinned scrcpy source contains the original build configuration and dependency
 build scripts in `release/build_macos.sh` and `app/deps/`. ADBuddy's release source
 bundle also contains its client extension and build script in `adbuddy-recording`.

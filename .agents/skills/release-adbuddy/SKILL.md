@@ -60,18 +60,23 @@ explicitly authorized publication.
    ADBUDDY_NOTARY_PROFILE="<Keychain profile>" scripts/package_release.sh
    ```
 
-   The resulting archive is
-   `dist/release/ADBuddy-macos-universal-<version>.zip`.
+   The app archives are `dist/release/ADBuddy-macos-<architecture>-<version>.zip`,
+   where architecture is `arm64`, `x86_64`, or `universal`. The matching sources are
+   in `dist/release/ADBuddy-recording-sources-<version>.zip`. Publish all four assets
+   together and keep them available; the app links to that source archive.
 3. Before changing remote state, confirm that `v<version>` is absent locally
    and on `origin`, and that `gh release view v<version>` reports no GitHub
    Release. Do not force-move or reuse a tag that points at a different commit.
 4. Create an annotated tag at the validated release commit, push that tag only,
-   then upload the notarized ZIP to its GitHub Release:
+   then upload the three notarized app ZIPs and source ZIP to its GitHub Release:
 
    ```bash
    git tag -a v<version> <commit> -m "Release v<version>"
    git push origin refs/tags/v<version>
    gh release create v<version> dist/release/ADBuddy-macos-universal-<version>.zip \
+     dist/release/ADBuddy-macos-arm64-<version>.zip \
+     dist/release/ADBuddy-macos-x86_64-<version>.zip \
+     dist/release/ADBuddy-recording-sources-<version>.zip \
      --title "ADBuddy <version>" \
      --generate-notes
    ```

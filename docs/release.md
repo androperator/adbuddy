@@ -2,9 +2,11 @@
 
 ## Distribution
 
-ADBuddy is distributed outside the Mac App Store. Universal app ZIPs are
-available from [GitHub Releases](https://github.com/clawperator/adbuddy/releases).
-Download and extract the ZIP, then move `ADBuddy.app` to Applications.
+ADBuddy is distributed through
+[GitHub Releases](https://github.com/clawperator/adbuddy/releases), with app ZIPs
+for Apple Silicon (`arm64`), Intel (`x86_64`), and both architectures (universal).
+Choose the ZIP for your Mac, extract it, then move `ADBuddy.app` to Applications.
+The universal ZIP runs on either architecture but is a larger download.
 
 A Clawperator-maintained Homebrew cask remains a planned distribution channel.
 The proposed command, once that cask is published, is:
@@ -18,8 +20,8 @@ macOS 14 or newer on Apple silicon and Intel Macs.
 
 ## Release artifact
 
-The release build creates a universal `ADBuddy.app` containing `arm64`
-and `x86_64` slices. It must include the `adbuddy-mcp` stdio helper in
+The release build creates separate `arm64` and `x86_64` apps, plus a universal
+app containing both slices. Each app includes the `adbuddy-mcp` stdio helper in
 `Contents/MacOS` alongside the GUI executable. Package it in a versioned archive
 such as:
 
@@ -27,14 +29,20 @@ such as:
 ADBuddy-macos-universal-0.2.0.zip
 ```
 
+The smaller downloads use `ADBuddy-macos-arm64-<version>.zip` and
+`ADBuddy-macos-x86_64-<version>.zip`. Each contains only its matching recorder
+helper and Android server resources.
+
 Do not treat an ad-hoc signed developer build as a public release. Public
 artifacts require a Developer ID Application identity, Hardened Runtime,
 notarization, and stapling.
 
 The package also includes architecture-specific scrcpy recording helpers and
 matching Android server resources. The release script verifies pinned checksums,
-signs both helpers, and includes matching third-party source archives and
-licenses. See [recording-backend.md](recording-backend.md).
+signs the included helpers, and keeps third-party license texts and a source
+download link inside the app. Matching sources and rebuild scripts go in the separate
+`ADBuddy-recording-sources-<version>.zip`. Publish all three app ZIPs and the
+source ZIP on the same release and keep them available. See [recording-backend.md](recording-backend.md).
 
 ## Packaging command
 
@@ -43,9 +51,9 @@ release helper to synchronize the MCP version, document examples, and packaging
 example, then commit the version change before packaging. The current version is
 `0.2.0`.
 
-`scripts/package_release.sh` creates the universal application bundle and
-versioned ZIP archive. It defaults to the Action Launcher Developer ID identity
-and accepts an override through `AD_BUDDY_SIGNING_IDENTITY` when necessary.
+`scripts/package_release.sh` creates all three application bundles and
+versioned app ZIPs, plus one shared recording-source ZIP. It defaults to the
+Action Launcher Developer ID identity and accepts an override through `AD_BUDDY_SIGNING_IDENTITY` when necessary.
 
 Before using the command for a public artifact, configure a notarization
 credential as a Keychain profile outside the repository. Do not place
@@ -63,7 +71,14 @@ For local signing validation only, the command can omit notarization:
 scripts/package_release.sh --skip-notarization
 ```
 
-An archive created with `--skip-notarization` is not a public release artifact.
+To measure or test all three builds without a Developer ID certificate:
+
+```sh
+scripts/package_release.sh --local
+```
+
+This ad-hoc signs the app and skips notarization. Neither `--local` nor
+`--skip-notarization` produces a public release artifact.
 
 ## Release flow
 
@@ -77,7 +92,8 @@ An archive created with `--skip-notarization` is not a public release artifact.
    staple the notarization ticket to the app.
 6. Verify the artifact with `codesign`, `spctl`, and `stapler`.
 7. With explicit publication authorization, tag the validated release commit
-   and upload the final ZIP and release notes to GitHub Releases. Follow the
+   and upload all three final app ZIPs and the matching recording-source ZIP with
+   release notes to GitHub Releases. Follow the
    release skill for tag and upload recovery rules.
 8. If a Homebrew tap update is explicitly requested, publish or update its cask
    URL, version, and SHA-256 after the matching asset exists.
