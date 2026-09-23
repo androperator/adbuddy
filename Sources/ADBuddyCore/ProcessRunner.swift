@@ -49,6 +49,10 @@ public final class ProcessRunner: ProcessRunning, @unchecked Sendable {
         )
     }
 
+    public func processIdentifier(identifier: String) -> Int32? {
+        activeProcesses.processIdentifier(id: identifier)
+    }
+
     public func interrupt(identifier: String) -> Bool {
         activeProcesses.interrupt(id: identifier)
     }
@@ -209,6 +213,13 @@ private final class ActiveProcessRegistry: @unchecked Sendable {
         lock.lock()
         processes[id] = nil
         lock.unlock()
+    }
+
+    func processIdentifier(id: String) -> Int32? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let process = processes[id], process.isRunning else { return nil }
+        return process.processIdentifier
     }
 
     func interrupt(id: String) -> Bool {

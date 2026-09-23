@@ -22,7 +22,7 @@ done
 mkdir -p "$BUILD" "$PREFIX"
 FINGERPRINT="$(cat "$ROOT/scripts/recording/segments.c" "$ROOT/scripts/recording/build_backend.sh" | shasum -a 256 | cut -d ' ' -f1)"
 # Increment when changing pinned library versions or their configure options.
-LIBRARY_BUILD_VERSION=1
+LIBRARY_BUILD_VERSION=3
 if [[ -f "$BUILD/library-build-version" && "$(cat "$BUILD/library-build-version")" != "$LIBRARY_BUILD_VERSION" ]]; then
   rm -rf "$PREFIX" "$BUILD/sdl" "$BUILD/ffmpeg"
   mkdir -p "$PREFIX"
@@ -61,7 +61,7 @@ if [[ ! -f "$PREFIX/lib/libavformat.a" ]]; then
       --disable-autodetect --disable-everything --disable-programs --disable-doc \
       --disable-shared --enable-static --disable-x86asm \
       --disable-avdevice --disable-avfilter --disable-swscale \
-      --enable-swresample --enable-decoder=h264,png --enable-parser=h264 \
+      --enable-swresample --enable-decoder=h264,png --enable-parser=h264,png --enable-demuxer=image_png_pipe \
       --enable-muxer=mp4 --enable-protocol=file --enable-zlib >&2
     make -j "$JOBS" >&2
     make install >&2

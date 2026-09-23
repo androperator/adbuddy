@@ -87,6 +87,7 @@ AppPreferences -> Finder reveal preference -> MediaFinderRevealService
 DeviceStore -> MediaNotificationService -> macOS notification center
 AppPreferences -> recording options -> ScreenRecordingService
 DeviceStore -> ScreenRecordingService -> bundled scrcpy capture -> local MP4
+DeviceStore -> DeviceMirrorStore -> ScrcpyMirroring -> standalone scrcpy window
 ScreenRecordingService -> AVFoundation -> framed MP4 export
 DeviceStore discovery by serial -> LogcatWindowView -> LogcatStore
 DeviceStore emulator entries -> EmulatorStore -> AndroidEmulatorService
@@ -391,3 +392,12 @@ Test pure behavior without a device:
 
 Live ADB validation supplements those tests when a device or emulator is
 available.
+
+## Device mirror sessions
+
+`DeviceMirrorStore` owns one cancellable task and helper process identifier per
+mirrored serial. It reserves the serial before launch, activates an existing
+helper on repeated requests, and removes the session when the helper exits.
+`ScrcpyMirroring` uses `ProcessRunner` with an explicit SDK ADB environment and
+shares bundled-helper resolution with recording. The app waits for mirror
+cancellation on normal quit. Mirror windows belong to the scrcpy process.

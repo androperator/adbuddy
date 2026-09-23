@@ -31,18 +31,9 @@ public struct ScrcpyScreenRecordingCapture: ScreenRecordingCapturing {
 
     public init(adbPath: String, backendDirectory: URL? = nil) {
         self.adbPath = adbPath
-        #if arch(arm64)
-        let architecture = "arm64"
-        #else
-        let architecture = "x86_64"
-        #endif
-        // Both GUI and MCP executables live in Contents/MacOS.
-        let executable = Bundle.main.executableURL ?? URL(fileURLWithPath: CommandLine.arguments[0])
-        let contents = executable.deletingLastPathComponent().deletingLastPathComponent()
-        executableURL = backendDirectory?.appendingPathComponent("scrcpy")
-            ?? contents.appendingPathComponent("MacOS/scrcpy-\(architecture)")
-        serverURL = backendDirectory?.appendingPathComponent("scrcpy-server")
-            ?? contents.appendingPathComponent("Resources/Recording/\(architecture)/scrcpy-server")
+        let backend = ScrcpyBackend(backendDirectory: backendDirectory)
+        executableURL = backend.executableURL
+        serverURL = backend.serverURL
     }
 
     public func record(

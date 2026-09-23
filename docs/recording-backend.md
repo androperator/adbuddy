@@ -9,7 +9,8 @@ The bundled recorder locks the capture canvas to the device's natural orientatio
 Display content can rotate within that canvas without shrinking into a portrait
 letterbox. The device's own rotation settings are not changed.
 
-The helper runs without a window, audio, device control, or clipboard access.
+For recording, the helper runs without a window, audio, device control, or
+clipboard access.
 It uses ADBuddy's resolved Android SDK ADB and writes local H.264 MP4 clips.
 The extension reads encoded frame dimensions with FFmpeg's H.264 parser. When
 those dimensions change, it finishes the previous MP4 and opens the next at the
@@ -22,6 +23,15 @@ and frames them separately, and reports the session once.
 The existing three-minute limit remains. The selected percentage limits the
 longest dimension; the encoder may round dimensions to its required alignment.
 Show taps, file naming, framing, and success notifications remain owned by ADBuddy.
+
+## Device mirroring
+
+ADBuddy also uses the bundled helper for **Mirror Device**. Each mirror runs as
+an independent process with H.264 video playback and keyboard/mouse control.
+Audio and automatic clipboard synchronization are disabled. Mirroring does not
+use the recording extension, orientation lock, or recording time limit.
+The existing SDL and H.264 decoder build supports this mode; no additional
+runtime dependency is required.
 
 ## Bundling
 
@@ -51,9 +61,10 @@ under Apache License 2.0. The custom static macOS client includes:
 - FFmpeg 8.1.2, Copyright the FFmpeg developers, LGPL 2.1 or later;
 - SDL 3.4.12, Copyright Sam Lantinga and contributors, zlib license.
 
-The custom client disables USB control and uses only the H.264 and PNG decoders,
-H.264 parser, and MP4 muxer needed by this workflow. It does not link dav1d or
-libusb. Their upstream source archives remain included with the original source
+The custom client disables direct USB (AOA) control; mirror input uses ADB.
+It includes the H.264 and PNG decoders and parsers, PNG image demuxer, and MP4
+muxer needed by these workflows. The matching upstream window icons are bundled
+beside the Android server. The client does not link dav1d or libusb. Their upstream source archives remain included with the original source
 bundle for reference.
 
 Release packaging puts the matching sources and this document in a separate

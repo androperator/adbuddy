@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install a pinned, checksum-verified headless recorder into an app's Contents directory.
+# Install a pinned, checksum-verified recording and mirroring helper into an app's Contents directory.
 set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DESTINATION="${1:?usage: prepare_recording_backend.sh destination [arm64|x86_64|universal]}"
@@ -39,7 +39,7 @@ install_architecture() {
   local patched_client
   patched_client="$("$ROOT_DIR/scripts/recording/build_backend.sh" "$architecture")"
   cp "$patched_client" "$DESTINATION/MacOS/scrcpy-$architecture"
-  cp "$extracted/scrcpy-macos-$upstream_architecture-v$VERSION/"{scrcpy-server,LICENSE} "$DESTINATION/Resources/Recording/$architecture/"
+  cp "$extracted/scrcpy-macos-$upstream_architecture-v$VERSION/"{scrcpy-server,LICENSE,scrcpy.png,disconnected.png} "$DESTINATION/Resources/Recording/$architecture/"
   rm -rf "$extracted"
 }
 

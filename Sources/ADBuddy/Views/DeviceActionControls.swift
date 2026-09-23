@@ -9,6 +9,7 @@ struct DeviceActionControls: View {
     let takeScreenshot: () -> Void
     let showScreenRecordingOptions: () -> Void
     let stopScreenRecording: () -> Void
+    let mirrorDevice: () -> Void
     let openLogcat: () -> Void
 
     var body: some View {
@@ -40,6 +41,18 @@ struct DeviceActionControls: View {
             .controlSize(.small)
             .disabled(isCapturing)
             .help("Take Screenshot")
+
+            Button(action: mirrorDevice) {
+                Label("Mirror Device", systemImage: "rectangle.on.rectangle")
+                    .labelStyle(.iconOnly)
+                    .frame(width: DeviceListLayout.actionButtonLabelWidth,
+                           height: DeviceListLayout.actionControlContentHeight)
+            }
+            .frame(width: DeviceListLayout.actionControlWidth,
+                   height: DeviceListLayout.actionControlHeight)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Mirror Device")
 
             screenRecordingControl
 

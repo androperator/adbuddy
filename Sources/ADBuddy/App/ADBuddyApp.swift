@@ -45,6 +45,7 @@ struct ADBuddyApp: App {
                     emulatorStore.start()
                 }
                 .onAppear {
+                    appDelegate.stopDeviceMirrors = { await deviceStore.mirrors.stopAll() }
                     appDelegate.setAPKDocumentHandler { fileURLs in
                         guard let fileURL = fileURLs.first else {
                             return
@@ -128,6 +129,17 @@ struct ADBuddyApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    var stopDeviceMirrors: (@MainActor () async -> Void)?
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let stopDeviceMirrors else { return .terminateNow }
+        Task { @MainActor in
+            await stopDeviceMirrors()
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
+
     private var apkDocumentHandler: (([URL]) -> Void)?
     private var pendingAPKDocumentURLs: [URL] = []
 

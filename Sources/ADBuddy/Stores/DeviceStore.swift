@@ -6,6 +6,12 @@ import Observation
 final class DeviceStore {
     static let automaticRefreshInterval: Duration = .seconds(1)
 
+    let mirrors = DeviceMirrorStore()
+
+    func mirrorDevice(_ device: AndroidDevice) {
+        mirrors.open(device: device, adbPath: resolvedSDK?.adbPath)
+    }
+
     private let preferences: AppPreferences
     private let sdkLocator: AndroidSDKLocator
     private let processRunner: any ProcessRunning

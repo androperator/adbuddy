@@ -8,6 +8,7 @@ public enum AppLogger {
     public static let androidSDK = Logger(subsystem: subsystem, category: "AndroidSDK")
     public static let devices = Logger(subsystem: subsystem, category: "Devices")
     public static let screenshot = Logger(subsystem: subsystem, category: "Screenshot")
+    public static let mirroring = Logger(subsystem: subsystem, category: "Mirroring")
     public static let recording = Logger(subsystem: subsystem, category: "Recording")
     public static let notifications = Logger(subsystem: subsystem, category: "Notifications")
     public static let menuBar = Logger(subsystem: subsystem, category: "MenuBar")

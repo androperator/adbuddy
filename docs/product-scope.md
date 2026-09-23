@@ -67,6 +67,22 @@ current product contract; they are not an outstanding implementation plan.
 - Let users choose the shared media destination from the Settings window. The
   selected folder is used for both screenshots and recordings.
 
+### Device mirroring
+
+- Offer **Mirror Device** for each usable connected device from the main-window
+  controls, contextual menu, and menu bar. Double-clicking a physical device
+  also opens its mirror; emulator double-clicks retain their host-window action.
+- Open a standalone scrcpy window titled with the device's friendly name, with
+  keyboard and mouse control enabled and audio disabled.
+- Keep one mirror session per device. Reopening an active mirror brings its
+  window forward. Multiple devices may be mirrored independently.
+- Disable automatic clipboard synchronization. Explicit scrcpy paste shortcuts
+  remain available.
+- Closing a mirror ends that session. Quitting ADBuddy stops its mirror sessions.
+  Report launch and device-disconnection failures with a native alert.
+- Use the bundled helper and resolved Android SDK ADB; no separate scrcpy
+  installation is required. Mirroring does not start or replace screen recording.
+
 ### Screen recording
 
 - Offer **Record Screen** for each usable connected device from the menu bar
@@ -258,6 +274,18 @@ Check SDK discovery when launching outside an interactive shell as well.
   an Android Studio-managed emulator, verify the Android Studio host opens.
   Headless or unidentified hosts must not offer a window-reveal action.
   Check device-ID copying and AVD-folder reveal from contextual menus.
+
+### Device mirroring
+
+- Open a mirror from the device row, contextual menu, and menu bar. Confirm
+  keyboard and mouse input on a connected test device and no audio playback.
+- Reopen the same device and verify its existing window is brought forward;
+  mirror two devices and confirm each action selects the correct window.
+- Close and reopen a mirror, disconnect a mirrored device, and quit ADBuddy
+  with mirrors open. Confirm session cleanup and actionable disconnect feedback.
+- Double-click a physical device to mirror it and an emulator to reveal its
+  existing host window. Verify screenshots and recordings still work while
+  mirroring, including orientation changes.
 
 ### App actions, links, and installation
 

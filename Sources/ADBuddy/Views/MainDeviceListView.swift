@@ -165,6 +165,10 @@ private struct ConnectedDeviceRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture(count: 2) {
+                if device.kind == .physical, device.isUsable {
+                    deviceStore.mirrorDevice(device)
+                    return
+                }
                 guard emulatorWindowPresentation?.canRevealHostWindow == true else {
                     return
                 }
@@ -200,6 +204,7 @@ private struct ConnectedDeviceRow: View {
                         takeScreenshot: { deviceStore.takeScreenshot(of: device) },
                         showScreenRecordingOptions: { deviceStore.presentScreenRecordingOptions(for: device) },
                         stopScreenRecording: { deviceStore.stopScreenRecording(for: device) },
+                        mirrorDevice: { deviceStore.mirrorDevice(device) },
                         openLogcat: { openLogcat(device) }
                     )
 
@@ -229,6 +234,9 @@ private struct ConnectedDeviceRow: View {
             apkInstallationStore.presentInstaller(for: fileURL, preferredDevice: device)
         }
         .contextMenu {
+            if device.isUsable {
+                Button("Mirror Device") { deviceStore.mirrorDevice(device) }
+            }
             Button("Copy Device ID") {
                 deviceIdentifierClipboard.copyDeviceIdentifier(device.serial)
             }
