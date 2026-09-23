@@ -64,7 +64,7 @@ VERSION_FILE="$ROOT_DIR/VERSION"
 [[ -f "$MENU_BAR_GLYPH" ]] || fail "menu bar glyph is missing: $MENU_BAR_GLYPH"
 VERSION="$(<"$VERSION_FILE")"
 [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}([.-][0-9A-Za-z]+)*$ ]] || \
-  fail "release version in $VERSION_FILE must look like 0.2.0"
+  fail "release version in $VERSION_FILE must look like 0.2.1"
 
 SIGNING_IDENTITY="${AD_BUDDY_SIGNING_IDENTITY:-$DEFAULT_SIGNING_IDENTITY}"
 NOTARY_PROFILE="${ADBUDDY_NOTARY_PROFILE:-${AD_BUDDY_NOTARY_PROFILE:-}}"
