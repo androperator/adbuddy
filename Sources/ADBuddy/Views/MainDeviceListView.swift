@@ -196,7 +196,6 @@ private struct ConnectedDeviceRow: View {
             if device.isUsable {
                 HStack(spacing: 8) {
                     DeviceActionControls(
-                        showsMirror: device.kind == .physical,
                         isCapturing: deviceStore.isCapturingScreenshot(for: device),
                         isPreparingScreenRecording: deviceStore.isPreparingScreenRecording(for: device),
                         isScreenRecording: deviceStore.canStopScreenRecording(for: device),
@@ -205,7 +204,6 @@ private struct ConnectedDeviceRow: View {
                         takeScreenshot: { deviceStore.takeScreenshot(of: device) },
                         showScreenRecordingOptions: { deviceStore.presentScreenRecordingOptions(for: device) },
                         stopScreenRecording: { deviceStore.stopScreenRecording(for: device) },
-                        mirrorDevice: { deviceStore.mirrorDevice(device) },
                         openLogcat: { openLogcat(device) }
                     )
 
@@ -286,6 +284,24 @@ private struct ConnectedDeviceRow: View {
             .controlSize(.small)
             .tint(.red)
             .help("Stop Emulator")
+        } else if device.kind == .physical {
+            Button {
+                deviceStore.mirrorDevice(device)
+            } label: {
+                Label("Mirror Device", systemImage: "rectangle.on.rectangle")
+                    .labelStyle(.iconOnly)
+                    .frame(
+                        width: DeviceListLayout.actionControlContentHeight,
+                        height: DeviceListLayout.actionControlContentHeight
+                    )
+            }
+            .frame(
+                width: DeviceListLayout.lifecycleControlWidth,
+                height: DeviceListLayout.actionControlHeight
+            )
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Mirror Device")
         } else {
             Color.clear
                 .frame(
