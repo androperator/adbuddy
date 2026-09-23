@@ -196,6 +196,7 @@ private struct ConnectedDeviceRow: View {
             if device.isUsable {
                 HStack(spacing: 8) {
                     DeviceActionControls(
+                        showsMirror: device.kind == .physical,
                         isCapturing: deviceStore.isCapturingScreenshot(for: device),
                         isPreparingScreenRecording: deviceStore.isPreparingScreenRecording(for: device),
                         isScreenRecording: deviceStore.canStopScreenRecording(for: device),
@@ -234,7 +235,7 @@ private struct ConnectedDeviceRow: View {
             apkInstallationStore.presentInstaller(for: fileURL, preferredDevice: device)
         }
         .contextMenu {
-            if device.isUsable {
+            if device.isUsable, device.kind == .physical {
                 Button("Mirror Device") { deviceStore.mirrorDevice(device) }
             }
             Button("Copy Device ID") {

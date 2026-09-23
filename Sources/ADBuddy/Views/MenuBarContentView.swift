@@ -80,9 +80,11 @@ struct MenuBarContentView: View {
             ForEach(deviceStore.devices) { device in
                 Menu(device.menuTitle) {
                     if device.isUsable {
-                        Button(deviceStore.mirrors.activeSerials.contains(device.serial)
-                               ? "Show Device Mirror" : "Mirror Device") {
-                            deviceStore.mirrorDevice(device)
+                        if device.kind == .physical {
+                            Button(deviceStore.mirrors.activeSerials.contains(device.serial)
+                                   ? "Show Device Mirror" : "Mirror Device") {
+                                deviceStore.mirrorDevice(device)
+                            }
                         }
 
                         Button("Take Screenshot") {

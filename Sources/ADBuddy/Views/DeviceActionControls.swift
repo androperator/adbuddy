@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DeviceActionControls: View {
+    let showsMirror: Bool
     let isCapturing: Bool
     let isPreparingScreenRecording: Bool
     let isScreenRecording: Bool
@@ -14,6 +15,20 @@ struct DeviceActionControls: View {
 
     var body: some View {
         HStack(spacing: 8) {
+            if showsMirror {
+                Button(action: mirrorDevice) {
+                    Label("Mirror Device", systemImage: "rectangle.on.rectangle")
+                        .labelStyle(.iconOnly)
+                        .frame(width: DeviceListLayout.actionButtonLabelWidth,
+                               height: DeviceListLayout.actionControlContentHeight)
+                }
+                .frame(width: DeviceListLayout.actionControlWidth,
+                       height: DeviceListLayout.actionControlHeight)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Mirror Device")
+            }
+
             Button {
                 takeScreenshot()
             } label: {
@@ -41,18 +56,6 @@ struct DeviceActionControls: View {
             .controlSize(.small)
             .disabled(isCapturing)
             .help("Take Screenshot")
-
-            Button(action: mirrorDevice) {
-                Label("Mirror Device", systemImage: "rectangle.on.rectangle")
-                    .labelStyle(.iconOnly)
-                    .frame(width: DeviceListLayout.actionButtonLabelWidth,
-                           height: DeviceListLayout.actionControlContentHeight)
-            }
-            .frame(width: DeviceListLayout.actionControlWidth,
-                   height: DeviceListLayout.actionControlHeight)
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .help("Mirror Device")
 
             screenRecordingControl
 

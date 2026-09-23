@@ -69,8 +69,9 @@ current product contract; they are not an outstanding implementation plan.
 
 ### Device mirroring
 
-- Offer **Mirror Device** for each usable connected device from the main-window
-  controls, contextual menu, and menu bar. Double-clicking a physical device
+- Offer **Mirror Device** for each usable connected physical device from the
+  main-window controls, contextual menu, and menu bar. Place its row button
+  immediately before **Take Screenshot** and hide mirroring actions for emulators. Double-clicking a physical device
   also opens its mirror; emulator double-clicks retain their host-window action.
 - Open a standalone scrcpy window titled with the device's friendly name, with
   keyboard and mouse control enabled and audio disabled.
