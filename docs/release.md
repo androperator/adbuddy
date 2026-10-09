@@ -90,8 +90,15 @@ This ad-hoc signs the app and skips notarization. Neither `--local` nor
 
 ## Release flow
 
-1. Follow the version-bump procedure in the repository
-   [release skill](../.agents/skills/release-adbuddy/SKILL.md).
+The repository [release skill](../.agents/skills/release-adbuddy/SKILL.md)
+handles a requested release from version preparation through verified publication.
+On resume, it checks completed stages and continues from the first incomplete
+one. Existing tags and uploaded assets are preserved; conflicts require explicit
+repair direction. Version-only and packaging-only requests keep their narrower
+scope.
+
+1. Prepare and commit the synchronized target version using the release skill,
+   or verify the already committed version with its helper's `--check`.
 2. Author and commit the target version entry in `CHANGELOG.md` using the
    [release-notes-author skill](../.agents/skills/release-notes-author/SKILL.md).
    It gathers the previous release tag through the intended build commit,
