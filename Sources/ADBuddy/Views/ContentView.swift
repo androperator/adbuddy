@@ -7,6 +7,7 @@ struct ContentView: View {
     @Environment(AppPreferences.self) private var preferences
     @Environment(APKInstallationStore.self) private var apkInstallationStore
 
+
     var body: some View {
         @Bindable var deviceStore = deviceStore
 
@@ -140,6 +141,23 @@ struct ContentView: View {
                 )
             }
         }
+        .alert("Delete Emulator?", isPresented: Binding(
+            get: { emulatorStore.deleteConfirmationVirtualDevice != nil },
+            set: { if !$0 { emulatorStore.deleteConfirmationVirtualDevice = nil } }
+        ), presenting: emulatorStore.deleteConfirmationVirtualDevice) { device in
+            Button("Cancel", role: .cancel) { emulatorStore.deleteConfirmationVirtualDevice = nil }
+            Button("Delete", role: .destructive) {
+                Task { await emulatorStore.confirmDelete(device, configuration: preferences.emulatorHelperConfiguration) }
+            }
+        } message: { device in
+            Text("Permanently delete \(device.name) and all its installed apps, settings and data? The shared Android system image will be kept.")
+        }
+        .alert("Could Not Delete Emulator", isPresented: Binding(
+            get: { emulatorStore.deletionError != nil },
+            set: { if !$0 { emulatorStore.deletionError = nil } }
+        )) {
+            Button("OK") { emulatorStore.deletionError = nil }
+        } message: { Text(emulatorStore.deletionError ?? "") }
         .alert(
             "Wipe Emulator Data?",
             isPresented: Binding(
@@ -184,6 +202,17 @@ struct ContentView: View {
         }
         .navigationTitle("ADBuddy")
         .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    EmulatorCreationWindowController.shared.show(
+                        preferences: preferences, deviceStore: deviceStore, emulatorStore: emulatorStore
+                    )
+                } label: {
+                    Label("Create Android Emulator", systemImage: "plus.rectangle")
+                }
+                .help("Create Android Emulator")
+            }
+
             ToolbarItem(placement: .primaryAction) {
                 Button(action: chooseAPK) {
                     Label("Install APK", systemImage: "shippingbox")

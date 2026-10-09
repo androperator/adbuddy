@@ -24,6 +24,13 @@ final class AppPreferences {
         static let deepLinkLauncherEnabled = "deepLinkLauncherEnabled"
     }
 
+    var emulatorHelperPath: String { didSet { userDefaults.set(emulatorHelperPath, forKey: "emulatorHelperPath") } }
+    var emulatorNodePath: String { didSet { userDefaults.set(emulatorNodePath, forKey: "emulatorNodePath") } }
+    var emulatorJavaHome: String { didSet { userDefaults.set(emulatorJavaHome, forKey: "emulatorJavaHome") } }
+    var emulatorHelperConfiguration: EmulatorHelperConfiguration {
+        EmulatorHelperConfiguration(helperPath: emulatorHelperPath, nodePath: emulatorNodePath, javaHome: emulatorJavaHome)
+    }
+
     private let userDefaults: UserDefaults
     private let defaultScreenshotDirectory: URL
 
@@ -172,6 +179,9 @@ final class AppPreferences {
         screenRecordingShowsTaps = userDefaults.object(forKey: Key.screenRecordingShowsTaps) as? Bool
             ?? ScreenRecordingOptions.default.showsTaps
         screenRecordingAddsFrame = userDefaults.object(forKey: Key.screenRecordingAddsFrame) as? Bool ?? false
+        emulatorHelperPath = userDefaults.string(forKey: "emulatorHelperPath") ?? ""
+        emulatorNodePath = userDefaults.string(forKey: "emulatorNodePath") ?? ""
+        emulatorJavaHome = userDefaults.string(forKey: "emulatorJavaHome") ?? ""
         isDeepLinkLauncherEnabled = userDefaults.object(forKey: Key.deepLinkLauncherEnabled) as? Bool ?? false
         logcatColors = Self.loadLogcatColors(from: userDefaults) ?? LogcatPriority.defaultColors
         logcatTablePreferences = Self.loadLogcatTablePreferences(from: userDefaults)

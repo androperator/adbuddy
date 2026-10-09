@@ -88,7 +88,9 @@ struct MainDeviceListView: View {
                         },
                         requestWipeDataAndStart: {
                             emulatorStore.requestWipeDataAndStart(virtualDevice)
-                        }
+                        },
+                        requestDelete: { emulatorStore.requestDelete(virtualDevice) },
+                        isDeleting: emulatorStore.deletingNames.contains(virtualDevice.name)
                     )
                 }
             }
@@ -329,6 +331,8 @@ private struct VirtualDeviceRow: View {
     let virtualDevice: AndroidVirtualDevice
     let start: (AndroidEmulatorStartMode) -> Void
     let requestWipeDataAndStart: () -> Void
+    let requestDelete: () -> Void
+    let isDeleting: Bool
 
     private let virtualDeviceFinderRevealer = AndroidVirtualDeviceFinderRevealService()
 
@@ -351,12 +355,16 @@ private struct VirtualDeviceRow: View {
                 DeviceInformationButton(deviceDetails: deviceDetails)
             }
 
-            lifecycleControls
+            if isDeleting {
+                ProgressView().controlSize(.small).help("Deleting Emulator")
+            } else {
+                lifecycleControls
+            }
         }
         .contentShape(Rectangle())
         .padding(.vertical, 2)
         .onTapGesture(count: 2) {
-            guard case .stopped = virtualDevice.status else {
+            guard !isDeleting, case .stopped = virtualDevice.status else {
                 return
             }
             start(.quickBoot)
@@ -365,11 +373,15 @@ private struct VirtualDeviceRow: View {
             Button("Reveal in Finder") {
                 virtualDeviceFinderRevealer.revealVirtualDevice(named: virtualDevice.name)
             }
+            if case .stopped = virtualDevice.status {
+                Button("Delete Emulator…", role: .destructive, action: requestDelete).disabled(isDeleting)
+            }
         }
     }
 
     private var statusDetail: String {
-        switch virtualDevice.status {
+        if isDeleting { return "Deleting…" }
+        return switch virtualDevice.status {
         case .stopped:
             "Stopped"
         case .starting:
@@ -399,7 +411,8 @@ private struct VirtualDeviceRow: View {
             HStack(spacing: 8) {
                 EmulatorOverflowMenu(
                     coldBoot: { start(.coldBoot) },
-                    requestWipeDataAndStart: requestWipeDataAndStart
+                    requestWipeDataAndStart: requestWipeDataAndStart,
+                    requestDelete: requestDelete
                 )
 
                 Button {

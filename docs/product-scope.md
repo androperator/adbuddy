@@ -121,6 +121,41 @@ current product contract; they are not an outstanding implementation plan.
 
 ### Emulator management
 
+- Offer **Delete Emulator…** in stopped-AVD action and contextual menus. Confirm
+  the named AVD's permanent data loss, retain shared system images, and refuse
+  deletion if its state changes before confirmation. Use the optional helper's
+  live running-device checks; disable launch while deletion is in progress and
+  show deletion failures in a native alert.
+- Offer a prototype **Create Android Emulator** window from the main-window toolbar.
+  Use the optional separately installed `@androperator/emulator` helper with
+  catalog capabilities; Node is not bundled. Settings provides helper, Node,
+  and Java path overrides. Packaged development builds prefer a built sibling
+  emulator checkout.
+- Select a hardware type first (Phone, Tablet, Foldable, TV, Automotive, Wear OS,
+  Desktop, XR, Glasses, or Other), then a profile from that type and a matching
+  native-architecture image. Only types present in the SDK catalog are shown.
+  Load installed images first and automatically fetch downloadable choices. Keep
+  installed images available if the remote catalog fails, with a retry action.
+  Mark installed choices with a drive icon and remote choices with a download icon. Reserve the native checkmark for the selected image; creation downloads the selected image.
+- Suggest names in the form `Nexus_10_API_37.2`, updating with device and image
+  selection while preserving manually entered names. Require a unique name and
+  internal-storage capacity, defaulting to 24 GB.
+  Never replace existing AVDs or accept SDK licenses automatically. Report
+  prerequisite and license failures visibly. Offer **Create** and **Create & Start** actions, with **Create & Start** as the
+  default Return-key action. Create leaves the emulator stopped; Create & Start
+  launches it after successful creation. Use the red close button or Escape to cancel.
+- Initial loading hides the form and entire footer, including the separator, with a
+  progress indicator centered across the full window content while preserving
+  window size. Its native red close button and Escape dismiss it except during
+  creation. Both creation buttons remain hidden until local options are ready;
+  Escape remains available during loading. Errors expose recovery controls. Downloadable images then load quietly without disabling the form or
+  creation with an installed image. Creation progress, validation, and retry controls
+  share a fixed-height area at the bottom left. Technical errors open in a popover without resizing
+  the sheet. Image availability is shown by picker icons, with spoken status for accessibility.
+  Dismissal is disabled during creation; cancellation and byte-level download progress are deferred.
+  Configured capacity is not a host-disk quota, guaranteed guest capacity, or
+  existing-userdata resizing. Dynamic allocation and snapshot policy use SDK defaults.
+
 - Show all connected Android devices, physical and emulator, together in the
   compact main-window list. A connected emulator is shown once, with its AVD
   name, ADB serial, stop control, and device actions.
@@ -325,7 +360,7 @@ checks when changing those features.
 The following capabilities are not implemented. Add them only as deliberate
 scope changes, without placeholder interfaces:
 
-- AVD creation, configuration, and snapshot management;
+- Advanced AVD configuration, resizing, and snapshot management;
 - saved Logcat filter presets, log export, advanced field or regex filters,
   device-buffer mutation, and multiple Logcat tabs per window;
 - split APKs, `.apks` archives, and Android App Bundles;

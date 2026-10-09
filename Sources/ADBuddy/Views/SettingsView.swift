@@ -16,6 +16,9 @@ struct SettingsView: View {
                     Label("Screenshots", systemImage: "camera")
                 }
 
+            EmulatorSettingsView(preferences: preferences)
+                .tabItem { Label("Emulators", systemImage: "desktopcomputer") }
+
             ThemeSettingsView(preferences: preferences)
                 .tabItem {
                     Label("Theme", systemImage: "paintpalette")
@@ -194,5 +197,30 @@ private struct ThemeSettingsView: View {
 
     private func currentLogcatColor(for priority: LogcatPriority) -> Color {
         preferences.logcatColors[priority]?.color ?? LogcatPriority.defaultColors[priority]!.color
+    }
+}
+
+private struct EmulatorSettingsView: View {
+    @Bindable var preferences: AppPreferences
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("Package folder or CLI", text: $preferences.emulatorHelperPath, prompt: Text("Automatic"))
+                TextField("Node executable", text: $preferences.emulatorNodePath, prompt: Text("Automatic"))
+                TextField("Java home", text: $preferences.emulatorJavaHome, prompt: Text("Automatic"))
+            } header: {
+                Text("Optional creation helper")
+            } footer: {
+                Text("Leave paths blank for automatic discovery. Development builds use the sibling emulator checkout. Installed apps look for androperator-emulator. Node 24+ and SDK command-line tools are required. Java defaults to JAVA_HOME or Android Studio’s bundled runtime.")
+            }
+            Section {
+                Text("npm install -g @androperator/emulator").font(.body.monospaced()).textSelection(.enabled)
+                Text("This prototype needs catalog support from the built local emulator checkout until a package release includes it. Reload the creation sheet after changing paths.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .formStyle(.grouped)
+        .scenePadding()
     }
 }

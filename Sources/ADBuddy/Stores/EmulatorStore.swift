@@ -65,6 +65,10 @@ final class EmulatorStore {
     private(set) var virtualDevices: [AndroidVirtualDevice] = []
     private(set) var status: EmulatorDiscoveryStatus = .loading
     private(set) var feedback: EmulatorFeedback?
+    var deleteConfirmationVirtualDevice: AndroidVirtualDevice?
+    var deletionError: String?
+    private(set) var deletingNames: Set<String> = []
+    private var discoveryRevision = UUID()
     var wipeDataConfirmationVirtualDevice: AndroidVirtualDevice?
 
     init(
@@ -103,10 +107,11 @@ final class EmulatorStore {
     }
 
     func refreshVirtualDevices() {
-        guard !isLoadingVirtualDevices else {
+        guard !isLoadingVirtualDevices, deletingNames.isEmpty else {
             return
         }
 
+        let revision = discoveryRevision
         isLoadingVirtualDevices = true
         AppLogger.emulator.debug("Refreshing installed Android virtual devices")
 
@@ -120,8 +125,10 @@ final class EmulatorStore {
                 return
             }
 
-            apply(result)
+            let needsRefresh = revision != discoveryRevision
+            if !needsRefresh { apply(result) }
             isLoadingVirtualDevices = false
+            if needsRefresh { refreshVirtualDevices() }
         }
     }
 
@@ -138,8 +145,20 @@ final class EmulatorStore {
         refreshRunningStatuses()
     }
 
+    func registerCreatedVirtualDevice(name: String, startAfterCreation: Bool = false) {
+        // A discovery started before creation must not remove the new entry or its startup state.
+        discoveryRevision = UUID()
+        let virtualDevice = AndroidVirtualDevice(name: name)
+        if !virtualDevices.contains(where: { $0.name == name }) {
+            virtualDevices.append(virtualDevice)
+        }
+        if startAfterCreation { start(virtualDevice) }
+        refreshVirtualDevices()
+    }
+
     func start(_ virtualDevice: AndroidVirtualDevice, mode: AndroidEmulatorStartMode = .quickBoot) {
-        guard virtualDevices.first(where: { $0.id == virtualDevice.id })?.status == .stopped,
+        guard !deletingNames.contains(virtualDevice.name),
+              virtualDevices.first(where: { $0.id == virtualDevice.id })?.status == .stopped,
               let sdk = resolvedSDK ?? locatedSDK else {
             return
         }
@@ -155,8 +174,43 @@ final class EmulatorStore {
         }
     }
 
+    func requestDelete(_ virtualDevice: AndroidVirtualDevice) {
+        guard deletingNames.isEmpty,
+              virtualDevices.first(where: { $0.id == virtualDevice.id })?.status == .stopped else { return }
+        deleteConfirmationVirtualDevice = virtualDevice
+    }
+
+    func confirmDelete(_ virtualDevice: AndroidVirtualDevice, configuration: EmulatorHelperConfiguration) async {
+        deleteConfirmationVirtualDevice = nil
+        guard deletingNames.isEmpty,
+              virtualDevices.first(where: { $0.id == virtualDevice.id })?.status == .stopped else {
+            deletionError = "The emulator is no longer stopped. Stop it before deleting."
+            return
+        }
+        deletingNames.insert(virtualDevice.name)
+        discoveryRevision = UUID()
+        defer {
+            deletingNames.remove(virtualDevice.name)
+            discoveryRevision = UUID()
+            refreshVirtualDevices()
+        }
+        do {
+            guard let sdk = resolvedSDK ?? locatedSDK else { throw EmulatorCreationError("Android SDK not found.") }
+            let service = EmulatorCreationService(invocation: try EmulatorHelperInvocation.resolve(configuration: configuration, sdk: sdk))
+            _ = try await service.check(requiresCatalogs: false)
+            // The helper rechecks live ADB state and refuses running/offline AVDs.
+            AppLogger.emulator.info("Deleting stopped Android virtual device")
+            try await service.delete(name: virtualDevice.name)
+            virtualDevices.removeAll { $0.name == virtualDevice.name }
+        } catch {
+            deletionError = error.localizedDescription
+            AppLogger.emulator.error("Emulator deletion failed")
+        }
+    }
+
     func requestWipeDataAndStart(_ virtualDevice: AndroidVirtualDevice) {
-        guard virtualDevices.first(where: { $0.id == virtualDevice.id })?.status == .stopped else {
+        guard !deletingNames.contains(virtualDevice.name),
+              virtualDevices.first(where: { $0.id == virtualDevice.id })?.status == .stopped else {
             return
         }
         wipeDataConfirmationVirtualDevice = virtualDevice
