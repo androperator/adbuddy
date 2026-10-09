@@ -72,3 +72,63 @@ Each mode rebuilds and packages the app before starting:
 | `scripts/build_and_run.sh --telemetry` | Launch and stream logs for the `com.clawperator.adbuddy` subsystem. |
 
 Contribution and agent workflow rules are in [AGENTS.md](../AGENTS.md).
+
+## Emulator creation prototype
+
+Build the sibling `../emulator` project (`npm ci` and `npm run build`) on its
+catalog-capable branch before using **Create Emulator**. The published 0.1.1
+package does not include these catalogs. Development app bundles in `dist` find
+that checkout automatically. Settings → Emulators accepts a package directory
+or CLI path, Node executable, and Java home for explicit selection. Node 24+,
+SDK command-line tools and an SDK-compatible Java runtime are required.
+
+Run focused checks with:
+
+```sh
+scripts/test.sh ADBuddyTests.EmulatorCreationTests,ADBuddyTests.AppPreferencesTests,ADBuddyTests.AndroidEmulatorServiceTests
+```
+
+In the packaged app, open **Create Emulator**, choose an installed phone or TV
+image, enter a unique disposable name and storage capacity, and create. Verify
+success, list refresh, and optional standalone launch. Check duplicate-name and
+invalid-capacity feedback. Browse downloadable images and verify installed state
+and device-family/ABI selection. A missing image may be downloaded on creation;
+licenses must already be accepted. Do not accept licenses or remove an existing
+user AVD as part of routine testing. Verify missing/unbuilt helper and outdated
+capability errors with explicit path overrides, then restore the previous values.
+
+Use the helper to clean up only the disposable AVD created for validation after
+stopping it. Record actual boot/storage results separately from configured size.
+Native helper cancellation and snapshot-free allocation remain outside this
+prototype. Stopped AVD menus support confirmed deletion through the helper.
+
+Draft validation on Apple Silicon (2026-10-04, before integration onto current main):
+
+- Packaged app built and launched with `scripts/build_and_run.sh --verify`.
+- 32 focused creation, preferences, emulator-service and emulator-store tests passed.
+- Native UI created disposable TV API 36 and Pixel phone API 35 AVDs from installed
+  images. Both launched as standalone emulators and reported `sys.boot_completed=1`.
+- Confirmed duplicate-name protection, remote catalog loading, installed/download
+  labels, and the new AVD's Starting state. Existing running devices stayed available.
+- The TV image reported about 5.8 GB on `/data` with a requested 4 GB configuration;
+  configured storage must not be presented as guaranteed actual capacity.
+- Stopped and deleted only the two disposable AVDs after verification. No image
+  packages or existing user AVDs were removed.
+- Missing-image installation, license failures, Intel execution, and nonstandard
+  runtime installations have not been live-verified by this prototype pass.
+
+Stopped-emulator deletion checks: inspect the action/context menus and cancel the
+named confirmation on existing AVDs. Use only a disposable AVD for a confirmed
+deletion; verify disappearance, shared-image retention, and a visible error when
+the helper refuses deletion. State changes before confirmation must prevent it.
+
+Integration validation (2026-10-10):
+
+- Reapplied the creation, hardware filtering, and stopped-emulator deletion flows
+  from `avd-management-draft` onto a fresh `avd-management` branch from `main`.
+- Packaged build and launch smoke check passed, along with 25 focused creation,
+  preferences, and emulator-store tests.
+- Confirmed the main window exposes Create Emulator alongside the newer device
+  controls. Automated UI interaction was unavailable for completing the sheet
+  checks in this pass; no AVD was created or deleted during integration.
+- The earlier live creation results above belong to the draft validation.

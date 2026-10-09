@@ -6,6 +6,34 @@ import XCTest
 
 @MainActor
 final class EmulatorStoreTests: XCTestCase {
+    func testCreatedAVDEntersStartingStateBeforeNextPoll() async throws {
+        let sdk = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let emulator = sdk.appendingPathComponent("emulator/emulator")
+        try FileManager.default.createDirectory(at: emulator.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data().write(to: emulator)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: emulator.path)
+        defer { try? FileManager.default.removeItem(at: sdk) }
+        let store = EmulatorStore(
+            sdkLocator: AndroidSDKLocator(environment: ["ANDROID_HOME": sdk.path], pathExists: { _ in true }, isExecutable: { _ in true }),
+            processRunner: VirtualDevicePollingRunner(),
+            applicationLauncher: CreationTestLauncher()
+        )
+        store.registerCreatedVirtualDevice(name: "New_TV", startAfterCreation: false)
+        store.requestDelete(AndroidVirtualDevice(name: "New_TV"))
+        XCTAssertEqual(store.deleteConfirmationVirtualDevice?.name, "New_TV")
+        store.deleteConfirmationVirtualDevice = nil
+        store.registerCreatedVirtualDevice(name: "New_TV", startAfterCreation: true)
+        XCTAssertEqual(store.virtualDevices.first?.name, "New_TV")
+        XCTAssertEqual(store.virtualDevices.first?.status, .starting)
+        store.registerCreatedVirtualDevice(name: "New_TV", startAfterCreation: true)
+        XCTAssertEqual(store.virtualDevices.count, 1)
+        store.requestDelete(AndroidVirtualDevice(name: "New_TV"))
+        XCTAssertNil(store.deleteConfirmationVirtualDevice)
+        await store.confirmDelete(AndroidVirtualDevice(name: "New_TV"), configuration: .init(helperPath: "/must-not-run", nodePath: "/must-not-run", javaHome: ""))
+        XCTAssertEqual(store.deletionError, "The emulator is no longer stopped. Stop it before deleting.")
+        XCTAssertTrue(store.deletingNames.isEmpty)
+    }
+
     func testPollingDiscoversNewAVDsWithoutInvalidatingUnchangedPresentation() async throws {
         let sdk = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let emulator = sdk.appendingPathComponent("emulator/emulator")
@@ -66,4 +94,8 @@ private actor VirtualDevicePollingRunner: ProcessRunning {
             wasCancelled: false
         )
     }
+}
+
+private struct CreationTestLauncher: ApplicationProcessLaunching {
+    func launch(executablePath: String, arguments: [String]) throws {}
 }

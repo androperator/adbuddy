@@ -5,6 +5,21 @@ import XCTest
 
 @MainActor
 final class AppPreferencesTests: XCTestCase {
+    func testEmulatorHelperOverridesPersist() throws {
+        let suite = "EmulatorPreferencesTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let preferences = AppPreferences(userDefaults: defaults)
+        XCTAssertEqual(preferences.emulatorHelperPath, "")
+        preferences.emulatorHelperPath = "/emulator"
+        preferences.emulatorNodePath = "/node"
+        preferences.emulatorJavaHome = "/java"
+        let restored = AppPreferences(userDefaults: defaults)
+        XCTAssertEqual(restored.emulatorHelperConfiguration.helperPath, "/emulator")
+        XCTAssertEqual(restored.emulatorHelperConfiguration.nodePath, "/node")
+        XCTAssertEqual(restored.emulatorHelperConfiguration.javaHome, "/java")
+    }
+
     func testPersistsConfiguredScreenshotDirectory() {
         let suiteName = "AppPreferencesTests.\(UUID().uuidString)"
         guard let userDefaults = UserDefaults(suiteName: suiteName) else {

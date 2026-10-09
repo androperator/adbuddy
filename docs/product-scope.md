@@ -121,6 +121,29 @@ current product contract; they are not an outstanding implementation plan.
 
 ### Emulator management
 
+- Offer **Delete Emulator…** in stopped-AVD action and contextual menus. Confirm
+  the named AVD's permanent data loss, retain shared system images, and refuse
+  deletion if its state changes before confirmation. Use the optional helper's
+  live running-device checks; disable launch while deletion is in progress and
+  show deletion failures in a native alert.
+- Offer a prototype **Create Emulator** sheet from the main-window toolbar.
+  Use the optional separately installed `@androperator/emulator` helper with
+  catalog capabilities; Node is not bundled. Settings provides helper, Node,
+  and Java path overrides. Packaged development builds prefer a built sibling
+  emulator checkout.
+- Select a hardware type first (Phone, Tablet, Foldable, TV, Automotive, Wear OS,
+  Desktop, XR, Glasses, or Other), then a profile from that type and a matching
+  native-architecture image. Only types present in the SDK catalog are shown. Start with installed images; **Browse Downloadable Images** loads remote
+  choices. Creating with a remote image downloads it through the helper.
+- Require a unique name and internal-storage capacity, defaulting to 24 GB.
+  Never replace existing AVDs or accept SDK licenses automatically. Report
+  prerequisite and license failures visibly. Offer start after creation using
+  the existing standalone emulator launch flow.
+- Creation and catalog requests show indeterminate activity. Dismissal is disabled
+  during operations; cancellation and byte-level download progress are deferred.
+  Configured capacity is not a host-disk quota, guaranteed guest capacity, or
+  existing-userdata resizing. Dynamic allocation and snapshot policy use SDK defaults.
+
 - Show all connected Android devices, physical and emulator, together in the
   compact main-window list. A connected emulator is shown once, with its AVD
   name, ADB serial, stop control, and device actions.
@@ -325,7 +348,7 @@ checks when changing those features.
 The following capabilities are not implemented. Add them only as deliberate
 scope changes, without placeholder interfaces:
 
-- AVD creation, configuration, and snapshot management;
+- Advanced AVD configuration, resizing, and snapshot management;
 - saved Logcat filter presets, log export, advanced field or regex filters,
   device-buffer mutation, and multiple Logcat tabs per window;
 - split APKs, `.apks` archives, and Android App Bundles;

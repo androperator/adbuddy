@@ -33,6 +33,7 @@ struct DeviceOverflowMenu: View {
 struct EmulatorOverflowMenu: View {
     let coldBoot: () -> Void
     let requestWipeDataAndStart: () -> Void
+    let requestDelete: () -> Void
 
     var body: some View {
         Menu {
@@ -41,6 +42,8 @@ struct EmulatorOverflowMenu: View {
             Divider()
 
             Button("Wipe Data and Start…", role: .destructive, action: requestWipeDataAndStart)
+            Divider()
+            Button("Delete Emulator…", role: .destructive, action: requestDelete)
         } label: {
             OverflowMenuLabel()
         }

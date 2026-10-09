@@ -404,3 +404,26 @@ helper on repeated requests, and removes the session when the helper exits.
 `ScrcpyMirroring` uses `ProcessRunner` with an explicit SDK ADB environment and
 shares bundled-helper resolution with recording. The app waits for mirror
 cancellation on normal quit. Mirror windows belong to the scrcpy process.
+
+## Emulator creation prototype
+
+`EmulatorCreationSheet` owns an observable `EmulatorCreationStore` for the sheet.
+`EmulatorCreationService` calls the optional Node helper through `ProcessRunner`
+with fixed argument arrays and explicit SDK/Java environment. It checks Node 24+,
+protocol version 1, package identity and catalog capabilities, decodes typed JSON,
+and verifies creation returns the requested AVD name and existence. Existing
+emulator discovery and lifecycle operations remain native.
+
+`EmulatorHelperInvocation` resolves a Settings override first. A packaged build
+under a source checkout's `dist` directory can resolve the sibling `emulator`
+checkout. Otherwise it searches PATH, standard Homebrew locations, Volta, and
+installed nvm versions. Node is invoked explicitly so CLI shebang lookup does not
+depend on Finder's PATH. An existing but unbuilt sibling reports an error rather
+than falling back silently. Settings stores path overrides in `AppPreferences`.
+The helper receives the same SDK root and ADB executable as normal app operations.
+Java uses its explicit override, inherited JAVA_HOME, or Android Studio's runtime.
+
+The catalog API is currently a local, unpublished emulator-package extension.
+Creation refuses replacement, uses accepted licenses only, and refreshes discovery
+on success or failure. No helper progress stream or cancellation guarantee is
+assumed; the sheet remains open during an operation. ADBuddy must remain running.
