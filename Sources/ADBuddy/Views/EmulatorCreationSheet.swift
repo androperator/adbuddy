@@ -116,11 +116,14 @@ struct EmulatorCreationSheet: View {
 
     private var footer: some View {
             HStack(spacing: 12) {
-                footerStatus
-                    .font(.caption).foregroundStyle(.secondary)
-                    .lineLimit(3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: 60, alignment: .center)
+                ZStack(alignment: .leading) {
+                    Color.clear
+                    footerStatus
+                        .font(.caption).foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 36)
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(store.isCreating)
                 HStack(spacing: 4) {
                     Button(store.selectedImage?.installed == false ? "Download, Create & Start" : "Create & Start") {
@@ -141,7 +144,7 @@ struct EmulatorCreationSheet: View {
                 }
                 .disabled(store.isBusy || !store.isReady || store.validationMessage(existingNames: existingNames) != nil)
                 .help(store.validationMessage(existingNames: existingNames) ?? "Create emulator")
-            }.frame(height: 60)
+            }.frame(height: 36)
     }
 
     private func create(startAfterCreation: Bool) {
