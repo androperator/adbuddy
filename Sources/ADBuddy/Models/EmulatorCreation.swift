@@ -99,7 +99,12 @@ struct EmulatorCreationRequest: Sendable {
 
 struct EmulatorCreationError: LocalizedError, Sendable {
     let message: String
-    init(_ message: String) { self.message = message }
+    enum Kind: Sendable { case general, nodeRuntime }
+    let kind: Kind
+    init(_ message: String, kind: Kind = .general) {
+        self.message = message
+        self.kind = kind
+    }
     var errorDescription: String? { message }
 }
 

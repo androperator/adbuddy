@@ -14,6 +14,7 @@ final class EmulatorCreationStore {
     private(set) var isBusy = false
     private(set) var activity = ""
     private(set) var errorMessage: String?
+    private(set) var needsNodeRuntime = false
     private(set) var isLoadingCatalog = false
     private(set) var isCreating = false
     var isReady: Bool { service != nil }
@@ -74,6 +75,7 @@ final class EmulatorCreationStore {
         isBusy = true
         activity = "Finding emulator tools and installed images…"
         errorMessage = nil
+        needsNodeRuntime = false
         service = nil
         profiles = []
         images = []
@@ -91,6 +93,7 @@ final class EmulatorCreationStore {
             await fetchFullCatalog(using: candidate)
         } catch {
             isBusy = false
+            needsNodeRuntime = (error as? EmulatorCreationError)?.kind == .nodeRuntime
             errorMessage = error.localizedDescription
         }
     }

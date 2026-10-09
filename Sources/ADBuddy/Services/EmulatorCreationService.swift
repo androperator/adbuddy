@@ -31,7 +31,7 @@ struct EmulatorHelperInvocation: Sendable {
         let explicitNode = configuration.nodePath.trimmingCharacters(in: .whitespacesAndNewlines)
         let candidates = explicitNode.isEmpty ? directories.map { "\($0)/node" } : [expanded(explicitNode)]
         guard let node = candidates.first(where: files.isExecutableFile(atPath:)) else {
-            throw EmulatorCreationError("Node.js 24 or newer is required for emulator creation and deletion. Install Node, or set its executable in Settings → Emulators. The selected Node override must exist and be executable.")
+            throw EmulatorCreationError("Node.js 24 or newer is required for emulator creation and deletion. Install Node, or set its executable in Settings → Emulators. The selected Node override must exist and be executable.", kind: .nodeRuntime)
         }
         let override = configuration.helperPath.trimmingCharacters(in: .whitespacesAndNewlines)
         var script = override.isEmpty
@@ -85,7 +85,7 @@ struct EmulatorCreationService: Sendable {
         let node = await execute(invocation.node, ["--version"], invocation.environment)
         let versionText = String(decoding: node.standardOutput, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
         guard node.succeeded, let major = Int(versionText.dropFirst().split(separator: ".").first ?? ""), major >= 24 else {
-            throw EmulatorCreationError("The selected Node executable must be version 24 or newer. Update Settings → Emulators.")
+            throw EmulatorCreationError("The selected Node executable must be version 24 or newer. Update Settings → Emulators.", kind: .nodeRuntime)
         }
         let version: EmulatorHelperVersion = try await call(["--version"])
         guard version.name == "@androperator/emulator" else {

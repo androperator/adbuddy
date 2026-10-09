@@ -7,6 +7,35 @@ final class EmulatorCreationTests: XCTestCase {
     private let profile = EmulatorHardwareProfile(id: "tv_720p", name: "Television", manufacturer: "Google", tag: "android-tv")
     private let image = EmulatorSystemImage(id: "system-images;android-36;android-tv;arm64-v8a", platform: "android-36", apiLevel: 36, tag: "android-tv", abi: "arm64-v8a", description: "TV", installed: true)
 
+    @MainActor
+    func testMissingNodeShowsSetupAndRetryClearsStaleGuidance() async {
+        let store = EmulatorCreationStore(makeService: { _, _ in
+            throw EmulatorCreationError("Node missing", kind: .nodeRuntime)
+        })
+        let configuration = EmulatorHelperConfiguration(helperPath: "", nodePath: "", javaHome: "")
+        await store.load(configuration: configuration,
+                         sdk: AndroidSDK(rootPath: "/sdk", adbPath: "/sdk/adb", source: .standardLocation))
+        XCTAssertTrue(store.needsNodeRuntime)
+        XCTAssertFalse(store.isReady)
+        XCTAssertFalse(store.isBusy)
+        await store.load(configuration: configuration, sdk: nil)
+        XCTAssertFalse(store.needsNodeRuntime)
+        XCTAssertNotNil(store.errorMessage)
+    }
+
+    func testOldNodeIsClassifiedAsRuntimeSetupFailure() async {
+        let service = EmulatorCreationService(invocation: .init(node: "/node", script: "/helper", environment: [:])) { _, _, _ in
+            ProcessResult(standardOutput: Data("v22.0.0".utf8), standardError: Data(), exitStatus: 0,
+                          durationMilliseconds: 0, failureDescription: nil, wasCancelled: false)
+        }
+        do {
+            _ = try await service.check()
+            XCTFail("Old Node must require setup")
+        } catch {
+            XCTAssertEqual((error as? EmulatorCreationError)?.kind, .nodeRuntime)
+        }
+    }
+
     func testValidationPreventsReplacementAndInvalidCapacity() throws {
         let request = EmulatorCreationRequest(name: "TV_Dev", profile: profile, image: image, storageGB: 24)
         try request.validate(existingNames: [])
