@@ -26,6 +26,10 @@ current product contract; they are not an outstanding implementation plan.
 - Display each available device's Android version and API level as
   `Android {version} / API {apiLevel}`. Read connected-device values from
   the device and stopped AVD values from their configured system images.
+- Show emulator disk usage in GiB beside Android version details for stopped and
+  running emulators. Measure allocated space in the AVD directory, including
+  snapshots but excluding shared SDK system images, in the background about every
+  30 seconds. Omit the value when the directory cannot be measured.
 - Show clear UI states for a missing SDK, missing ADB, no devices,
   unauthorized devices, offline devices, and usable devices.
 

@@ -23,6 +23,7 @@ struct MainDeviceListView: View {
                             device: device,
                             deviceDetails: deviceStore.deviceDetails(for: device),
                             virtualDevice: runningVirtualDevice(for: device),
+                            diskUsageBytes: runningVirtualDevice(for: device).flatMap { emulatorStore.diskUsageBytes[$0.name] },
                             emulatorWindowPresentation: runningVirtualDevice(for: device).map {
                                 emulatorStore.windowPresentation(for: $0)
                             },
@@ -84,6 +85,7 @@ struct MainDeviceListView: View {
                 ForEach(availableVirtualDevices) { virtualDevice in
                     VirtualDeviceRow(
                         virtualDevice: virtualDevice,
+                        diskUsageBytes: emulatorStore.diskUsageBytes[virtualDevice.name],
                         start: { mode in
                             emulatorStore.start(virtualDevice, mode: mode)
                         },
@@ -140,6 +142,7 @@ private struct ConnectedDeviceRow: View {
     let device: AndroidDevice
     let deviceDetails: AndroidDeviceDetails?
     let virtualDevice: AndroidVirtualDevice?
+    let diskUsageBytes: UInt64?
     let emulatorWindowPresentation: EmulatorWindowPresentation?
     let deviceStore: DeviceStore
     let apkInstallationStore: APKInstallationStore
@@ -160,7 +163,8 @@ private struct ConnectedDeviceRow: View {
                 VStack(alignment: .leading, spacing: 3) {
                     DeviceNameWithDetails(
                         name: virtualDevice?.name ?? device.displayName,
-                        deviceDetails: deviceDetails
+                        deviceDetails: deviceDetails,
+                        diskUsageBytes: diskUsageBytes
                     )
                     deviceDetail
                 }
@@ -330,6 +334,7 @@ private struct ConnectedDeviceRow: View {
 
 private struct VirtualDeviceRow: View {
     let virtualDevice: AndroidVirtualDevice
+    let diskUsageBytes: UInt64?
     let start: (AndroidEmulatorStartMode) -> Void
     let requestWipeDataAndStart: () -> Void
     let requestDelete: () -> Void
@@ -347,6 +352,7 @@ private struct VirtualDeviceRow: View {
                 name: virtualDevice.name,
                 detail: statusDetail,
                 deviceDetails: virtualDevice.deviceDetails,
+                diskUsageBytes: diskUsageBytes,
                 detailTint: statusTint
             )
 
@@ -465,11 +471,12 @@ private struct DeviceIdentityView: View {
     let name: String
     let detail: String
     var deviceDetails: AndroidDeviceDetails?
+    var diskUsageBytes: UInt64?
     var detailTint: Color = .secondary
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            DeviceNameWithDetails(name: name, deviceDetails: deviceDetails)
+            DeviceNameWithDetails(name: name, deviceDetails: deviceDetails, diskUsageBytes: diskUsageBytes)
             Text(detail)
                 .font(.caption)
                 .foregroundStyle(detailTint)
@@ -482,6 +489,7 @@ private struct DeviceIdentityView: View {
 private struct DeviceNameWithDetails: View {
     let name: String
     let deviceDetails: AndroidDeviceDetails?
+    var diskUsageBytes: UInt64?
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -496,6 +504,13 @@ private struct DeviceNameWithDetails: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
+            }
+            if let diskUsageBytes {
+                Text("· " + String(format: "%.1f GiB", Double(diskUsageBytes) / 1_073_741_824))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize()
+                    .help("Disk space used by this emulator’s files and snapshots; excludes shared SDK system images.")
             }
         }
     }
