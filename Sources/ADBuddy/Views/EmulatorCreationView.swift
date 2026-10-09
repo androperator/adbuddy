@@ -69,8 +69,8 @@ struct EmulatorCreationView: View {
                 .font(.title3.weight(.semibold))
             Text("ADBuddy includes the emulator tools, but needs Node.js 24 or newer to run them.")
                 .foregroundStyle(.secondary)
-            Link("Download Node.js…", destination: URL(string: "https://nodejs.org/en/download")!)
-            Text("Install the macOS package, then return here and choose Check Again.")
+            Link("Node.js installation instructions", destination: URL(string: "https://nodejs.org/en/download")!)
+            Text("Follow the official instructions to install Node.js 24 or newer, then choose Check Again.")
                 .font(.callout).foregroundStyle(.secondary)
             HStack {
                 Button("Check Again") { Task { await load() } }

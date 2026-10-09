@@ -380,7 +380,7 @@ global helper. Android SDK tools, system images and Java remain external.
 ### Emulator Node.js prerequisite
 
 When Node.js is missing, unusable, or older than version 24, the creation window
-shows dedicated installation guidance with a link to the official Node.js download
-page. **Check Again** repeats discovery after installation, while **Choose Existing
+shows dedicated installation guidance with a link to the official Node.js installation
+webpage. **Check Again** repeats discovery after installation, while **Choose Existing
 Node…** opens Settings for an executable override. Creation stays unavailable
 until the runtime and emulator tools pass validation.
