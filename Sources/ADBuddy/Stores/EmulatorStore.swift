@@ -56,6 +56,10 @@ final class EmulatorStore {
     private let processRunner: any ProcessRunning
     private let applicationLauncher: any ApplicationProcessLaunching
     private var pollingTask: Task<Void, Never>?
+    private var diskUsageTask: Task<Void, Never>?
+    private var lastDiskUsageRefresh: Date?
+    private var measuredDiskUsageNames: Set<String> = []
+    private(set) var diskUsageBytes: [String: UInt64] = [:]
     private var isLoadingVirtualDevices = false
     private var connectedEmulatorDevices: [AndroidDevice] = []
     private var resolvedSDK: AndroidSDK?
@@ -104,6 +108,9 @@ final class EmulatorStore {
     func stopPolling() {
         pollingTask?.cancel()
         pollingTask = nil
+        diskUsageTask?.cancel()
+        diskUsageTask = nil
+        lastDiskUsageRefresh = nil
     }
 
     func refreshVirtualDevices() {
@@ -293,6 +300,29 @@ final class EmulatorStore {
         }
     }
 
+    private func refreshDiskUsage() {
+        let names = Set(virtualDevices.map(\.name))
+        diskUsageBytes = diskUsageBytes.filter { names.contains($0.key) }
+        guard diskUsageTask == nil else { return }
+        measuredDiskUsageNames.formIntersection(names)
+        let hasNewDevices = !names.isSubset(of: measuredDiskUsageNames)
+        let refreshIsDue = lastDiskUsageRefresh.map { Date().timeIntervalSince($0) >= 30 } ?? true
+        guard hasNewDevices || refreshIsDue else { return }
+        lastDiskUsageRefresh = Date()
+        diskUsageTask = Task { [weak self] in
+            let service = AndroidVirtualDeviceDiskUsageService()
+            for name in names.sorted() {
+                guard !Task.isCancelled else { break }
+                let bytes = await service.allocatedBytes(for: name)
+                guard !Task.isCancelled else { break }
+                guard let self, self.virtualDevices.contains(where: { $0.name == name }) else { continue }
+                self.diskUsageBytes[name] = bytes
+                self.measuredDiskUsageNames.insert(name)
+            }
+            self?.diskUsageTask = nil
+        }
+    }
+
     private func apply(_ result: AndroidEmulatorVirtualDeviceListResult) {
         switch result {
         case .success(let virtualDevices):
@@ -315,6 +345,7 @@ final class EmulatorStore {
                 status = .ready
             }
             refreshRunningStatuses()
+            refreshDiskUsage()
         case .failure(let failure):
             if !virtualDevices.isEmpty {
                 virtualDevices = []
