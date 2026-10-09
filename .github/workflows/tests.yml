@@ -16,13 +16,13 @@ concurrency:
 jobs:
   tests:
     name: macOS tests
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 20
     env:
-      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
       - name: Report toolchain

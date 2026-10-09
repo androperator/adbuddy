@@ -56,7 +56,7 @@ passing them does not prove live ADB behavior.
 
 [The Tests workflow](../.github/workflows/tests.yml) runs the complete unit suite
 on every pull request update and on pushes to `main`. It uses a standard
-`macos-15` runner with Xcode 26.3 and invokes `scripts/test.sh`. The stable
+`macos-26` runner with Xcode 26.6 and invokes `scripts/test.sh`. The stable
 check name is `macOS tests`; GitHub branch protection requires this check to
 pass before merging into `main`. New commits cancel superseded test runs.
 
