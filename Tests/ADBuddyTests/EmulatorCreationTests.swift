@@ -165,6 +165,37 @@ final class EmulatorCreationTests: XCTestCase {
         XCTAssertEqual(attempts, 2)
     }
 
+    @MainActor
+    func testInstalledOptionsRemainUsableWhileRemoteCatalogLoads() async throws {
+        let catalogStarted = expectation(description: "Remote catalog requested")
+        let gate = CatalogGate()
+        let responses = CatalogResponses()
+        let service = EmulatorCreationService(invocation: .init(node: "/node", script: "/cli.js", environment: [:])) { _, arguments, _ in
+            if arguments.last == "images" {
+                catalogStarted.fulfill()
+                await gate.wait()
+            }
+            return await responses.respond(arguments)
+        }
+        let store = EmulatorCreationStore(makeService: { _, _ in service })
+        let loading = Task {
+            await store.load(configuration: .init(helperPath: "", nodePath: "", javaHome: ""),
+                             sdk: AndroidSDK(rootPath: "/sdk", adbPath: "/sdk/adb", source: .standardLocation))
+        }
+        await fulfillment(of: [catalogStarted], timeout: 3)
+        XCTAssertTrue(store.isReady)
+        XCTAssertTrue(store.isLoadingCatalog)
+        XCTAssertFalse(store.isBusy)
+        XCTAssertEqual(store.imageID, "installed")
+        XCTAssertNil(store.validationMessage(existingNames: []))
+        store.name = "My_Emulator"
+        await gate.release()
+        await loading.value
+        XCTAssertEqual(store.name, "My_Emulator")
+        XCTAssertFalse(store.isLoadingCatalog)
+        XCTAssertFalse(store.isBusy)
+    }
+
     private func result(_ text: String, status: Int32 = 0) -> ProcessResult {
         ProcessResult(standardOutput: Data(text.utf8), standardError: Data(), exitStatus: status, durationMilliseconds: 0, failureDescription: nil, wasCancelled: false)
     }
@@ -198,5 +229,21 @@ private actor CatalogResponses {
             """
         }
         return ProcessResult(standardOutput: Data(output.utf8), standardError: Data(), exitStatus: 0, durationMilliseconds: 0, failureDescription: nil, wasCancelled: false)
+    }
+}
+
+private actor CatalogGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var released = false
+
+    func wait() async {
+        guard !released else { return }
+        await withCheckedContinuation { continuation = $0 }
+    }
+
+    func release() {
+        released = true
+        continuation?.resume()
+        continuation = nil
     }
 }

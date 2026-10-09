@@ -60,7 +60,7 @@ final class EmulatorCreationStore {
     }
 
     func load(configuration: EmulatorHelperConfiguration, sdk: AndroidSDK?) async {
-        guard !isBusy else { return }
+        guard !isBusy, !isLoadingCatalog else { return }
         isBusy = true
         activity = "Finding emulator tools and installed images…"
         errorMessage = nil
@@ -68,7 +68,6 @@ final class EmulatorCreationStore {
         profiles = []
         images = []
         catalogError = nil
-        defer { isBusy = false }
         do {
             guard let sdk else { throw EmulatorCreationError("Install an Android SDK with ADB before creating an emulator.") }
             let candidate = try makeService(configuration, sdk)
@@ -78,21 +77,22 @@ final class EmulatorCreationStore {
             service = candidate
             if !availableHardwareTypes.contains(hardwareType) { hardwareType = availableHardwareTypes.first ?? .phone }
             selectHardwareType()
+            isBusy = false
             await fetchFullCatalog(using: candidate)
-        } catch { errorMessage = error.localizedDescription }
+        } catch {
+            isBusy = false
+            errorMessage = error.localizedDescription
+        }
     }
 
     func loadDownloadableImages() async {
-        guard !isBusy, let service else { return }
-        isBusy = true
-        defer { isBusy = false }
+        guard !isBusy, !isLoadingCatalog, let service else { return }
         await fetchFullCatalog(using: service)
     }
 
     private func fetchFullCatalog(using service: EmulatorCreationService) async {
         isLoadingCatalog = true
         defer { isLoadingCatalog = false }
-        activity = "Loading available images…"
         catalogError = nil
         do {
             let catalog = try await service.images(includeDownloads: true)

@@ -17,6 +17,19 @@ struct EmulatorCreationSheet: View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Create Emulator").font(.title2.weight(.semibold))
             configurationForm
+                .opacity(store.isReady ? 1 : 0)
+                .allowsHitTesting(store.isReady)
+                .accessibilityHidden(!store.isReady)
+                .overlay {
+                    if !store.isReady {
+                        if store.errorMessage == nil {
+                            ProgressView("Loading emulator options…")
+                        } else {
+                            Text("Emulator options couldn’t be loaded.")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             Divider()
             footer
         }
@@ -63,7 +76,7 @@ struct EmulatorCreationSheet: View {
                             .accessibilityLabel("\(image.title), \(image.installed ? "Installed" : "Download required")")
                             .tag(image.id)
                     }
-                    if store.availableImages.isEmpty { Text(store.isBusy ? "Loading images…" : "No compatible images").tag("") }
+                    if store.availableImages.isEmpty { Text(store.isLoadingCatalog ? "Loading images…" : "No compatible images").tag("") }
                 }.labelsHidden().frame(width: 412)
             }
             GridRow {
@@ -94,7 +107,7 @@ struct EmulatorCreationSheet: View {
     }
 
     @ViewBuilder private var footerStatus: some View {
-        if store.isBusy {
+        if store.isCreating {
             HStack(alignment: .top, spacing: 8) {
                 ProgressView().controlSize(.small)
                 Text(store.activity)

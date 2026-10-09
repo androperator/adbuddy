@@ -141,8 +141,11 @@ current product contract; they are not an outstanding implementation plan.
   Never replace existing AVDs or accept SDK licenses automatically. Report
   prerequisite and license failures visibly. Offer **Cancel** and **Create** actions. Creation leaves the new emulator
   stopped; start it separately from the emulator list.
-- Loading, creation progress, validation, and retry controls share a fixed-height
-  area at the bottom left. Technical errors open in a popover without resizing
+- Initial loading replaces the form with a centered progress indicator while preserving
+  sheet size. Cancel remains available and Create stays disabled until local options
+  are ready. Downloadable images then load quietly without disabling the form or
+  creation with an installed image. Creation progress, validation, and retry controls
+  share a fixed-height area at the bottom left. Technical errors open in a popover without resizing
   the sheet. Image availability is shown by picker icons, with spoken status for accessibility.
   Dismissal is disabled during creation; cancellation and byte-level download progress are deferred.
   Configured capacity is not a host-disk quota, guaranteed guest capacity, or
