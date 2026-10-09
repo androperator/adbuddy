@@ -24,8 +24,12 @@ struct EmulatorCreationView: View {
                 .accessibilityHidden(!store.isReady)
                 .overlay {
                     if !store.isReady, store.errorMessage != nil {
-                        Text("Emulator options couldn’t be loaded.")
-                            .foregroundStyle(.secondary)
+                        if store.needsNodeRuntime {
+                            nodeSetup
+                        } else {
+                            Text("Emulator options couldn’t be loaded.")
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
                 .padding(24)
@@ -57,6 +61,25 @@ struct EmulatorCreationView: View {
         .onChange(of: store.createdName) { _, name in
             if name != nil { dismiss() }
         }
+    }
+
+    private var nodeSetup: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Install Node.js to create emulators")
+                .font(.title3.weight(.semibold))
+            Text("Node.js 24 or newer is required to create emulators.")
+                .foregroundStyle(.secondary)
+            Link("Node.js installation instructions", destination: URL(string: "https://nodejs.org/en/download")!)
+            Text("Follow the official instructions to install Node.js 24 or newer, then choose Check Again.")
+                .font(.callout).foregroundStyle(.secondary)
+            HStack {
+                Button("Check Again") { Task { await load() } }
+                Button("Choose Existing Node…") { openSettings() }
+            }
+            Text("Already installed? Set the Node executable in Settings → Emulators.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: 440, alignment: .leading)
     }
 
     private var configurationForm: some View {
@@ -125,7 +148,7 @@ struct EmulatorCreationView: View {
                 ProgressView().controlSize(.small)
                 Text(store.activity)
             }
-        } else if store.errorMessage != nil {
+        } else if store.errorMessage != nil, !store.needsNodeRuntime {
             VStack(alignment: .leading, spacing: 4) {
                 Text(store.isReady ? "Couldn’t create emulator." : "Emulator tools need attention.")
                 HStack {
@@ -162,7 +185,7 @@ struct EmulatorCreationView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 36)
-                if store.isReady || store.errorMessage != nil {
+                if store.isReady || (store.errorMessage != nil && !store.needsNodeRuntime) {
                     HStack(spacing: 12) {
                         Button("Create") { create(startAfterCreation: false) }
                         Button("Create & Start") { create(startAfterCreation: true) }
