@@ -7,7 +7,6 @@ struct ContentView: View {
     @Environment(AppPreferences.self) private var preferences
     @Environment(APKInstallationStore.self) private var apkInstallationStore
 
-    @State private var isCreatingEmulator = false
 
     var body: some View {
         @Bindable var deviceStore = deviceStore
@@ -87,7 +86,6 @@ struct ContentView: View {
                 sdk: deviceStore.resolvedSDK
             )
         }
-        .sheet(isPresented: $isCreatingEmulator) { EmulatorCreationSheet() }
         .sheet(item: $deviceStore.screenRecordingOptionsDevice) { device in
             ScreenRecordingOptionsView(
                 device: device,
@@ -205,8 +203,12 @@ struct ContentView: View {
         .navigationTitle("ADBuddy")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button { isCreatingEmulator = true } label: {
-                    Label("Create Emulator", systemImage: "plus.rectangle")
+                Button {
+                    EmulatorCreationWindowController.shared.show(
+                        preferences: preferences, deviceStore: deviceStore, emulatorStore: emulatorStore
+                    )
+                } label: {
+                    Label("Create Android Emulator", systemImage: "plus.rectangle")
                 }
                 .help("Create Android Emulator")
             }

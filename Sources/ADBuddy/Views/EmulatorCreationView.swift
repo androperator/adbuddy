@@ -1,12 +1,13 @@
 import SwiftUI
 
-struct EmulatorCreationSheet: View {
-    @Environment(\.dismiss) private var dismiss
+struct EmulatorCreationView: View {
+    let dismiss: () -> Void
+    let creationStateChanged: (Bool) -> Void
     @Environment(\.openSettings) private var openSettings
     @Environment(AppPreferences.self) private var preferences
     @Environment(DeviceStore.self) private var deviceStore
     @Environment(EmulatorStore.self) private var emulatorStore
-    @State private var store = EmulatorCreationStore()
+    @State var store: EmulatorCreationStore
     @State private var showsErrorDetails = false
     @FocusState private var isDeviceTypeFocused: Bool
     @State private var hasSetInitialFocus = false
@@ -15,7 +16,6 @@ struct EmulatorCreationSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Create Emulator").font(.title2.weight(.semibold))
             configurationForm
                 .opacity(store.isReady ? 1 : 0)
                 .allowsHitTesting(store.isReady)
@@ -35,7 +35,7 @@ struct EmulatorCreationSheet: View {
         }
         .padding(24)
         .frame(width: 600)
-        .interactiveDismissDisabled(store.isCreating)
+        .onChange(of: store.isCreating) { _, creating in creationStateChanged(creating) }
         .onExitCommand {
             if !store.isCreating { dismiss() }
         }

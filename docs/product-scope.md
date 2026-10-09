@@ -126,7 +126,7 @@ current product contract; they are not an outstanding implementation plan.
   deletion if its state changes before confirmation. Use the optional helper's
   live running-device checks; disable launch while deletion is in progress and
   show deletion failures in a native alert.
-- Offer a prototype **Create Emulator** sheet from the main-window toolbar.
+- Offer a prototype **Create Android Emulator** window from the main-window toolbar.
   Use the optional separately installed `@androperator/emulator` helper with
   catalog capabilities; Node is not bundled. Settings provides helper, Node,
   and Java path overrides. Packaged development builds prefer a built sibling
@@ -142,8 +142,9 @@ current product contract; they are not an outstanding implementation plan.
   prerequisite and license failures visibly. Offer **Cancel** and **Create** actions. Creation leaves the new emulator
   stopped; start it separately from the emulator list.
 - Initial loading replaces the form with a centered progress indicator while preserving
-  sheet size. Cancel and Create remain hidden until local options are ready;
-  Escape dismisses the sheet during loading. Errors restore the controls for recovery. Downloadable images then load quietly without disabling the form or
+  window size. Its native red close button and Escape dismiss it except during
+  creation. Cancel and Create remain hidden until local options are ready;
+  Escape remains available during loading. Errors restore the controls for recovery. Downloadable images then load quietly without disabling the form or
   creation with an installed image. Creation progress, validation, and retry controls
   share a fixed-height area at the bottom left. Technical errors open in a popover without resizing
   the sheet. Image availability is shown by picker icons, with spoken status for accessibility.

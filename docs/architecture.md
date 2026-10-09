@@ -407,7 +407,9 @@ cancellation on normal quit. Mirror windows belong to the scrcpy process.
 
 ## Emulator creation prototype
 
-`EmulatorCreationSheet` owns an observable `EmulatorCreationStore` for the sheet.
+`EmulatorCreationWindowController` presents one native, closable **Create Android Emulator**
+window with a fresh `EmulatorCreationStore` each time it opens. `EmulatorCreationView`
+presents the form. Closing is disabled while creation is in progress.
 `EmulatorCreationService` calls the optional Node helper through `ProcessRunner`
 with fixed argument arrays and explicit SDK/Java environment. It checks Node 24+,
 protocol version 1, package identity and catalog capabilities, decodes typed JSON,
