@@ -8,6 +8,10 @@ struct ContentView: View {
     @Environment(APKInstallationStore.self) private var apkInstallationStore
 
 
+    private var canInstallAPK: Bool {
+        deviceStore.devices.contains(where: \.isUsable)
+    }
+
     private var contentWithFeedback: some View {
         deviceContent
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -215,6 +219,20 @@ struct ContentView: View {
         .navigationTitle("ADBuddy")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
+                Button(action: chooseAPK) {
+                    Label("Install APK", systemImage: "shippingbox")
+                        .foregroundStyle(
+                            canInstallAPK
+                                ? Color.primary : Color(nsColor: .disabledControlTextColor)
+                        )
+                }
+                .disabled(!canInstallAPK)
+                .help(canInstallAPK
+                    ? "Install APK on Android Device"
+                    : "Connect an available Android device to install an APK")
+            }
+
+            ToolbarItem(placement: .primaryAction) {
                 Button {
                     EmulatorCreationWindowController.shared.show(
                         preferences: preferences, deviceStore: deviceStore, emulatorStore: emulatorStore
@@ -224,18 +242,6 @@ struct ContentView: View {
                         .foregroundStyle(Color.primary)
                 }
                 .help("Create Android Emulator")
-            }
-
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: chooseAPK) {
-                    Label("Install APK", systemImage: "shippingbox")
-                        .foregroundStyle(
-                            deviceStore.devices.contains(where: \.isUsable)
-                                ? Color.primary : Color.secondary
-                        )
-                }
-                .disabled(!deviceStore.devices.contains(where: \.isUsable))
-                .help("Install APK on Android Device")
             }
 
             if preferences.isDeepLinkLauncherEnabled {

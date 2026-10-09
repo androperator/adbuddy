@@ -320,7 +320,7 @@ The app presents a dedicated SwiftUI Settings window. It receives the existing
 `AppPreferences` instance and uses a native folder importer to update the
 shared media destination. Its tabs are General (menu bar and feedback),
 Screenshots (shared media and capture output), Emulators (runtime configuration),
-Theme (Logcat colors), and About (app version, credits, and GitHub repository).
+Logcat (severity colors), and About (app version, credits, and GitHub repository).
 Recording bit rate, resolution, and Show taps are selected in the recording
 options sheet.
 
