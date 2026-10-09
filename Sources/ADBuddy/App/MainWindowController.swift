@@ -4,7 +4,7 @@ import AppKit
 final class MainWindowController {
     static let shared = MainWindowController()
 
-    private weak var window: NSWindow?
+    private(set) weak var window: NSWindow?
     private var isOpeningWindow = false
 
     private init() {}
