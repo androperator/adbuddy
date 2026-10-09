@@ -14,27 +14,36 @@ struct EmulatorCreationView: View {
 
     private var existingNames: Set<String> { Set(emulatorStore.virtualDevices.map(\.name)) }
 
+    private var isInitiallyLoading: Bool { !store.isReady && store.errorMessage == nil }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 0) {
             configurationForm
                 .opacity(store.isReady ? 1 : 0)
                 .allowsHitTesting(store.isReady)
                 .accessibilityHidden(!store.isReady)
                 .overlay {
-                    if !store.isReady {
-                        if store.errorMessage == nil {
-                            ProgressView("Loading emulator options…")
-                        } else {
-                            Text("Emulator options couldn’t be loaded.")
-                                .foregroundStyle(.secondary)
-                        }
+                    if !store.isReady, store.errorMessage != nil {
+                        Text("Emulator options couldn’t be loaded.")
+                            .foregroundStyle(.secondary)
                     }
                 }
+                .padding(24)
             Divider()
+                .opacity(isInitiallyLoading ? 0 : 1)
             footer
+                .padding(.horizontal, 24)
+                .padding(.vertical, 8)
+                .opacity(isInitiallyLoading ? 0 : 1)
+                .allowsHitTesting(!isInitiallyLoading)
+                .accessibilityHidden(isInitiallyLoading)
         }
-        .padding(24)
         .frame(width: 600)
+        .overlay {
+            if isInitiallyLoading {
+                ProgressView("Loading emulator options…")
+            }
+        }
         .onChange(of: store.isCreating) { _, creating in creationStateChanged(creating) }
         .onExitCommand {
             if !store.isCreating { dismiss() }

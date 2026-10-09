@@ -141,7 +141,8 @@ current product contract; they are not an outstanding implementation plan.
   Never replace existing AVDs or accept SDK licenses automatically. Report
   prerequisite and license failures visibly. Offer **Cancel** and **Create** actions. Creation leaves the new emulator
   stopped; start it separately from the emulator list.
-- Initial loading replaces the form with a centered progress indicator while preserving
+- Initial loading hides the form and entire footer, including the separator, with a
+  progress indicator centered across the full window content while preserving
   window size. Its native red close button and Escape dismiss it except during
   creation. Cancel and Create remain hidden until local options are ready;
   Escape remains available during loading. Errors restore the controls for recovery. Downloadable images then load quietly without disabling the form or
