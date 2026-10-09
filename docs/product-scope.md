@@ -142,8 +142,8 @@ current product contract; they are not an outstanding implementation plan.
   prerequisite and license failures visibly. Offer **Cancel** and **Create** actions. Creation leaves the new emulator
   stopped; start it separately from the emulator list.
 - Initial loading replaces the form with a centered progress indicator while preserving
-  sheet size. Cancel remains available and Create stays disabled until local options
-  are ready. Downloadable images then load quietly without disabling the form or
+  sheet size. Cancel and Create remain hidden until local options are ready;
+  Escape dismisses the sheet during loading. Errors restore the controls for recovery. Downloadable images then load quietly without disabling the form or
   creation with an installed image. Creation progress, validation, and retry controls
   share a fixed-height area at the bottom left. Technical errors open in a popover without resizing
   the sheet. Image availability is shown by picker icons, with spoken status for accessibility.

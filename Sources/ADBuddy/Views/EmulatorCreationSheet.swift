@@ -36,6 +36,9 @@ struct EmulatorCreationSheet: View {
         .padding(24)
         .frame(width: 600)
         .interactiveDismissDisabled(store.isCreating)
+        .onExitCommand {
+            if !store.isCreating { dismiss() }
+        }
         .task { await load() }
         .onChange(of: store.isReady) { _, ready in
             guard ready, !hasSetInitialFocus else { return }
@@ -149,13 +152,15 @@ struct EmulatorCreationSheet: View {
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 36)
-                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(store.isCreating)
-                Button("Create") {
-                    create()
+                if store.isReady || store.errorMessage != nil {
+                    Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(store.isCreating)
+                    Button("Create") {
+                        create()
+                    }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(store.isBusy || !store.isReady || store.validationMessage(existingNames: existingNames) != nil)
+                    .help(store.validationMessage(existingNames: existingNames) ?? "Create emulator")
                 }
-                .keyboardShortcut(.defaultAction)
-                .disabled(store.isBusy || !store.isReady || store.validationMessage(existingNames: existingNames) != nil)
-                .help(store.validationMessage(existingNames: existingNames) ?? "Create emulator")
             }.frame(height: 36)
     }
 
