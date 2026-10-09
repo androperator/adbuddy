@@ -35,6 +35,34 @@ final class EmulatorStoreTests: XCTestCase {
         XCTAssertTrue(store.deletingNames.isEmpty)
     }
 
+    func testCreationSurvivesDiscoveryStartedBeforeCreation() async throws {
+        let sdk = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let emulator = sdk.appendingPathComponent("emulator/emulator")
+        try FileManager.default.createDirectory(at: emulator.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data().write(to: emulator)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: emulator.path)
+        defer { try? FileManager.default.removeItem(at: sdk) }
+        let started = expectation(description: "Pre-creation discovery started")
+        let refreshed = expectation(description: "Fresh discovery follows stale result")
+        let runner = DelayedCreationDiscoveryRunner(started: started, refreshed: refreshed)
+        let store = EmulatorStore(
+            sdkLocator: AndroidSDKLocator(environment: ["ANDROID_HOME": sdk.path], pathExists: { _ in true }, isExecutable: { _ in true }),
+            processRunner: runner,
+            applicationLauncher: CreationTestLauncher()
+        )
+        store.refreshVirtualDevices()
+        await fulfillment(of: [started], timeout: 2)
+        store.registerCreatedVirtualDevice(name: "New_TV", startAfterCreation: true)
+        XCTAssertEqual(store.virtualDevices.first?.status, .starting)
+        await runner.releaseOldDiscovery()
+        await fulfillment(of: [refreshed], timeout: 2)
+        for _ in 0..<100 where store.status != .ready {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTAssertEqual(store.virtualDevices.map(\.name), ["New_TV"])
+        XCTAssertEqual(store.virtualDevices.first?.status, .starting)
+    }
+
     func testPollingDiscoversNewAVDsWithoutInvalidatingUnchangedPresentation() async throws {
         let sdk = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let emulator = sdk.appendingPathComponent("emulator/emulator")
@@ -99,4 +127,39 @@ private actor VirtualDevicePollingRunner: ProcessRunning {
 
 private struct CreationTestLauncher: ApplicationProcessLaunching {
     func launch(executablePath: String, arguments: [String]) throws {}
+}
+
+private actor DelayedCreationDiscoveryRunner: ProcessRunning {
+    let started: XCTestExpectation
+    let refreshed: XCTestExpectation
+    private var pending: CheckedContinuation<Void, Never>?
+    private var requests = 0
+
+    init(started: XCTestExpectation, refreshed: XCTestExpectation) {
+        self.started = started
+        self.refreshed = refreshed
+    }
+
+    func run(executablePath: String, arguments: [String]) async -> ProcessResult {
+        var output = ""
+        if arguments == ["-list-avds"] {
+            requests += 1
+            if requests == 1 {
+                await withCheckedContinuation { continuation in
+                    pending = continuation
+                    started.fulfill()
+                }
+            } else {
+                output = "New_TV\n"
+                refreshed.fulfill()
+            }
+        }
+        return ProcessResult(standardOutput: Data(output.utf8), standardError: Data(), exitStatus: 0,
+                             durationMilliseconds: 0, failureDescription: nil, wasCancelled: false)
+    }
+
+    func releaseOldDiscovery() {
+        pending?.resume()
+        pending = nil
+    }
 }

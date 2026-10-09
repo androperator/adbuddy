@@ -125,8 +125,10 @@ final class EmulatorStore {
                 return
             }
 
-            if revision == discoveryRevision { apply(result) }
+            let needsRefresh = revision != discoveryRevision
+            if !needsRefresh { apply(result) }
             isLoadingVirtualDevices = false
+            if needsRefresh { refreshVirtualDevices() }
         }
     }
 
@@ -144,6 +146,8 @@ final class EmulatorStore {
     }
 
     func registerCreatedVirtualDevice(name: String, startAfterCreation: Bool = false) {
+        // A discovery started before creation must not remove the new entry or its startup state.
+        discoveryRevision = UUID()
         let virtualDevice = AndroidVirtualDevice(name: name)
         if !virtualDevices.contains(where: { $0.name == name }) {
             virtualDevices.append(virtualDevice)
