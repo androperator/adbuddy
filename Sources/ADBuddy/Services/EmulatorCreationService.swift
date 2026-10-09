@@ -16,44 +16,33 @@ struct EmulatorHelperInvocation: Sendable {
         sdk: AndroidSDK,
         environment: [String: String] = ProcessInfo.processInfo.environment,
         bundleURL: URL = Bundle.main.bundleURL,
-        home: URL = FileManager.default.homeDirectoryForCurrentUser
+        home: URL = FileManager.default.homeDirectoryForCurrentUser,
+        standardNodeDirectories: [String] = ["/opt/homebrew/bin", "/usr/local/bin"]
     ) throws -> Self {
         let files = FileManager.default
         func expanded(_ path: String) -> String { (path as NSString).expandingTildeInPath }
         var directories = (environment["PATH"] ?? "").split(separator: ":").map(String.init)
-        directories += ["/opt/homebrew/bin", "/usr/local/bin", home.appendingPathComponent(".volta/bin").path]
+        directories += standardNodeDirectories + [home.appendingPathComponent(".volta/bin").path]
         let nvm = home.appendingPathComponent(".nvm/versions/node")
         let versions = (try? files.contentsOfDirectory(at: nvm, includingPropertiesForKeys: nil)) ?? []
-        directories += versions.sorted { $0.lastPathComponent.compare($1.lastPathComponent, options: .numeric) == .orderedDescending }
-            .map { $0.appendingPathComponent("bin").path }
+        directories += versions.sorted {
+            $0.lastPathComponent.compare($1.lastPathComponent, options: .numeric) == .orderedDescending
+        }.map { $0.appendingPathComponent("bin").path }
         let explicitNode = configuration.nodePath.trimmingCharacters(in: .whitespacesAndNewlines)
-        let nodeCandidates = explicitNode.isEmpty ? directories.map { "\($0)/node" } : [expanded(explicitNode)]
-        guard let node = nodeCandidates.first(where: files.isExecutableFile(atPath:)) else {
-            throw EmulatorCreationError("Node.js 24 or newer is required. Install Node or set its executable in Settings → Emulators.")
+        let candidates = explicitNode.isEmpty ? directories.map { "\($0)/node" } : [expanded(explicitNode)]
+        guard let node = candidates.first(where: files.isExecutableFile(atPath:)) else {
+            throw EmulatorCreationError("Node.js 24 or newer is required for emulator creation and deletion. Install Node, or set its executable in Settings → Emulators. The selected Node override must exist and be executable.")
         }
         let override = configuration.helperPath.trimmingCharacters(in: .whitespacesAndNewlines)
-        var candidates: [String] = []
-        if !override.isEmpty {
-            var isDirectory: ObjCBool = false
-            let path = expanded(override)
-            files.fileExists(atPath: path, isDirectory: &isDirectory)
-            candidates = [isDirectory.boolValue ? "\(path)/dist/cli.js" : path]
-        } else {
-            // Only a packaged development build in <checkout>/dist gets sibling discovery.
-            let dist = bundleURL.deletingLastPathComponent()
-            let repository = dist.deletingLastPathComponent()
-            if dist.lastPathComponent == "dist",
-               files.fileExists(atPath: repository.appendingPathComponent("Package.swift").path),
-               files.fileExists(atPath: repository.appendingPathComponent(".git").path) {
-                let sibling = repository.deletingLastPathComponent().appendingPathComponent("emulator")
-                if files.fileExists(atPath: sibling.path) {
-                    candidates = [sibling.appendingPathComponent("dist/cli.js").path]
-                }
-            }
-            if candidates.isEmpty { candidates = directories.map { "\($0)/androperator-emulator" } }
+        var script = override.isEmpty
+            ? bundleURL.appendingPathComponent("Contents/Resources/Emulator/package/dist/cli.js").path
+            : expanded(override)
+        var isDirectory: ObjCBool = false
+        if files.fileExists(atPath: script, isDirectory: &isDirectory), isDirectory.boolValue {
+            script = URL(fileURLWithPath: script).appendingPathComponent("dist/cli.js").path
         }
-        guard let script = candidates.first(where: files.isReadableFile(atPath:)) else {
-            throw EmulatorCreationError("Emulator helper missing or unbuilt. Install @androperator/emulator with npm, or build the local emulator checkout. Set a package folder or CLI path in Settings → Emulators.")
+        guard files.isReadableFile(atPath: script) else {
+            throw EmulatorCreationError("Emulator helper is missing or unbuilt: \(script). Build the selected checkout, clear the helper override in Settings → Emulators, or reinstall ADBuddy if the bundled helper is missing.")
         }
         var childEnvironment = environment
         // The helper only understands ANDROID_AVD_HOME; SDK tools also honor ANDROID_USER_HOME.
@@ -100,11 +89,12 @@ struct EmulatorCreationService: Sendable {
         }
         let version: EmulatorHelperVersion = try await call(["--version"])
         guard version.name == "@androperator/emulator" else {
-            throw EmulatorCreationError("The selected helper is not @androperator/emulator.")
+            throw EmulatorCreationError("The selected helper is not @androperator/emulator. Select a compatible helper or clear the override in Settings → Emulators.")
         }
         guard !requiresCatalogs || Set(version.capabilities ?? []).isSuperset(of: ["catalog.profiles", "catalog.images"]) else {
-            throw EmulatorCreationError("This helper lacks creation catalogs. Use the built local emulator checkout until a release with catalog support is installed.")
+            throw EmulatorCreationError("The selected helper lacks required catalog.profiles and catalog.images capabilities. Select a catalog-capable build in Settings → Emulators or clear the override to use the bundled helper.")
         }
+        AppLogger.emulator.info("Emulator helper \(version.version, privacy: .public) at \(invocation.script, privacy: .public), Node at \(invocation.node, privacy: .public)")
         return version
     }
 
@@ -123,7 +113,7 @@ struct EmulatorCreationService: Sendable {
     func create(_ request: EmulatorCreationRequest) async throws {
         try request.validate(existingNames: [])
         struct Result: Decodable, Sendable { let name: String; let exists: Bool }
-        AppLogger.emulator.info("Creating Android virtual device through optional emulator helper")
+        AppLogger.emulator.info("Creating Android virtual device through emulator helper")
         let result: Result = try await call(request.arguments)
         guard result.exists, result.name == request.name else {
             throw EmulatorCreationError("The helper did not confirm the new emulator. Refresh the emulator list before retrying.")
@@ -146,7 +136,7 @@ struct EmulatorCreationService: Sendable {
     static func decode<Value: Decodable & Sendable>(_ result: ProcessResult) throws -> Value {
         guard let envelope = try? JSONDecoder().decode(HelperEnvelope<Value>.self, from: result.standardOutput), envelope.protocolVersion == 1 else {
             let detail = result.failureDescription ?? String(decoding: result.standardError, as: UTF8.self)
-            throw EmulatorCreationError("The emulator helper returned an invalid response. \(String(detail.prefix(1500)))")
+            throw EmulatorCreationError("The emulator helper returned an invalid protocol response. Select a protocol version 1 helper or clear the override in Settings → Emulators. \(String(detail.prefix(1500)))")
         }
         guard result.succeeded, envelope.ok, let data = envelope.data else {
             throw EmulatorCreationError(envelope.error?.message ?? result.failureDescription ?? "The emulator helper failed. Check Settings → Emulators and retry.")

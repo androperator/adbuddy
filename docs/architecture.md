@@ -411,22 +411,23 @@ cancellation on normal quit. Mirror windows belong to the scrcpy process.
 window with a fresh `EmulatorCreationStore` each time it opens. It opens at the
 top center of the main window, constrained to that display’s usable area. `EmulatorCreationView`
 presents the form. Closing is disabled while creation is in progress.
-`EmulatorCreationService` calls the optional Node helper through `ProcessRunner`
+`EmulatorCreationService` calls the bundled JavaScript helper using external Node through `ProcessRunner`
 with fixed argument arrays and explicit SDK/Java environment. It checks Node 24+,
 protocol version 1, package identity and catalog capabilities, decodes typed JSON,
 and verifies creation returns the requested AVD name and existence. Existing
 emulator discovery and lifecycle operations remain native.
 
-`EmulatorHelperInvocation` resolves a Settings override first. A packaged build
-under a source checkout's `dist` directory can resolve the sibling `emulator`
-checkout. Otherwise it searches PATH, standard Homebrew locations, Volta, and
-installed nvm versions. Node is invoked explicitly so CLI shebang lookup does not
-depend on Finder's PATH. An existing but unbuilt sibling reports an error rather
-than falling back silently. Settings stores path overrides in `AppPreferences`.
+`EmulatorHelperInvocation` resolves explicit Settings overrides first and otherwise
+uses `Contents/Resources/Emulator/package/dist/cli.js`. It never searches for
+helpers on PATH or in neighboring checkouts. Node is external, discovered through
+PATH, Homebrew, Volta and nvm, or selected through its explicit override. Missing or incompatible overrides fail without
+fallback. Settings displays the validated active version and paths, and successful
+checks log the same details. Overrides persist through `AppPreferences`.
 The helper receives the same SDK root and ADB executable as normal app operations.
 Java uses its explicit override, inherited JAVA_HOME, or Android Studio's runtime.
+See [bundle provenance](../vendor/emulator/README.md) for immutable helper bytes,
+published package integrity, source revision and license notices.
 
-The catalog API is currently a local, unpublished emulator-package extension.
 Creation refuses replacement, uses accepted licenses only, and refreshes discovery
 on success or failure. No helper progress stream or cancellation guarantee is
 assumed; the sheet remains open during an operation. ADBuddy must remain running.

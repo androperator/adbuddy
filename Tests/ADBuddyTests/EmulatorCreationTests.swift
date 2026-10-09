@@ -109,7 +109,7 @@ final class EmulatorCreationTests: XCTestCase {
         } catch { XCTAssertTrue(error.localizedDescription.contains("did not confirm")) }
     }
 
-    func testResolvesDevelopmentSiblingAndExplicitOverridesWithoutTerminalPATH() throws {
+    func testResolvesBundledHelperAndExplicitOverridesWithoutTerminalPATH() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: root) }
         let repo = root.appendingPathComponent("adbuddy")
@@ -122,8 +122,13 @@ final class EmulatorCreationTests: XCTestCase {
         try Data().write(to: node)
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: node.path)
         let sdk = AndroidSDK(rootPath: "/chosen-sdk", adbPath: "/chosen-sdk/platform-tools/adb", source: .standardLocation)
-        let resolved = try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: "", nodePath: node.path, javaHome: "/chosen-java"), sdk: sdk, environment: [:], bundleURL: repo.appendingPathComponent("dist/ADBuddy.app"), home: root)
-        XCTAssertEqual(resolved.script, helper.appendingPathComponent("dist/cli.js").resolvingSymlinksInPath().path)
+        let bundle = repo.appendingPathComponent("dist/ADBuddy.app")
+        let bundledScript = bundle.appendingPathComponent("Contents/Resources/Emulator/package/dist/cli.js")
+        try FileManager.default.createDirectory(at: bundledScript.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data().write(to: bundledScript)
+        let resolved = try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: "", nodePath: "", javaHome: "/chosen-java"), sdk: sdk, environment: ["PATH": root.path], bundleURL: bundle)
+        XCTAssertEqual(resolved.script, bundledScript.resolvingSymlinksInPath().path)
+        XCTAssertEqual(resolved.node, node.path)
         XCTAssertEqual(resolved.environment["JAVA_HOME"], "/chosen-java")
         XCTAssertEqual(resolved.environment["SDKMANAGER_PATH"], "/chosen-sdk/cmdline-tools/latest/bin/sdkmanager")
         XCTAssertEqual(resolved.environment["ANDROID_HOME"], "/chosen-sdk")
@@ -136,11 +141,112 @@ final class EmulatorCreationTests: XCTestCase {
         for (environment, expectedRoot) in avdEnvironments {
             let invocation = try EmulatorHelperInvocation.resolve(
                 configuration: .init(helperPath: helper.path, nodePath: node.path, javaHome: ""),
-                sdk: sdk, environment: environment, home: root
+                sdk: sdk, environment: environment
             )
             XCTAssertEqual(invocation.environment["ANDROID_AVD_HOME"], expectedRoot)
         }
-        XCTAssertThrowsError(try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: "/missing-helper", nodePath: node.path, javaHome: ""), sdk: sdk, environment: [:], bundleURL: repo.appendingPathComponent("dist/ADBuddy.app"), home: root))
+        XCTAssertThrowsError(try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: "/missing-helper", nodePath: node.path, javaHome: ""), sdk: sdk, environment: [:], bundleURL: repo.appendingPathComponent("dist/ADBuddy.app")))
+        XCTAssertThrowsError(try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: "", nodePath: "/missing-node", javaHome: ""), sdk: sdk, environment: ["PATH": root.path], bundleURL: bundle))
+        try FileManager.default.removeItem(at: bundledScript)
+        // An existing sibling and a PATH helper must never rescue a missing bundle.
+        XCTAssertThrowsError(try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: "", nodePath: node.path, javaHome: ""), sdk: sdk, environment: ["PATH": helper.path], bundleURL: bundle))
+
+    }
+
+    func testExternalNodeDiscoveryAndInvalidOverrides() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: home) }
+        let bundle = home.appendingPathComponent("ADBuddy.app")
+        let script = bundle.appendingPathComponent("Contents/Resources/Emulator/package/dist/cli.js")
+        try FileManager.default.createDirectory(at: script.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data().write(to: script)
+        let sdk = AndroidSDK(rootPath: "/sdk", adbPath: "/sdk/adb", source: .standardLocation)
+        func resolve(_ nodePath: String = "") throws -> EmulatorHelperInvocation {
+            try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: "", nodePath: nodePath, javaHome: ""),
+                sdk: sdk, environment: [:], bundleURL: bundle, home: home, standardNodeDirectories: [])
+        }
+        XCTAssertThrowsError(try resolve()) { error in
+            XCTAssertTrue(error.localizedDescription.contains("Install Node"))
+        }
+        for version in ["v24.1.0", "v24.2.0"] {
+            let node = home.appendingPathComponent(".nvm/versions/node/\(version)/bin/node")
+            try FileManager.default.createDirectory(at: node.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data().write(to: node)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: node.path)
+        }
+        XCTAssertTrue(try resolve().node.hasSuffix("v24.2.0/bin/node"))
+        let explicit = home.appendingPathComponent(".nvm/versions/node/v24.1.0/bin/node").path
+        XCTAssertEqual(try resolve(explicit).node, explicit)
+        XCTAssertThrowsError(try resolve(home.appendingPathComponent("missing-node").path))
+    }
+
+    func testPackagedRuntimeAndLocalOverrides() async throws {
+        guard let path = ProcessInfo.processInfo.environment["ADBUDDY_EMULATOR_TEST_BUNDLE"],
+              let nodePath = ProcessInfo.processInfo.environment["ADBUDDY_EMULATOR_TEST_NODE"] else {
+            throw XCTSkip("Set ADBUDDY_EMULATOR_TEST_BUNDLE and ADBUDDY_EMULATOR_TEST_NODE to verify a packaged app")
+        }
+        let bundle = URL(fileURLWithPath: path)
+        let sdk = AndroidSDK(rootPath: "/missing-sdk", adbPath: "/missing-sdk/adb", source: .standardLocation)
+        let configuration = EmulatorHelperConfiguration(helperPath: "", nodePath: nodePath, javaHome: "")
+        let invocation = try EmulatorHelperInvocation.resolve(configuration: configuration, sdk: sdk,
+            environment: ["PATH": "/usr/bin:/bin"], bundleURL: bundle)
+        let version = try await EmulatorCreationService(invocation: invocation).check()
+        struct Dependencies: Decodable {
+            struct Component: Decodable { let version: String }
+            let emulator: Component
+        }
+        let manifestURL = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("bundled-dependencies.json")
+        let manifestData = try Data(contentsOf: manifestURL)
+        let dependencies = try JSONDecoder().decode(Dependencies.self, from: manifestData)
+        XCTAssertEqual(version.version, dependencies.emulator.version)
+        XCTAssertEqual(try Data(contentsOf: bundle.appendingPathComponent("Contents/Resources/Emulator/bundled-dependencies.json")), manifestData)
+        XCTAssertTrue(invocation.script.hasPrefix(bundle.path))
+        XCTAssertEqual(invocation.node, nodePath)
+        let macOSFiles = try FileManager.default.contentsOfDirectory(atPath: bundle.appendingPathComponent("Contents/MacOS").path)
+        XCTAssertFalse(macOSFiles.contains { $0 == "node" || $0.hasPrefix("node-") })
+
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let local = root.appendingPathComponent("local")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: bundle.appendingPathComponent("Contents/Resources/Emulator/package"), to: local)
+        let override = try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: local.path, nodePath: nodePath, javaHome: ""), sdk: sdk,
+            environment: ["PATH": "/usr/bin:/bin"], bundleURL: bundle)
+        XCTAssertEqual(override.script, local.appendingPathComponent("dist/cli.js").resolvingSymlinksInPath().path)
+        _ = try await EmulatorCreationService(invocation: override).check()
+        XCTAssertThrowsError(try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: root.appendingPathComponent("absent").path, nodePath: nodePath, javaHome: ""), sdk: sdk, bundleURL: bundle))
+
+        // Execute incompatible overrides with explicit external Node, without SDK calls.
+        let incompatible = root.appendingPathComponent("incompatible.js")
+        for response in [
+            #"{"protocolVersion":2,"ok":true,"data":{"name":"@androperator/emulator","version":"9","capabilities":["catalog.profiles","catalog.images"]}}"#,
+            #"{"protocolVersion":1,"ok":true,"data":{"name":"@androperator/emulator","version":"0.1.1"}}"#,
+            #"{"protocolVersion":1,"ok":true,"data":{"name":"other","version":"1","capabilities":["catalog.profiles","catalog.images"]}}"#
+        ] {
+            try Data("console.log(\(String(reflecting: response)))".utf8).write(to: incompatible)
+            let invalid = try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: incompatible.path, nodePath: nodePath, javaHome: ""), sdk: sdk, environment: ["PATH": "/usr/bin:/bin"], bundleURL: bundle)
+            do {
+                _ = try await EmulatorCreationService(invocation: invalid).check()
+                XCTFail("Incompatible helper must fail")
+            } catch { XCTAssertTrue(error is EmulatorCreationError) }
+        }
+    }
+
+    func testRejectsOldNodeAndMissingCapabilities() async {
+        for oldNode in [true, false] {
+            let service = EmulatorCreationService(invocation: .init(node: "/node", script: "/helper", environment: [:])) { _, arguments, _ in
+                let output = arguments == ["--version"] ? (oldNode ? "v22.0.0" : "v24.21.0") : #"{"protocolVersion":1,"ok":true,"data":{"name":"@androperator/emulator","version":"0.1.1"}}"#
+                return ProcessResult(standardOutput: Data(output.utf8), standardError: Data(), exitStatus: 0, durationMilliseconds: 0, failureDescription: nil, wasCancelled: false)
+            }
+            do {
+                _ = try await service.check()
+                XCTFail("Unsupported runtime or capabilities must fail")
+            } catch {
+                XCTAssertTrue(error.localizedDescription.contains(oldNode ? "Node" : "capabilities"))
+            }
+        }
     }
 
     @MainActor

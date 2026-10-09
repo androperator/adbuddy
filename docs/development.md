@@ -7,7 +7,8 @@
   `Package.swift`;
 - CMake, pkg-config, Python 3, and network access for the first bundled recorder
   build; see [recording-backend.md](recording-backend.md);
-- an Android SDK containing `platform-tools/adb` for live-device checks.
+- an Android SDK containing `platform-tools/adb` for live-device checks;
+- externally installed Node.js 24+ for emulator creation and deletion.
 
 The local scripts use the selected Xcode installation. If Xcode setup is
 incomplete, they can use separately installed Command Line Tools with the
@@ -87,12 +88,29 @@ Contribution and agent workflow rules are in [AGENTS.md](../AGENTS.md).
 
 ## Emulator creation prototype
 
-Build the sibling `../emulator` project (`npm ci` and `npm run build`) on its
-catalog-capable branch before using **Create Emulator**. The published 0.1.1
-package does not include these catalogs. Development app bundles in `dist` find
-that checkout automatically. Settings → Emulators accepts a package directory
-or CLI path, Node executable, and Java home for explicit selection. Node 24+,
-SDK command-line tools and an SDK-compatible Java runtime are required.
+Normal packaged launches use the pinned catalog-capable helper inside ADBuddy.
+The helper version, URL and checksum are defined in
+[the root dependency manifest](../bundled-dependencies.json), which is copied
+into the app. No global helper installation is required. Node.js 24+ must be
+installed separately for creation and deletion. See
+[the bundle pin and rebuild instructions](../vendor/emulator/README.md).
+
+For local helper development, build the checkout explicitly (`npm ci` and
+`npm run build`), then set **Settings → Emulators → Package folder or CLI**
+to that checkout's absolute path or compiled `dist/cli.js`. Blank selects the
+bundled helper. The Node executable override is independent; blank discovers
+installed Node through PATH, Homebrew, Volta and nvm locations. Node 24+ is required. Invalid paths,
+wrong package identity, protocol mismatch, or missing catalog capabilities fail
+visibly without fallback. Settings displays the checked active version and both
+paths. Reopen Create Emulator after changing settings. Nearby checkouts and
+global helper installations are never selected automatically.
+
+Android SDK tools, images, accepted licenses and SDK-compatible Java remain
+external. Existing SDK, Android user home, AVD home and Java discovery apply.
+Packaging does not download or include Node, build or read the sibling helper
+checkout. SDK tools, images and Java remain external. The rest of ADBuddy does
+not require Node; creation and deletion show actionable errors when it is absent
+or incompatible. A dedicated Node setup UI is deferred.
 
 Run focused checks with:
 
@@ -145,3 +163,27 @@ Integration validation (2026-10-10):
   controls. Automated UI interaction was unavailable for completing the sheet
   checks in this pass; no AVD was created or deleted during integration.
 - The earlier live creation results above belong to the draft validation.
+
+Safe bundled-runtime verification (no SDK calls or AVD mutations):
+
+```sh
+scripts/build_and_run.sh --verify
+ADBUDDY_EMULATOR_TEST_BUNDLE="$PWD/dist/ADBuddy.app" \
+ADBUDDY_EMULATOR_TEST_NODE="$(command -v node)" \
+  scripts/test.sh ADBuddyTests.EmulatorCreationTests
+```
+
+The runtime test uses a restricted PATH, the packaged helper with an explicitly selected external Node, a copied
+local package override, and disposable incompatible helper fixtures. It checks
+version, protocol, package identity and capabilities. Resolver tests also prove
+missing overrides and missing bundled components cannot fall back to a sibling.
+The runtime test skips explicitly when a bundle or external Node path is not supplied.
+
+External Node validation (2026-10-10):
+
+- The app packages only the pinned emulator helper, manifest and license notices.
+  Node downloads, binaries and signing entitlements are removed.
+- Isolated tests cover external Node discovery, explicit overrides, old runtimes,
+  helper protocol/capabilities and absence of Node in the packaged app.
+- No SDK licenses or user emulators are changed by these checks. Native Intel,
+  macOS 14 runtime and Developer ID notarization remain unverified.

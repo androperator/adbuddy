@@ -123,6 +123,7 @@ cat >"$INFO_PLIST" <<PLIST
 </plist>
 PLIST
 
+"$ROOT_DIR/scripts/prepare_emulator_backend.sh" "$APP_CONTENTS"
 "$ROOT_DIR/scripts/prepare_recording_backend.sh" "$APP_CONTENTS"
 /usr/bin/codesign --force --sign - "$APP_MACOS/scrcpy-$(uname -m)"
 /usr/bin/codesign --force --sign - "$APP_BUNDLE"

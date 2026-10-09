@@ -1,0 +1,12 @@
+{
+  "emulator": {
+    "name": "@androperator/emulator",
+    "version": "0.2.0",
+    "archive": "vendor/emulator/androperator-emulator-0.2.0.tgz",
+    "url": "https://registry.npmjs.org/@androperator/emulator/-/emulator-0.2.0.tgz",
+    "sha256": "eaa2f002b3d658acd3ffa99ba054e8be470588eface47a1586f946e95c36f2c9",
+    "integrity": "sha512-bXcZJfsVg3eMx4TeOsGNdqPr67uyo28RZmas/6rsL6mmxwZ4l7Hbm2NALf+JlJbjtx+ssGVIcv4g0HSDnsnSsw==",
+    "sourceRepository": "https://github.com/androperator/androperator-emulator",
+    "sourceCommit": "56281ab7e560ad5bb57e3130a2cdca22d4de5a40"
+  }
+}
