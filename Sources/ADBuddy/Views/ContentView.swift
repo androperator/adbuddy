@@ -8,9 +8,7 @@ struct ContentView: View {
     @Environment(APKInstallationStore.self) private var apkInstallationStore
 
 
-    var body: some View {
-        @Bindable var deviceStore = deviceStore
-
+    private var contentWithFeedback: some View {
         deviceContent
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .overlay(alignment: .bottom) {
@@ -86,6 +84,12 @@ struct ContentView: View {
                 sdk: deviceStore.resolvedSDK
             )
         }
+    }
+
+    private var contentWithSheets: some View {
+        @Bindable var deviceStore = deviceStore
+
+        return contentWithFeedback
         .sheet(item: $deviceStore.screenRecordingOptionsDevice) { device in
             ScreenRecordingOptionsView(
                 device: device,
@@ -141,6 +145,10 @@ struct ContentView: View {
                 )
             }
         }
+    }
+
+    private var contentWithAlerts: some View {
+        contentWithSheets
         .alert("Delete Emulator?", isPresented: Binding(
             get: { emulatorStore.deleteConfirmationVirtualDevice != nil },
             set: { if !$0 { emulatorStore.deleteConfirmationVirtualDevice = nil } }
@@ -200,6 +208,10 @@ struct ContentView: View {
         } message: { request in
             Text("This removes \(request.application.packageID) from \(request.device.displayName).")
         }
+    }
+
+    var body: some View {
+        contentWithAlerts
         .navigationTitle("ADBuddy")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

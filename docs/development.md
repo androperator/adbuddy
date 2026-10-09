@@ -52,6 +52,18 @@ Xcode, ordinary `swift build` and `swift test` are also available. Unit tests us
 fake process runners and do not require an Android SDK or connected device;
 passing them does not prove live ADB behavior.
 
+### Pull request checks
+
+[The Tests workflow](../.github/workflows/tests.yml) runs the complete unit suite
+on every pull request update and on pushes to `main`. It uses a standard
+`macos-26` runner with Xcode 26.6 and invokes `scripts/test.sh`. The stable
+check name is `macOS tests`; GitHub branch protection requires this check to
+pass before merging into `main`. New commits cancel superseded test runs.
+
+These checks compile the app, core library, and MCP helper, but do not package
+or launch the app, build the bundled recorder, or verify live Android behavior.
+No signing credentials or connected devices are required.
+
 Manual checks live with the features they verify:
 
 - [Product workflows](product-scope.md#manual-verification): discovery,
