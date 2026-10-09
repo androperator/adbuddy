@@ -208,12 +208,12 @@ private struct EmulatorSettingsView: View {
         Form {
             Section {
                 TextField("Package folder or CLI", text: $preferences.emulatorHelperPath, prompt: Text("Bundled"))
-                TextField("Node executable", text: $preferences.emulatorNodePath, prompt: Text("Bundled"))
+                TextField("Node executable", text: $preferences.emulatorNodePath, prompt: Text("Installed Node"))
                 TextField("Java home", text: $preferences.emulatorJavaHome, prompt: Text("Automatic"))
             } header: {
                 Text("Local development overrides")
             } footer: {
-                Text("Leave helper and Node paths blank to use the bundled versions. Overrides are explicit and must be compatible; invalid overrides report an error. SDK command-line tools and Java remain external. Java defaults to JAVA_HOME or Android Studio’s runtime.")
+                Text("Leave the helper path blank to use the bundled helper. Node.js 24+ must be installed separately; leave its path blank for discovery or select an executable explicitly. Invalid overrides report an error. SDK tools and Java remain external; Java defaults to JAVA_HOME or Android Studio’s runtime.")
             }
             Section {
                 Text(helperStatus).font(.caption).textSelection(.enabled)

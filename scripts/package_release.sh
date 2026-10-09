@@ -213,7 +213,7 @@ for variant in arm64 x86_64 universal; do
 </plist>
 PLIST
 
-  "$ROOT_DIR/scripts/prepare_emulator_backend.sh" "$APP_CONTENTS" "$variant"
+  "$ROOT_DIR/scripts/prepare_emulator_backend.sh" "$APP_CONTENTS"
   "$ROOT_DIR/scripts/prepare_recording_backend.sh" "$APP_CONTENTS" "$variant"
   LICENSES_DIRECTORY="$APP_CONTENTS/Resources/Recording/Licenses"
   mkdir -p "$LICENSES_DIRECTORY"
@@ -230,8 +230,6 @@ The source archive is distributed alongside the app ZIP on the same release.
 See README.md and Licenses/ in this directory for notices and license texts.
 SOURCES
   for architecture in "${ARCHITECTURES[@]}"; do
-    /usr/bin/codesign --force --options runtime "$TIMESTAMP_OPTION" --entitlements "$ROOT_DIR/scripts/node-entitlements.plist" --sign "$SIGNING_IDENTITY" \
-      "$APP_MACOS/node-$architecture"
     /usr/bin/codesign --force --options runtime "$TIMESTAMP_OPTION" --sign "$SIGNING_IDENTITY" \
       "$APP_MACOS/scrcpy-$architecture"
   done

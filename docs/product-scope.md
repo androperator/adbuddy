@@ -128,7 +128,7 @@ current product contract; they are not an outstanding implementation plan.
   show deletion failures in a native alert.
 - Offer a prototype **Create Android Emulator** window from the main-window toolbar.
   Use the pinned bundled `@androperator/emulator` helper with catalog
-  capabilities and a bundled Node runtime. Settings provides explicit helper,
+  capabilities and an externally installed Node.js 24+ runtime. Settings provides explicit helper,
   Node and Java path overrides for development, with checked version and paths.
 - Select a hardware type first (Phone, Tablet, Foldable, TV, Automotive, Wear OS,
   Desktop, XR, Glasses, or Other), then a profile from that type and a matching
@@ -371,7 +371,7 @@ prebuilding abstractions for these possible extensions.
 ## Emulator helper distribution
 
 Emulator creation catalogs and confirmed deletion use ADBuddy's pinned bundled
-helper and Node runtime. Settings supports explicit helper-package/compiled-CLI
+helper with external Node.js 24+. Settings supports explicit helper-package/compiled-CLI
 and Node executable overrides for local development, and displays the checked
 helper version and paths. Invalid or incompatible overrides report actionable
 errors without fallback. Normal launches never discover a sibling checkout or

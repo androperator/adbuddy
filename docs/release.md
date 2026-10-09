@@ -33,15 +33,13 @@ The smaller downloads use `ADBuddy-macos-arm64-<version>.zip` and
 `ADBuddy-macos-x86_64-<version>.zip`. Each contains only its matching recorder
 helper and Android server resources.
 
-Every app also includes the emulator helper and Node runtime pinned in
-[the root dependency manifest](../bundled-dependencies.json).
-Single-architecture apps contain the matching Node runtime; universal apps
-contain both runtimes and choose the native architecture. The shared JavaScript
-helper is the published npm package pinned by archive checksum. Packaging verifies helper and Node checksums, signs each Node executable
-with Hardened Runtime and the V8 allow-jit and unsigned-executable-memory entitlements before signing the app,
-and includes the helper LICENSE/NOTICE and full Node third-party license text.
-The GUI does not receive Node's entitlement. SDK tools, images and Java stay
-external. See [bundle provenance and rebuild instructions](../vendor/emulator/README.md).
+Every app also includes the emulator helper pinned in
+[the root dependency manifest](../bundled-dependencies.json). Packaging verifies
+its checksum and includes the helper LICENSE/NOTICE and provenance. The same
+JavaScript package serves every architecture. Node.js 24+ must be installed
+externally for creation/deletion; no Node executable, download or Node-specific
+signing entitlement is included. SDK tools, system images and Java stay external.
+See [bundle provenance](../vendor/emulator/README.md).
 
 Do not treat an ad-hoc signed developer build as a public release. Public
 artifacts require a Developer ID Application identity, Hardened Runtime,

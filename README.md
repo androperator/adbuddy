@@ -159,6 +159,9 @@ These are possible extensions, not a scheduled roadmap.
   verification contract.
 - [`docs/mcp.md`](docs/mcp.md) - local MCP server setup and tool contract.
 
-Bundled emulator-helper and Node runtime versions, URLs and checksums are pinned
+The bundled emulator-helper version, URL and checksum are pinned
 in [bundled-dependencies.json](bundled-dependencies.json). See
 [bundle provenance](vendor/emulator/README.md) for verification and update instructions.
+
+Node.js 24+ must be installed separately for emulator creation and deletion.
+Settings → Emulators supports an explicit Node executable override.

@@ -15,22 +15,23 @@ struct EmulatorHelperInvocation: Sendable {
         configuration: EmulatorHelperConfiguration,
         sdk: AndroidSDK,
         environment: [String: String] = ProcessInfo.processInfo.environment,
-        bundleURL: URL = Bundle.main.bundleURL
+        bundleURL: URL = Bundle.main.bundleURL,
+        home: URL = FileManager.default.homeDirectoryForCurrentUser,
+        standardNodeDirectories: [String] = ["/opt/homebrew/bin", "/usr/local/bin"]
     ) throws -> Self {
         let files = FileManager.default
         func expanded(_ path: String) -> String { (path as NSString).expandingTildeInPath }
-        let directories = (environment["PATH"] ?? "").split(separator: ":").map(String.init)
-        #if arch(arm64)
-        let architecture = "arm64"
-        #else
-        let architecture = "x86_64"
-        #endif
+        var directories = (environment["PATH"] ?? "").split(separator: ":").map(String.init)
+        directories += standardNodeDirectories + [home.appendingPathComponent(".volta/bin").path]
+        let nvm = home.appendingPathComponent(".nvm/versions/node")
+        let versions = (try? files.contentsOfDirectory(at: nvm, includingPropertiesForKeys: nil)) ?? []
+        directories += versions.sorted {
+            $0.lastPathComponent.compare($1.lastPathComponent, options: .numeric) == .orderedDescending
+        }.map { $0.appendingPathComponent("bin").path }
         let explicitNode = configuration.nodePath.trimmingCharacters(in: .whitespacesAndNewlines)
-        let node = explicitNode.isEmpty
-            ? bundleURL.appendingPathComponent("Contents/MacOS/node-\(architecture)").path
-            : expanded(explicitNode)
-        guard files.isExecutableFile(atPath: node) else {
-            throw EmulatorCreationError("Node executable is missing or not executable: \(node). Clear the Node override in Settings → Emulators to use the bundled runtime, or reinstall ADBuddy if the bundled runtime is missing.")
+        let candidates = explicitNode.isEmpty ? directories.map { "\($0)/node" } : [expanded(explicitNode)]
+        guard let node = candidates.first(where: files.isExecutableFile(atPath:)) else {
+            throw EmulatorCreationError("Node.js 24 or newer is required for emulator creation and deletion. Install Node, or set its executable in Settings → Emulators. The selected Node override must exist and be executable.")
         }
         let override = configuration.helperPath.trimmingCharacters(in: .whitespacesAndNewlines)
         var script = override.isEmpty
