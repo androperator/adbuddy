@@ -143,12 +143,11 @@ final class EmulatorStore {
         refreshRunningStatuses()
     }
 
-    func registerCreatedVirtualDevice(name: String, startAfterCreation: Bool) {
+    func registerCreatedVirtualDevice(name: String) {
         let virtualDevice = AndroidVirtualDevice(name: name)
         if !virtualDevices.contains(where: { $0.name == name }) {
             virtualDevices.append(virtualDevice)
         }
-        if startAfterCreation { start(virtualDevice) }
         refreshVirtualDevices()
     }
 

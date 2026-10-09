@@ -139,9 +139,8 @@ current product contract; they are not an outstanding implementation plan.
   Mark installed choices with a drive icon and remote choices with a download icon. Reserve the native checkmark for the selected image; creation downloads the selected image.
 - Require a unique name and internal-storage capacity, defaulting to 24 GB.
   Never replace existing AVDs or accept SDK licenses automatically. Report
-  prerequisite and license failures visibly. Offer one **Create** action (**Download & Create** for missing images) and a
-  visible **Start after creation** checkbox, enabled by default, using the existing
-  standalone emulator launch flow.
+  prerequisite and license failures visibly. Offer **Cancel** and **Create** actions. Creation leaves the new emulator
+  stopped; start it separately from the emulator list.
 - Loading, creation progress, validation, and retry controls share a fixed-height
   area at the bottom left. Technical errors open in a popover without resizing
   the sheet. Image availability is shown by picker icons, with spoken status for accessibility.

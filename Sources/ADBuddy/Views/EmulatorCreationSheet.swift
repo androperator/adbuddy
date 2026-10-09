@@ -84,11 +84,6 @@ struct EmulatorCreationSheet: View {
                 Text("Disk space is used as needed, rather than reserved upfront.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-            GridRow {
-                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                Toggle("Start after creation", isOn: $store.startAfterCreation)
-                    .toggleStyle(.checkbox)
-            }
         }
         .frame(maxWidth: .infinity)
         .disabled(!store.isReady || store.isCreating)
@@ -142,7 +137,7 @@ struct EmulatorCreationSheet: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 36)
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(store.isCreating)
-                Button(store.selectedImage?.installed == false ? "Download & Create" : "Create") {
+                Button("Create") {
                     create()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -154,8 +149,8 @@ struct EmulatorCreationSheet: View {
     private func create() {
         guard !store.isBusy else { return }
         Task {
-            await store.create(existingNames: existingNames) { name, start in
-                if let name { emulatorStore.registerCreatedVirtualDevice(name: name, startAfterCreation: start) }
+            await store.create(existingNames: existingNames) { name in
+                if let name { emulatorStore.registerCreatedVirtualDevice(name: name) }
                 else { emulatorStore.refreshVirtualDevices() }
             }
         }

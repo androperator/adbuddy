@@ -9,7 +9,6 @@ final class EmulatorCreationStore {
     var profileID = ""
     var imageID = ""
     var storageGB = "24"
-    var startAfterCreation = true
     private(set) var profiles: [EmulatorHardwareProfile] = []
     private(set) var images: [EmulatorSystemImage] = []
     private(set) var isBusy = false
@@ -107,7 +106,7 @@ final class EmulatorCreationStore {
         }
     }
 
-    func create(existingNames: Set<String>, didCreate: (String?, Bool) -> Void) async {
+    func create(existingNames: Set<String>, didCreate: (String?) -> Void) async {
         guard !isBusy, createdName == nil, let service, let profile = selectedProfile, let image = selectedImage else { return }
         if let message = validationMessage(existingNames: existingNames) { errorMessage = message; return }
         isBusy = true
@@ -120,10 +119,10 @@ final class EmulatorCreationStore {
             let request = EmulatorCreationRequest(name: name, profile: profile, image: image, storageGB: Int(storageGB) ?? 0)
             try await service.create(request)
             createdName = name
-            didCreate(name, startAfterCreation)
+            didCreate(name)
         } catch {
             errorMessage = error.localizedDescription
-            didCreate(nil, false) // Reconcile partial creation rather than assuming failure left nothing behind.
+            didCreate(nil) // Reconcile partial creation rather than assuming failure left nothing behind.
             AppLogger.emulator.error("Emulator creation failed")
         }
     }

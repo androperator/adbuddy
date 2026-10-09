@@ -90,7 +90,7 @@ scripts/test.sh ADBuddyTests.EmulatorCreationTests,ADBuddyTests.AppPreferencesTe
 
 In the packaged app, open **Create Emulator**, choose an installed phone or TV
 image, enter a unique disposable name and storage capacity, and create. Verify
-success, list refresh, and optional standalone launch. Check duplicate-name and
+success, list refresh, and that the new emulator remains stopped until explicitly started. Check duplicate-name and
 invalid-capacity feedback. Verify automatic downloadable catalog loading, offline fallback to installed images, retry, and installed state
 and device-family/ABI selection. A missing image may be downloaded on creation;
 licenses must already be accepted. Do not accept licenses or remove an existing
