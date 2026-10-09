@@ -139,8 +139,8 @@ current product contract; they are not an outstanding implementation plan.
   Label remote choices **Download required**; creation downloads the selected image.
 - Require a unique name and internal-storage capacity, defaulting to 24 GB.
   Never replace existing AVDs or accept SDK licenses automatically. Report
-  prerequisite and license failures visibly. Offer start after creation using
-  the existing standalone emulator launch flow.
+  prerequisite and license failures visibly. Offer **Create & Start** using the existing standalone emulator launch flow,
+  with **Create Only** in its adjacent action menu.
 - Catalog status appears below the image picker while fields remain usable.
   Creation progress appears in the footer; technical errors are expandable.
   Dismissal is disabled during creation; cancellation and byte-level download progress are deferred.

@@ -75,10 +75,6 @@ struct EmulatorCreationSheet: View {
                 Text("Disk space is used as needed, rather than reserved upfront.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-            GridRow {
-                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                Toggle("Start after creation", isOn: $store.startAfterCreation)
-            }
         }
         .frame(maxWidth: .infinity)
         .disabled(!store.isReady || store.isCreating)
@@ -140,18 +136,37 @@ struct EmulatorCreationSheet: View {
                 }
                 Spacer(minLength: 0)
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(store.isCreating)
-                Button(store.selectedImage?.installed == false ? "Download & Create" : "Create") {
-                    Task {
-                        await store.create(existingNames: existingNames) { name, start in
-                            if let name { emulatorStore.registerCreatedVirtualDevice(name: name, startAfterCreation: start) }
-                            else { emulatorStore.refreshVirtualDevices() }
-                        }
+                HStack(spacing: 4) {
+                    Button(store.selectedImage?.installed == false ? "Download, Create & Start" : "Create & Start") {
+                        create(startAfterCreation: true)
                     }
+                    .keyboardShortcut(.defaultAction)
+                    Menu {
+                        Button(store.selectedImage?.installed == false ? "Download & Create Only" : "Create Only") {
+                            create(startAfterCreation: false)
+                        }
+                    } label: {
+                        Image(systemName: "chevron.down")
+                    }
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .accessibilityLabel("More creation options")
+                    .help("Create without starting the emulator")
                 }
-                .keyboardShortcut(.defaultAction)
                 .disabled(store.isBusy || !store.isReady || store.validationMessage(existingNames: existingNames) != nil)
                 .help(store.validationMessage(existingNames: existingNames) ?? "Create emulator")
             }.frame(minHeight: 24)
+        }
+    }
+
+    private func create(startAfterCreation: Bool) {
+        guard !store.isBusy else { return }
+        store.startAfterCreation = startAfterCreation
+        Task {
+            await store.create(existingNames: existingNames) { name, start in
+                if let name { emulatorStore.registerCreatedVirtualDevice(name: name, startAfterCreation: start) }
+                else { emulatorStore.refreshVirtualDevices() }
+            }
         }
     }
 
