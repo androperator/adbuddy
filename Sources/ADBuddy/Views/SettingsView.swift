@@ -23,6 +23,11 @@ struct SettingsView: View {
                 .tabItem {
                     Label("Theme", systemImage: "paintpalette")
                 }
+
+            AboutSettingsView()
+                .tabItem {
+                    Label("About", systemImage: "info.circle")
+                }
         }
         .frame(width: 580, height: 420)
         .background {
