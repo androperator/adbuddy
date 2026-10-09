@@ -57,6 +57,7 @@ struct MainDeviceListView: View {
             }
         }
         .listStyle(.inset)
+        .background(NonFloatingListHeaders())
         .frame(height: listHeight)
     }
 

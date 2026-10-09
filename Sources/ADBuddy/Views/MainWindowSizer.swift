@@ -38,6 +38,8 @@ struct MainWindowSizer: NSViewRepresentable {
 
                 MainWindowController.shared.register(window)
                 window.tabbingMode = .disallowed
+                // Keep the toolbar boundary stable instead of using the automatic hover treatment.
+                window.titlebarSeparatorStyle = .line
                 window.standardWindowButton(.zoomButton)?.isHidden = true
                 window.collectionBehavior.insert(.fullScreenNone)
                 window.contentMinSize = CGSize(width: DeviceListLayout.windowWidth, height: 0)
