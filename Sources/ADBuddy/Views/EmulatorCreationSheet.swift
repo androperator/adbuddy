@@ -7,6 +7,7 @@ struct EmulatorCreationSheet: View {
     @Environment(DeviceStore.self) private var deviceStore
     @Environment(EmulatorStore.self) private var emulatorStore
     @State private var store = EmulatorCreationStore()
+    @State private var showsErrorDetails = false
 
     private var existingNames: Set<String> { Set(emulatorStore.virtualDevices.map(\.name)) }
 
@@ -53,10 +54,6 @@ struct EmulatorCreationSheet: View {
                     if store.availableImages.isEmpty { Text(store.isBusy ? "Loading images…" : "No compatible images").tag("") }
                 }.labelsHidden().frame(width: 412)
             }
-            GridRow(alignment: .top) {
-                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
-                imageStatus.frame(height: 42, alignment: .topLeading)
-            }
             GridRow {
                 fieldLabel("Name")
                 TextField("Name", text: $store.name).labelsHidden()
@@ -84,57 +81,46 @@ struct EmulatorCreationSheet: View {
         Text(text).foregroundStyle(.secondary).frame(width: 124, alignment: .trailing)
     }
 
-    @ViewBuilder private var imageStatus: some View {
-        if store.isLoadingCatalog {
-            HStack(spacing: 8) {
+    @ViewBuilder private var footerStatus: some View {
+        if store.isBusy {
+            HStack(alignment: .top, spacing: 8) {
                 ProgressView().controlSize(.small)
-                Text("Checking for more images…")
-            }.font(.caption).foregroundStyle(.secondary)
+                Text(store.activity)
+            }
+        } else if store.errorMessage != nil {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(store.isReady ? "Couldn’t create emulator." : "Emulator tools need attention.")
+                HStack {
+                    Button("Details") { showsErrorDetails = true }
+                        .popover(isPresented: $showsErrorDetails) {
+                            ScrollView {
+                                Text(store.errorMessage ?? "").textSelection(.enabled)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }.padding().frame(width: 360, height: 180)
+                        }
+                    if !store.isReady {
+                        Button("Settings…") { openSettings() }
+                        Button("Retry") { Task { await load() } }
+                    }
+                }.buttonStyle(.link)
+            }
         } else if store.catalogError != nil {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Couldn’t check for more images. Installed images are available.")
-                    .foregroundStyle(.secondary)
-                Button("Try Again") { Task { await store.loadDownloadableImages() } }
-                    .buttonStyle(.link).disabled(store.isBusy)
-            }.font(.caption)
-        } else if store.selectedImage?.installed == false {
-            Text("This image will be downloaded before the emulator is created.")
-                .font(.caption).foregroundStyle(.secondary)
-        } else if store.selectedImage != nil {
-            Text("Installed and ready to use.").font(.caption).foregroundStyle(.secondary)
-        } else if !store.isBusy {
-            Text("No compatible images. Choose another device type.")
-                .font(.caption).foregroundStyle(.secondary)
+                Text("Couldn’t load more images.")
+                Button("Retry") { Task { await store.loadDownloadableImages() } }.buttonStyle(.link)
+            }
+        } else if let message = store.validationMessage(existingNames: existingNames), store.isReady {
+            Text(message)
         }
     }
 
     private var footer: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if store.isReady, !store.isBusy, let message = store.validationMessage(existingNames: existingNames), !store.name.isEmpty {
-                Text(message).font(.caption).foregroundStyle(.secondary)
-            }
-            if let error = store.errorMessage {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(store.isReady ? "Couldn’t create the emulator." : "Emulator tools need attention.")
-                        .foregroundStyle(.red)
-                    DisclosureGroup("Details") {
-                        ScrollView { Text(error).font(.caption).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
-                            .frame(maxHeight: 90)
-                    }
-                }
-            }
             HStack(spacing: 12) {
-                if store.isCreating {
-                    ProgressView().controlSize(.small)
-                    Text(store.activity).font(.caption).foregroundStyle(.secondary)
-                } else if !store.isReady && store.isBusy {
-                    ProgressView().controlSize(.small)
-                    Text("Loading devices…").font(.caption).foregroundStyle(.secondary)
-                } else if !store.isReady {
-                    Button("Settings…") { openSettings() }
-                    Button("Try Again") { Task { await load() } }
-                }
-                Spacer(minLength: 0)
+                footerStatus
+                    .font(.caption).foregroundStyle(.secondary)
+                    .lineLimit(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: 60, alignment: .center)
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(store.isCreating)
                 HStack(spacing: 4) {
                     Button(store.selectedImage?.installed == false ? "Download, Create & Start" : "Create & Start") {
@@ -155,8 +141,7 @@ struct EmulatorCreationSheet: View {
                 }
                 .disabled(store.isBusy || !store.isReady || store.validationMessage(existingNames: existingNames) != nil)
                 .help(store.validationMessage(existingNames: existingNames) ?? "Create emulator")
-            }.frame(minHeight: 24)
-        }
+            }.frame(height: 60)
     }
 
     private func create(startAfterCreation: Bool) {
