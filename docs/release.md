@@ -33,10 +33,11 @@ The smaller downloads use `ADBuddy-macos-arm64-<version>.zip` and
 `ADBuddy-macos-x86_64-<version>.zip`. Each contains only its matching recorder
 helper and Android server resources.
 
-Every app also includes the pinned emulator helper and Node.js 24.21.0.
+Every app also includes the emulator helper and Node runtime pinned in
+[the root dependency manifest](../bundled-dependencies.json).
 Single-architecture apps contain the matching Node runtime; universal apps
 contain both runtimes and choose the native architecture. The shared JavaScript
-helper is `0.2.0`, the published npm package pinned by archive checksum. Packaging verifies helper and Node checksums, signs each Node executable
+helper is the published npm package pinned by archive checksum. Packaging verifies helper and Node checksums, signs each Node executable
 with Hardened Runtime and the V8 allow-jit and unsigned-executable-memory entitlements before signing the app,
 and includes the helper LICENSE/NOTICE and full Node third-party license text.
 The GUI does not receive Node's entitlement. SDK tools, images and Java stay

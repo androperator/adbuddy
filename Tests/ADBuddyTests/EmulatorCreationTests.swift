@@ -172,7 +172,23 @@ final class EmulatorCreationTests: XCTestCase {
         let invocation = try EmulatorHelperInvocation.resolve(configuration: configuration, sdk: sdk,
             environment: ["PATH": "/usr/bin:/bin"], bundleURL: bundle)
         let version = try await EmulatorCreationService(invocation: invocation).check()
-        XCTAssertEqual(version.version, "0.2.0")
+        struct Dependencies: Decodable {
+            struct Component: Decodable { let version: String }
+            let emulator: Component
+            let node: Component
+        }
+        let manifestURL = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("bundled-dependencies.json")
+        let manifestData = try Data(contentsOf: manifestURL)
+        let dependencies = try JSONDecoder().decode(Dependencies.self, from: manifestData)
+        XCTAssertEqual(version.version, dependencies.emulator.version)
+        XCTAssertEqual(try Data(contentsOf: bundle.appendingPathComponent("Contents/Resources/Emulator/bundled-dependencies.json")), manifestData)
+        let nodeVersion = await ProcessRunner().run(executablePath: invocation.node, arguments: ["--version"],
+            identifier: UUID().uuidString, environment: invocation.environment, onStarted: nil)
+        XCTAssertTrue(nodeVersion.succeeded)
+        XCTAssertEqual(String(decoding: nodeVersion.standardOutput, as: UTF8.self)
+            .trimmingCharacters(in: .whitespacesAndNewlines), "v\(dependencies.node.version)")
         XCTAssertTrue(invocation.script.hasPrefix(bundle.path))
         XCTAssertTrue(invocation.node.hasPrefix(bundle.path))
 

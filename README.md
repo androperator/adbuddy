@@ -158,3 +158,7 @@ These are possible extensions, not a scheduled roadmap.
 - [`docs/logcat.md`](docs/logcat.md) - Logcat behavior, architecture, and
   verification contract.
 - [`docs/mcp.md`](docs/mcp.md) - local MCP server setup and tool contract.
+
+Bundled emulator-helper and Node runtime versions, URLs and checksums are pinned
+in [bundled-dependencies.json](bundled-dependencies.json). See
+[bundle provenance](vendor/emulator/README.md) for verification and update instructions.

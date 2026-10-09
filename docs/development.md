@@ -88,7 +88,9 @@ Contribution and agent workflow rules are in [AGENTS.md](../AGENTS.md).
 ## Emulator creation prototype
 
 Normal packaged launches use the pinned catalog-capable helper and Node runtime
-inside ADBuddy. No global helper or Node installation is required. See
+inside ADBuddy. Versions, URLs and checksums are defined in
+[the root dependency manifest](../bundled-dependencies.json), which is copied
+into the app. No global helper or Node installation is required. See
 [the bundle pin and rebuild instructions](../vendor/emulator/README.md).
 
 For local helper development, build the checkout explicitly (`npm ci` and
