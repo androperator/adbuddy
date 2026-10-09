@@ -136,7 +136,7 @@ current product contract; they are not an outstanding implementation plan.
   native-architecture image. Only types present in the SDK catalog are shown.
   Load installed images first and automatically fetch downloadable choices. Keep
   installed images available if the remote catalog fails, with a retry action.
-  Mark installed choices with a checkmark and remote choices with a download icon; creation downloads the selected image.
+  Mark installed choices with a drive icon and remote choices with a download icon. Reserve the native checkmark for the selected image; creation downloads the selected image.
 - Require a unique name and internal-storage capacity, defaulting to 24 GB.
   Never replace existing AVDs or accept SDK licenses automatically. Report
   prerequisite and license failures visibly. Offer **Create & Start** using the existing standalone emulator launch flow,

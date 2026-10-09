@@ -59,7 +59,7 @@ struct EmulatorCreationSheet: View {
                 fieldLabel("Android image")
                 Picker("Android image", selection: $store.imageID) {
                     ForEach(store.availableImages) { image in
-                        Label(image.title, systemImage: image.installed ? "checkmark" : "arrow.down.circle")
+                        Label(image.title, systemImage: image.installed ? "internaldrive" : "arrow.down.circle")
                             .accessibilityLabel("\(image.title), \(image.installed ? "Installed" : "Download required")")
                             .tag(image.id)
                     }
