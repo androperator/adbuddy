@@ -58,7 +58,11 @@ struct EmulatorCreationSheet: View {
             GridRow {
                 fieldLabel("Android image")
                 Picker("Android image", selection: $store.imageID) {
-                    ForEach(store.availableImages) { Text($0.title).tag($0.id) }
+                    ForEach(store.availableImages) { image in
+                        Label(image.title, systemImage: image.installed ? "checkmark" : "arrow.down.circle")
+                            .accessibilityLabel("\(image.title), \(image.installed ? "Installed" : "Download required")")
+                            .tag(image.id)
+                    }
                     if store.availableImages.isEmpty { Text(store.isBusy ? "Loading images…" : "No compatible images").tag("") }
                 }.labelsHidden().frame(width: 412)
             }

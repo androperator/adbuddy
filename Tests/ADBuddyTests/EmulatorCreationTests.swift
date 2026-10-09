@@ -21,7 +21,7 @@ final class EmulatorCreationTests: XCTestCase {
     func testImageTitlesUseStablePackageTagsInsteadOfMalformedDescriptions() {
         let image = EmulatorSystemImage(id: "image", platform: "android-37.2", apiLevel: 37,
             tag: "google_apis_playstore_ps16k", abi: "arm64-v8a", description: "->", installed: true)
-        XCTAssertEqual(image.title, "API 37.2 · Google Play · 16 KB pages · Installed")
+        XCTAssertEqual(image.title, "API 37.2 · Google Play · 16 KB pages")
     }
 
     func testHardwareTypesSeparateSDKProfiles() {

@@ -136,14 +136,14 @@ current product contract; they are not an outstanding implementation plan.
   native-architecture image. Only types present in the SDK catalog are shown.
   Load installed images first and automatically fetch downloadable choices. Keep
   installed images available if the remote catalog fails, with a retry action.
-  Label remote choices **Download required**; creation downloads the selected image.
+  Mark installed choices with a checkmark and remote choices with a download icon; creation downloads the selected image.
 - Require a unique name and internal-storage capacity, defaulting to 24 GB.
   Never replace existing AVDs or accept SDK licenses automatically. Report
   prerequisite and license failures visibly. Offer **Create & Start** using the existing standalone emulator launch flow,
   with **Create Only** in its adjacent action menu.
 - Loading, creation progress, validation, and retry controls share a fixed-height
   area at the bottom left. Technical errors open in a popover without resizing
-  the sheet. Installed availability is shown only in the image picker.
+  the sheet. Image availability is shown by picker icons, with spoken status for accessibility.
   Dismissal is disabled during creation; cancellation and byte-level download progress are deferred.
   Configured capacity is not a host-disk quota, guaranteed guest capacity, or
   existing-userdata resizing. Dynamic allocation and snapshot policy use SDK defaults.
