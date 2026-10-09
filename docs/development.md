@@ -87,12 +87,24 @@ Contribution and agent workflow rules are in [AGENTS.md](../AGENTS.md).
 
 ## Emulator creation prototype
 
-Build the sibling `../emulator` project (`npm ci` and `npm run build`) on its
-catalog-capable branch before using **Create Emulator**. The published 0.1.1
-package does not include these catalogs. Development app bundles in `dist` find
-that checkout automatically. Settings → Emulators accepts a package directory
-or CLI path, Node executable, and Java home for explicit selection. Node 24+,
-SDK command-line tools and an SDK-compatible Java runtime are required.
+Normal packaged launches use the pinned catalog-capable helper and Node runtime
+inside ADBuddy. No global helper or Node installation is required. See
+[the bundle pin and rebuild instructions](../vendor/emulator/README.md).
+
+For local helper development, build the checkout explicitly (`npm ci` and
+`npm run build`), then set **Settings → Emulators → Package folder or CLI**
+to that checkout's absolute path or compiled `dist/cli.js`. Blank selects the
+bundled helper. The Node executable override is independent; blank selects
+bundled Node, including for a local helper. Node 24+ is required. Invalid paths,
+wrong package identity, protocol mismatch, or missing catalog capabilities fail
+visibly without fallback. Settings displays the checked active version and both
+paths. Reopen Create Emulator after changing settings. Nearby checkouts and
+global helper installations are never selected automatically.
+
+Android SDK tools, images, accepted licenses and SDK-compatible Java remain
+external. Existing SDK, Android user home, AVD home and Java discovery apply.
+Packaging downloads checksum-pinned Node archives on first build, then reuses
+verified cached files; it does not build or read the sibling helper checkout.
 
 Run focused checks with:
 
@@ -145,3 +157,49 @@ Integration validation (2026-10-10):
   controls. Automated UI interaction was unavailable for completing the sheet
   checks in this pass; no AVD was created or deleted during integration.
 - The earlier live creation results above belong to the draft validation.
+
+Safe bundled-runtime verification (no SDK calls or AVD mutations):
+
+```sh
+scripts/build_and_run.sh --verify
+ADBUDDY_EMULATOR_TEST_BUNDLE="$PWD/dist/ADBuddy.app" scripts/test.sh ADBuddyTests.EmulatorCreationTests
+```
+
+The runtime test uses a restricted PATH, the packaged helper and Node, a copied
+local package override, and disposable incompatible helper fixtures. It checks
+version, protocol, package identity and capabilities. Resolver tests also prove
+missing overrides and missing bundled components cannot fall back to a sibling.
+The runtime test skips explicitly when no bundle path is supplied.
+
+Initial snapshot bundling validation (2026-10-10, before the published 0.2.0 update):
+
+- The packaged development app built and launched; 42 focused Swift tests passed,
+  including actual bundled execution and compatible/incompatible local overrides.
+- An independent rebuild from the vendored source/lockfile reproduced the
+  helper archive byte-for-byte.
+- All 34 helper tests passed using bundled Node 24.21.0 and temporary/fake SDK
+  fixtures. Process-tree inspection required running outside the host sandbox.
+- Arm64, x86_64 and universal release ZIPs packaged with ad-hoc signing and passed
+  deep/strict signature checks. Both Node payloads ran the packaged version check
+  with PATH restricted to system directories; Intel ran through Rosetta.
+- Settings visibly showed bundled version/paths, selected an explicit local
+  package, and reported missing and published-0.1.1 capability errors. Overrides
+  were restored to blank. No user AVD or SDK license was changed.
+- Developer ID/notarization, a native Intel host and macOS 14 runtime execution
+  were not exercised. Both Swift executables retain macOS 14 deployment targets;
+  official Node payloads target macOS 13.5 or newer.
+
+Published helper update validation (2026-10-10):
+
+- Replaced the custom snapshot with the unmodified npm 0.2.0 archive and removed
+  the old package/source snapshots. Verified registry SHA-512 integrity and
+  pinned the archive SHA-256 for development and release packaging.
+- Verified protocol 1, both catalog capabilities, Node 24+ requirements and no
+  npm runtime dependencies. Source commit is recorded in bundle provenance.
+- All 34 upstream source tests passed with bundled Node and fake/temporary SDK
+  fixtures. All 14 emulator tests passed against the rebuilt, signed app,
+  including compatible local overrides and incompatible override failures.
+- Packaged app launch and strict signature checks passed. Its bundled helper
+  reports 0.2.0 with a system-only PATH. No emulator or SDK license was changed.
+- Node remains pinned at 24.21.0. Architecture policy is unchanged. Intel payloads
+  were not executed during this update; no Rosetta checks were run.

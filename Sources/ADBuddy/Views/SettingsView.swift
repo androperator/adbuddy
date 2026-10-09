@@ -202,25 +202,39 @@ private struct ThemeSettingsView: View {
 
 private struct EmulatorSettingsView: View {
     @Bindable var preferences: AppPreferences
+    @State private var helperStatus = "Checking helper…"
 
     var body: some View {
         Form {
             Section {
-                TextField("Package folder or CLI", text: $preferences.emulatorHelperPath, prompt: Text("Automatic"))
-                TextField("Node executable", text: $preferences.emulatorNodePath, prompt: Text("Automatic"))
+                TextField("Package folder or CLI", text: $preferences.emulatorHelperPath, prompt: Text("Bundled"))
+                TextField("Node executable", text: $preferences.emulatorNodePath, prompt: Text("Bundled"))
                 TextField("Java home", text: $preferences.emulatorJavaHome, prompt: Text("Automatic"))
             } header: {
-                Text("Optional creation helper")
+                Text("Local development overrides")
             } footer: {
-                Text("Leave paths blank for automatic discovery. Development builds use the sibling emulator checkout. Installed apps look for androperator-emulator. Node 24+ and SDK command-line tools are required. Java defaults to JAVA_HOME or Android Studio’s bundled runtime.")
+                Text("Leave helper and Node paths blank to use the bundled versions. Overrides are explicit and must be compatible; invalid overrides report an error. SDK command-line tools and Java remain external. Java defaults to JAVA_HOME or Android Studio’s runtime.")
             }
             Section {
-                Text("npm install -g @androperator/emulator").font(.body.monospaced()).textSelection(.enabled)
-                Text("This prototype needs catalog support from the built local emulator checkout until a package release includes it. Reload the creation sheet after changing paths.")
-                    .font(.caption).foregroundStyle(.secondary)
+                Text(helperStatus).font(.caption).textSelection(.enabled)
             }
         }
         .formStyle(.grouped)
         .scenePadding()
+        .task(id: [preferences.emulatorHelperPath, preferences.emulatorNodePath]) {
+            helperStatus = "Checking helper…"
+            do {
+                // Version validation does not invoke SDK tools or require an installed SDK.
+                let invocation = try EmulatorHelperInvocation.resolve(
+                    configuration: preferences.emulatorHelperConfiguration,
+                    sdk: AndroidSDK(rootPath: "", adbPath: "", source: .standardLocation))
+                let version = try await EmulatorCreationService(invocation: invocation).check()
+                guard !Task.isCancelled else { return }
+                helperStatus = "Active helper: \(version.version)\n\(invocation.script)\nNode: \(invocation.node)"
+            } catch {
+                guard !Task.isCancelled else { return }
+                helperStatus = error.localizedDescription
+            }
+        }
     }
 }

@@ -123,14 +123,13 @@ current product contract; they are not an outstanding implementation plan.
 
 - Offer **Delete Emulator…** in stopped-AVD action and contextual menus. Confirm
   the named AVD's permanent data loss, retain shared system images, and refuse
-  deletion if its state changes before confirmation. Use the optional helper's
+  deletion if its state changes before confirmation. Use the bundled helper's
   live running-device checks; disable launch while deletion is in progress and
   show deletion failures in a native alert.
 - Offer a prototype **Create Android Emulator** window from the main-window toolbar.
-  Use the optional separately installed `@androperator/emulator` helper with
-  catalog capabilities; Node is not bundled. Settings provides helper, Node,
-  and Java path overrides. Packaged development builds prefer a built sibling
-  emulator checkout.
+  Use the pinned bundled `@androperator/emulator` helper with catalog
+  capabilities and a bundled Node runtime. Settings provides explicit helper,
+  Node and Java path overrides for development, with checked version and paths.
 - Select a hardware type first (Phone, Tablet, Foldable, TV, Automotive, Wear OS,
   Desktop, XR, Glasses, or Other), then a profile from that type and a matching
   native-architecture image. Only types present in the SDK catalog are shown.
@@ -368,3 +367,12 @@ scope changes, without placeholder interfaces:
 
 Keep the source structure focused on implemented behavior rather than
 prebuilding abstractions for these possible extensions.
+
+## Emulator helper distribution
+
+Emulator creation catalogs and confirmed deletion use ADBuddy's pinned bundled
+helper and Node runtime. Settings supports explicit helper-package/compiled-CLI
+and Node executable overrides for local development, and displays the checked
+helper version and paths. Invalid or incompatible overrides report actionable
+errors without fallback. Normal launches never discover a sibling checkout or
+global helper. Android SDK tools, system images and Java remain external.
