@@ -121,6 +121,19 @@ final class EmulatorCreationTests: XCTestCase {
         XCTAssertEqual(resolved.environment["JAVA_HOME"], "/chosen-java")
         XCTAssertEqual(resolved.environment["SDKMANAGER_PATH"], "/chosen-sdk/cmdline-tools/latest/bin/sdkmanager")
         XCTAssertEqual(resolved.environment["ANDROID_HOME"], "/chosen-sdk")
+        let avdEnvironments: [([String: String], String?)] = [
+            ([:], nil),
+            (["ANDROID_USER_HOME": "/custom-android"], "/custom-android/avd"),
+            (["ANDROID_USER_HOME": "/custom-android", "ANDROID_AVD_HOME": ""], "/custom-android/avd"),
+            (["ANDROID_USER_HOME": "/custom-android", "ANDROID_AVD_HOME": "/explicit-avds"], "/explicit-avds")
+        ]
+        for (environment, expectedRoot) in avdEnvironments {
+            let invocation = try EmulatorHelperInvocation.resolve(
+                configuration: .init(helperPath: helper.path, nodePath: node.path, javaHome: ""),
+                sdk: sdk, environment: environment, home: root
+            )
+            XCTAssertEqual(invocation.environment["ANDROID_AVD_HOME"], expectedRoot)
+        }
         XCTAssertThrowsError(try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: "/missing-helper", nodePath: node.path, javaHome: ""), sdk: sdk, environment: [:], bundleURL: repo.appendingPathComponent("dist/ADBuddy.app"), home: root))
     }
 

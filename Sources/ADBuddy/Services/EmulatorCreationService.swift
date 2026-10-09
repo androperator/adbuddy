@@ -56,6 +56,12 @@ struct EmulatorHelperInvocation: Sendable {
             throw EmulatorCreationError("Emulator helper missing or unbuilt. Install @androperator/emulator with npm, or build the local emulator checkout. Set a package folder or CLI path in Settings → Emulators.")
         }
         var childEnvironment = environment
+        // The helper only understands ANDROID_AVD_HOME; SDK tools also honor ANDROID_USER_HOME.
+        if (environment["ANDROID_AVD_HOME"] ?? "").isEmpty,
+           let userHome = environment["ANDROID_USER_HOME"], !userHome.isEmpty {
+            childEnvironment["ANDROID_AVD_HOME"] = URL(fileURLWithPath: userHome)
+                .appendingPathComponent("avd", isDirectory: true).path
+        }
         childEnvironment["PATH"] = ([URL(fileURLWithPath: node).deletingLastPathComponent().path] + directories + ["/usr/bin", "/bin", "/usr/sbin", "/sbin"]).joined(separator: ":")
         childEnvironment["ANDROID_HOME"] = sdk.rootPath
         childEnvironment["ANDROID_SDK_ROOT"] = sdk.rootPath
