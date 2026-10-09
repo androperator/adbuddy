@@ -127,15 +127,6 @@ struct DeviceSettingsMenuContent: View {
     let perform: (AndroidDeviceSettingAction) -> Void
 
     var body: some View {
-        Menu("Theme") {
-            Button("Use Dark Theme") {
-                perform(.enableDarkTheme)
-            }
-            Button("Use Light Theme") {
-                perform(.enableLightTheme)
-            }
-        }
-
         Menu("Navigation") {
             Button("Use Gesture Navigation") {
                 perform(.enableGestureNavigation)

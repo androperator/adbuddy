@@ -2,6 +2,7 @@ import Foundation
 
 public enum AndroidDeviceSettingAction: CaseIterable, Equatable, Sendable {
     case openSystemSettings
+    case toggleDarkTheme
     case enableDarkTheme
     case enableLightTheme
     case enableGestureNavigation
@@ -15,6 +16,8 @@ public enum AndroidDeviceSettingAction: CaseIterable, Equatable, Sendable {
         switch self {
         case .openSystemSettings:
             "Android Settings opened"
+        case .toggleDarkTheme:
+            "Dark theme toggled"
         case .enableDarkTheme:
             "Dark theme enabled"
         case .enableLightTheme:
@@ -74,6 +77,29 @@ public struct AndroidDeviceSettingsService: Sendable {
         _ action: AndroidDeviceSettingAction,
         to deviceSerial: String
     ) async -> AndroidDeviceSettingsServiceResult {
+        if action == .toggleDarkTheme {
+            let currentTheme = await processRunner.run(
+                executablePath: adbPath,
+                arguments: ["-s", deviceSerial, "shell", "dumpsys", "uimode"]
+            )
+            guard currentTheme.succeeded else {
+                return .failure(.commandFailed(failureMessage(from: currentTheme)))
+            }
+            let fields = String(decoding: currentTheme.standardOutput, as: UTF8.self)
+                .split(whereSeparator: { $0.isWhitespace })
+            let resolvedAction: AndroidDeviceSettingAction
+            if fields.contains("mComputedNightMode=true") {
+                resolvedAction = .enableLightTheme
+            } else if fields.contains("mComputedNightMode=false") {
+                resolvedAction = .enableDarkTheme
+            } else {
+                return .failure(.commandFailed(
+                    "Could not determine the device's current theme. Try changing Dark theme in Android Settings."
+                ))
+            }
+            return await apply(resolvedAction, to: deviceSerial)
+        }
+
         let navigation = action.navigationConfiguration
         if let navigation {
             let availability = await processRunner.run(
@@ -171,6 +197,8 @@ public struct AndroidDeviceSettingsService: Sendable {
         return switch action {
         case .openSystemSettings:
             deviceArguments + ["am", "start", "-W", "-a", "android.settings.SETTINGS"]
+        case .toggleDarkTheme:
+            preconditionFailure("Resolve the current theme before constructing setting arguments")
         case .enableDarkTheme:
             deviceArguments + ["cmd", "uimode", "night", "yes"]
         case .enableLightTheme:

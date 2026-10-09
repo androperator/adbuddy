@@ -182,6 +182,18 @@ private struct ConnectedDeviceRow: View {
             }
 
             Button {
+                deviceStore.performDeviceSetting(.toggleDarkTheme, for: device)
+            } label: {
+                Label("Toggle Dark Theme", systemImage: "circle.lefthalf.filled")
+                    .labelStyle(.iconOnly)
+            }
+            .buttonStyle(.borderless)
+            .controlSize(.small)
+            .accessibilityLabel("Toggle Dark Theme")
+            .help("Toggle Dark Theme")
+            .disabled(!device.isUsable || deviceStore.isPerformingDeviceSetting(for: device))
+
+            Button {
                 deviceStore.performDeviceSetting(.openSystemSettings, for: device)
             } label: {
                 Label("Open Android Settings", systemImage: "gearshape")
