@@ -196,6 +196,29 @@ final class EmulatorCreationTests: XCTestCase {
         XCTAssertFalse(store.isBusy)
     }
 
+    @MainActor
+    func testSuggestedNameTracksImageAndPreservesCustomName() async {
+        let responses = CatalogResponses()
+        let service = EmulatorCreationService(invocation: .init(node: "/node", script: "/cli.js", environment: [:])) { _, arguments, _ in
+            await responses.respond(arguments)
+        }
+        let store = EmulatorCreationStore(makeService: { _, _ in service })
+        await store.load(configuration: .init(helperPath: "", nodePath: "", javaHome: ""),
+                         sdk: AndroidSDK(rootPath: "/sdk", adbPath: "/sdk/adb", source: .standardLocation))
+        XCTAssertEqual(store.name, "Pixel_7_API_35")
+        await store.loadDownloadableImages()
+        store.imageID = "download"
+        store.updateSuggestedName()
+        XCTAssertEqual(store.name, "Pixel_7_API_37.2")
+        store.name = "My_Test_Device"
+        store.imageID = "installed"
+        store.selectProfile()
+        XCTAssertEqual(store.name, "My_Test_Device")
+        store.name = ""
+        store.updateSuggestedName()
+        XCTAssertEqual(store.name, "Pixel_7_API_35")
+    }
+
     private func result(_ text: String, status: Int32 = 0) -> ProcessResult {
         ProcessResult(standardOutput: Data(text.utf8), standardError: Data(), exitStatus: status, durationMilliseconds: 0, failureDescription: nil, wasCancelled: false)
     }
@@ -225,7 +248,7 @@ private actor CatalogResponses {
             }
             let id = installed ? "installed" : "download"
             output = """
-            {"protocolVersion":1,"ok":true,"data":{"images":[{"id":"\(id)","platform":"android-35","apiLevel":35,"tag":"google_apis","abi":"\(EmulatorImageSelection.hostABI)","description":"Phone","installed":\(installed)}]}}
+            {"protocolVersion":1,"ok":true,"data":{"images":[{"id":"\(id)","platform":"android-\(installed ? "35" : "37.2")","apiLevel":35,"tag":"google_apis","abi":"\(EmulatorImageSelection.hostABI)","description":"Phone","installed":\(installed)}]}}
             """
         }
         return ProcessResult(standardOutput: Data(output.utf8), standardError: Data(), exitStatus: 0, durationMilliseconds: 0, failureDescription: nil, wasCancelled: false)

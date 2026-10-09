@@ -54,9 +54,19 @@ final class EmulatorCreationStore {
 
     func selectProfile() {
         if !availableImages.contains(where: { $0.id == imageID }) { imageID = availableImages.first?.id ?? "" }
+        updateSuggestedName()
+    }
+
+    func updateSuggestedName() {
         let shouldSuggest = name.isEmpty || name == suggestedName
-        suggestedName = profileID.replacingOccurrences(of: "[^A-Za-z0-9_.-]", with: "_", options: .regularExpression) + "_Dev"
-        if shouldSuggest { name = profileID.isEmpty ? "" : suggestedName }
+        if let profile = selectedProfile, let image = selectedImage {
+            let api = image.platform.replacingOccurrences(of: "android-", with: "")
+            suggestedName = "\(profile.name)_API_\(api)"
+                .replacingOccurrences(of: "[^A-Za-z0-9_.-]", with: "_", options: .regularExpression)
+        } else {
+            suggestedName = ""
+        }
+        if shouldSuggest { name = suggestedName }
     }
 
     func load(configuration: EmulatorHelperConfiguration, sdk: AndroidSDK?) async {

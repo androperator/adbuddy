@@ -90,6 +90,7 @@ struct EmulatorCreationView: View {
                     }
                     if store.availableImages.isEmpty { Text(store.isLoadingCatalog ? "Loading images…" : "No compatible images").tag("") }
                 }.labelsHidden().frame(width: 412)
+                .onChange(of: store.imageID) { _, _ in store.updateSuggestedName() }
             }
             GridRow {
                 fieldLabel("Name")

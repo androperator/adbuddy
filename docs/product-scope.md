@@ -137,7 +137,9 @@ current product contract; they are not an outstanding implementation plan.
   Load installed images first and automatically fetch downloadable choices. Keep
   installed images available if the remote catalog fails, with a retry action.
   Mark installed choices with a drive icon and remote choices with a download icon. Reserve the native checkmark for the selected image; creation downloads the selected image.
-- Require a unique name and internal-storage capacity, defaulting to 24 GB.
+- Suggest names in the form `Nexus_10_API_37.2`, updating with device and image
+  selection while preserving manually entered names. Require a unique name and
+  internal-storage capacity, defaulting to 24 GB.
   Never replace existing AVDs or accept SDK licenses automatically. Report
   prerequisite and license failures visibly. Offer one **Create** action; use the red close button or Escape to cancel. Creation leaves the new emulator
   stopped; start it separately from the emulator list.
