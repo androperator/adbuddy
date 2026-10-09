@@ -202,38 +202,66 @@ private struct ThemeSettingsView: View {
 
 private struct EmulatorSettingsView: View {
     @Bindable var preferences: AppPreferences
-    @State private var helperStatus = "Checking helper…"
+    @State private var helperStatus = "Checking emulator tools…"
+    @State private var diagnosticDetails = ""
 
     var body: some View {
         Form {
-            Section {
-                TextField("Package folder or CLI", text: $preferences.emulatorHelperPath, prompt: Text("Bundled"))
-                TextField("Node executable", text: $preferences.emulatorNodePath, prompt: Text("Installed Node"))
-                TextField("Java home", text: $preferences.emulatorJavaHome, prompt: Text("Automatic"))
-            } header: {
-                Text("Local development overrides")
-            } footer: {
-                Text("Leave the helper path blank to use the bundled helper. Node.js 24+ must be installed separately; leave its path blank for discovery or select an executable explicitly. Invalid overrides report an error. SDK tools and Java remain external; Java defaults to JAVA_HOME or Android Studio’s runtime.")
+            Section("Node.js") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Node.js 24 or newer is required to create and delete emulators.")
+                    Link("Node.js installation instructions", destination: URL(string: "https://nodejs.org/en/download")!)
+                    TextField("Node executable path", text: $preferences.emulatorNodePath, prompt: Text("Find automatically"))
+                    Text("Leave blank to find Node automatically. If it isn’t found, enter the full path to the node executable.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    if !preferences.emulatorNodePath.isEmpty {
+                        Button("Use Automatic Detection") { preferences.emulatorNodePath = "" }
+                    }
+                }.padding(.vertical, 4)
+            }
+            Section("Status") {
+                Text(helperStatus).font(.callout)
             }
             Section {
-                Text(helperStatus).font(.caption).textSelection(.enabled)
+                DisclosureGroup("Advanced") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Java").font(.headline)
+                        TextField("Java home folder", text: $preferences.emulatorJavaHome, prompt: Text("Find automatically"))
+                        Text("Usually detected from Android Studio or JAVA_HOME. Set a Java installation’s home folder only if automatic detection fails.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        Divider()
+                        Text("Custom emulator helper").font(.headline)
+                        TextField("Helper path", text: $preferences.emulatorHelperPath, prompt: Text("Use ADBuddy’s default"))
+                        Text("For developing the emulator helper. Enter a built @androperator/emulator project folder or its dist/cli.js file. Leave blank for normal use.")
+                            .font(.caption).foregroundStyle(.secondary)
+                        if !diagnosticDetails.isEmpty {
+                            Divider()
+                            Text("Diagnostics").font(.headline)
+                            Text(diagnosticDetails).font(.caption).textSelection(.enabled)
+                        }
+                    }.padding(.vertical, 8)
+                }
             }
         }
         .formStyle(.grouped)
         .scenePadding()
         .task(id: [preferences.emulatorHelperPath, preferences.emulatorNodePath]) {
-            helperStatus = "Checking helper…"
+            helperStatus = "Checking emulator tools…"
+            diagnosticDetails = ""
             do {
-                // Version validation does not invoke SDK tools or require an installed SDK.
                 let invocation = try EmulatorHelperInvocation.resolve(
                     configuration: preferences.emulatorHelperConfiguration,
                     sdk: AndroidSDK(rootPath: "", adbPath: "", source: .standardLocation))
                 let version = try await EmulatorCreationService(invocation: invocation).check()
                 guard !Task.isCancelled else { return }
-                helperStatus = "Active helper: \(version.version)\n\(invocation.script)\nNode: \(invocation.node)"
+                helperStatus = "Node.js is ready for emulator creation."
+                diagnosticDetails = "Helper: \(version.version)\n\(invocation.script)\nNode: \(invocation.node)"
             } catch {
                 guard !Task.isCancelled else { return }
-                helperStatus = error.localizedDescription
+                helperStatus = (error as? EmulatorCreationError)?.kind == .nodeRuntime
+                    ? "Node.js 24 or newer wasn’t found or couldn’t run. Install Node.js or check the executable path above."
+                    : "The emulator helper couldn’t run. See Advanced for details."
+                diagnosticDetails = error.localizedDescription
             }
         }
     }
