@@ -45,6 +45,11 @@ struct SettingsWindowTitle: NSViewRepresentable {
                 object: nil
             )
             self.window = window
+            window.initialFirstResponder = nil
+            // Let Tab navigation establish focus instead of highlighting a toolbar tab on open.
+            DispatchQueue.main.async { [weak window] in
+                window?.makeFirstResponder(nil)
+            }
             NotificationCenter.default.addObserver(
                 self,
                 selector: #selector(handleWindowUpdate),
