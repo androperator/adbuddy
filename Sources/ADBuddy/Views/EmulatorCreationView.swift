@@ -162,7 +162,6 @@ struct EmulatorCreationView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 36)
                 if store.isReady || store.errorMessage != nil {
-                    Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(store.isCreating)
                     Button("Create") {
                         create()
                     }
