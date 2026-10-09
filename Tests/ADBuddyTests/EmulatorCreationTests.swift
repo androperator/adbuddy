@@ -18,6 +18,12 @@ final class EmulatorCreationTests: XCTestCase {
         XCTAssertEqual(request.arguments, ["create", "TV_Dev", "--profile", "tv_720p", "--image", image.id, "--storage-size", "24G"])
     }
 
+    func testImageTitlesUseStablePackageTagsInsteadOfMalformedDescriptions() {
+        let image = EmulatorSystemImage(id: "image", platform: "android-37.2", apiLevel: 37,
+            tag: "google_apis_playstore_ps16k", abi: "arm64-v8a", description: "->", installed: true)
+        XCTAssertEqual(image.title, "API 37.2 · Google Play · 16 KB pages · Installed")
+    }
+
     func testHardwareTypesSeparateSDKProfiles() {
         let cases: [(String, String?, EmulatorHardwareType)] = [
             ("pixel_7", nil, .phone), ("pixel_tablet", nil, .tablet),

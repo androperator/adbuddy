@@ -50,8 +50,22 @@ struct EmulatorSystemImage: Decodable, Identifiable, Equatable, Sendable {
     let installed: Bool
 
     var title: String {
-        "\(platform.replacingOccurrences(of: "android-", with: "API ")) · \(description)\(installed ? " · Installed" : " · Download required")"
+        "\(platform.replacingOccurrences(of: "android-", with: "API ")) · \(displayName)\(installed ? " · Installed" : " · Download required")"
     }
+
+    var displayName: String {
+        // SDK catalog descriptions can contain progress output instead of a name.
+        // Package tags are stable identifiers and keep the picker concise.
+        var name: String
+        if tag.contains("playstore") { name = "Google Play" }
+        else if tag.hasPrefix("google_apis") { name = "Google APIs" }
+        else if tag == "default" { name = "Android" }
+        else { name = tag.replacingOccurrences(of: "-", with: " ").replacingOccurrences(of: "_", with: " ").capitalized }
+        if tag.contains("ps16k") { name += " · 16 KB pages" }
+        if tag.contains("tablet") { name += " · Tablet" }
+        return name
+    }
+
 }
 
 struct EmulatorHelperVersion: Decodable, Sendable {

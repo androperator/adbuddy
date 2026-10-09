@@ -11,103 +11,147 @@ struct EmulatorCreationSheet: View {
     private var existingNames: Set<String> { Set(emulatorStore.virtualDevices.map(\.name)) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             Text("Create Emulator").font(.title2.weight(.semibold))
-            Text("Choose a device and Android image. Existing emulators are never replaced.")
-                .foregroundStyle(.secondary)
-
-            if let created = store.createdName {
-                Label("Created \(created)", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                Text(store.startAfterCreation ? "Start requested. The emulator will appear in the device list as it boots." : "Your emulator is ready in the Android Emulators list.")
-            } else if !store.profiles.isEmpty {
-                configurationForm
-            } else if !store.isBusy {
-                Text("Creation requires Node.js 24+, Android SDK command-line tools, and the optional emulator package with catalog support.")
-                Text("npm install -g @androperator/emulator")
-                    .font(.body.monospaced()).textSelection(.enabled)
-                Text("For this prototype, use the built sibling emulator checkout. Configure other helper, Node or Java locations in Settings → Emulators.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-
-            if let error = store.errorMessage {
-                ScrollView { Text(error).foregroundStyle(.red).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
-                    .frame(maxHeight: 100)
-            }
-            if store.isBusy {
-                HStack {
-                    ProgressView().controlSize(.small)
-                    Text(store.activity).font(.callout)
-                }
-                Text("Keep ADBuddy open until the operation finishes.").font(.caption).foregroundStyle(.secondary)
-            }
-            if let helper = store.helperDescription {
-                Text(helper).font(.caption2).foregroundStyle(.secondary).lineLimit(2).textSelection(.enabled)
-            }
-            HStack {
-                Button("Settings…") { openSettings() }.disabled(store.isBusy)
-                if store.createdName == nil {
-                    Button("Reload") { Task { await load() } }.disabled(store.isBusy)
-                }
-                Spacer()
-                Button(store.createdName == nil ? "Cancel" : "Done") { dismiss() }
-                    .keyboardShortcut(.cancelAction).disabled(store.isBusy)
-                if store.createdName == nil {
-                    Button(store.selectedImage?.installed == false ? "Download & Create" : "Create") {
-                        Task { await store.create(existingNames: existingNames) { name, start in
-                            if let name { emulatorStore.registerCreatedVirtualDevice(name: name, startAfterCreation: start) }
-                            else { emulatorStore.refreshVirtualDevices() }
-                        } }
-                    }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(store.isBusy || store.validationMessage(existingNames: existingNames) != nil || store.helperDescription == nil)
-                }
-            }
+            configurationForm
+            Divider()
+            footer
         }
         .padding(24)
-        .frame(width: 620)
-        .interactiveDismissDisabled(store.isBusy)
+        .frame(width: 600)
+        .interactiveDismissDisabled(store.isCreating)
         .task { await load() }
+        .onChange(of: store.createdName) { _, name in
+            if name != nil { dismiss() }
+        }
     }
 
     private var configurationForm: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Form {
-                Picker("Hardware type", selection: $store.hardwareType) {
-                    ForEach(store.availableHardwareTypes) { type in Text(type.rawValue).tag(type) }
+        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
+            GridRow {
+                fieldLabel("Device type")
+                Picker("Device type", selection: $store.hardwareType) {
+                    ForEach(store.availableHardwareTypes) { Text($0.rawValue).tag($0) }
+                    if store.profiles.isEmpty { Text("Loading devices…").tag(store.hardwareType) }
                 }
+                .labelsHidden().frame(width: 412)
                 .onChange(of: store.hardwareType) { _, _ in store.selectHardwareType() }
-                Picker("Hardware", selection: $store.profileID) {
-                    ForEach(store.availableProfiles) { profile in Text(profile.name).tag(profile.id) }
+            }
+            GridRow {
+                fieldLabel("Device")
+                Picker("Device", selection: $store.profileID) {
+                    ForEach(store.availableProfiles) { Text($0.name).tag($0.id) }
+                    if store.availableProfiles.isEmpty { Text("Choose a device").tag("") }
                 }
+                .labelsHidden().frame(width: 412)
                 .onChange(of: store.profileID) { _, _ in store.selectProfile() }
+            }
+            GridRow {
+                fieldLabel("Android image")
                 Picker("Android image", selection: $store.imageID) {
-                    if store.availableImages.isEmpty { Text("No matching images").tag("") }
-                    ForEach(store.availableImages) { image in Text(image.title).tag(image.id) }
+                    ForEach(store.availableImages) { Text($0.title).tag($0.id) }
+                    if store.availableImages.isEmpty { Text(store.isBusy ? "Loading images…" : "No compatible images").tag("") }
+                }.labelsHidden().frame(width: 412)
+            }
+            GridRow(alignment: .top) {
+                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                imageStatus.frame(height: 42, alignment: .topLeading)
+            }
+            GridRow {
+                fieldLabel("Name")
+                TextField("Name", text: $store.name).labelsHidden()
+            }
+            GridRow {
+                fieldLabel("Maximum storage")
+                HStack {
+                    TextField("Maximum internal storage", text: $store.storageGB)
+                        .frame(width: 70)
+                    Text("GB").foregroundStyle(.secondary)
+                    Spacer()
                 }
-                TextField("Name", text: $store.name)
-                TextField("Maximum internal storage (GB)", text: $store.storageGB)
+            }
+            GridRow {
+                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                Text("Disk space is used as needed, rather than reserved upfront.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            GridRow {
+                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
                 Toggle("Start after creation", isOn: $store.startAfterCreation)
             }
-            .disabled(store.isBusy)
-            if let error = store.catalogError {
-                Text(error).font(.caption).foregroundStyle(.secondary)
-                Button("Retry Loading Images") { Task { await store.loadDownloadableImages() } }
-                    .disabled(store.isBusy)
-            }
-            if store.availableImages.isEmpty {
-                Text("No matching \(EmulatorImageSelection.hostABI) image is available for this profile. Try another hardware profile.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            if store.selectedImage?.installed == false {
-                Text("The image will be downloaded into your Android SDK. SDK licenses must already be accepted; this prototype does not accept licenses automatically.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Text("Disk space is used as needed, rather than reserved upfront.")
+        }
+        .frame(maxWidth: .infinity)
+        .disabled(!store.isReady || store.isCreating)
+    }
+
+    private func fieldLabel(_ text: String) -> some View {
+        Text(text).foregroundStyle(.secondary).frame(width: 124, alignment: .trailing)
+    }
+
+    @ViewBuilder private var imageStatus: some View {
+        if store.isLoadingCatalog {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Checking for more images…")
+            }.font(.caption).foregroundStyle(.secondary)
+        } else if store.catalogError != nil {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Couldn’t check for more images. Installed images are available.")
+                    .foregroundStyle(.secondary)
+                Button("Try Again") { Task { await store.loadDownloadableImages() } }
+                    .buttonStyle(.link).disabled(store.isBusy)
+            }.font(.caption)
+        } else if store.selectedImage?.installed == false {
+            Text("This image will be downloaded before the emulator is created.")
                 .font(.caption).foregroundStyle(.secondary)
-            if let message = store.validationMessage(existingNames: existingNames), !store.name.isEmpty {
+        } else if store.selectedImage != nil {
+            Text("Installed and ready to use.").font(.caption).foregroundStyle(.secondary)
+        } else if !store.isBusy {
+            Text("No compatible images. Choose another device type.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+
+    private var footer: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if store.isReady, !store.isBusy, let message = store.validationMessage(existingNames: existingNames), !store.name.isEmpty {
                 Text(message).font(.caption).foregroundStyle(.secondary)
             }
+            if let error = store.errorMessage {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(store.isReady ? "Couldn’t create the emulator." : "Emulator tools need attention.")
+                        .foregroundStyle(.red)
+                    DisclosureGroup("Details") {
+                        ScrollView { Text(error).font(.caption).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }
+                            .frame(maxHeight: 90)
+                    }
+                }
+            }
+            HStack(spacing: 12) {
+                if store.isCreating {
+                    ProgressView().controlSize(.small)
+                    Text(store.activity).font(.caption).foregroundStyle(.secondary)
+                } else if !store.isReady && store.isBusy {
+                    ProgressView().controlSize(.small)
+                    Text("Loading devices…").font(.caption).foregroundStyle(.secondary)
+                } else if !store.isReady {
+                    Button("Settings…") { openSettings() }
+                    Button("Try Again") { Task { await load() } }
+                }
+                Spacer(minLength: 0)
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(store.isCreating)
+                Button(store.selectedImage?.installed == false ? "Download & Create" : "Create") {
+                    Task {
+                        await store.create(existingNames: existingNames) { name, start in
+                            if let name { emulatorStore.registerCreatedVirtualDevice(name: name, startAfterCreation: start) }
+                            else { emulatorStore.refreshVirtualDevices() }
+                        }
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(store.isBusy || !store.isReady || store.validationMessage(existingNames: existingNames) != nil)
+                .help(store.validationMessage(existingNames: existingNames) ?? "Create emulator")
+            }.frame(minHeight: 24)
         }
     }
 

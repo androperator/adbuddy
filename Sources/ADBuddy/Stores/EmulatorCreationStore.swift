@@ -15,7 +15,9 @@ final class EmulatorCreationStore {
     private(set) var isBusy = false
     private(set) var activity = ""
     private(set) var errorMessage: String?
-    private(set) var helperDescription: String?
+    private(set) var isLoadingCatalog = false
+    private(set) var isCreating = false
+    var isReady: Bool { service != nil }
     private(set) var createdName: String?
     private(set) var catalogError: String?
     private var service: EmulatorCreationService?
@@ -66,14 +68,12 @@ final class EmulatorCreationStore {
         service = nil
         profiles = []
         images = []
-        helperDescription = nil
         catalogError = nil
         defer { isBusy = false }
         do {
             guard let sdk else { throw EmulatorCreationError("Install an Android SDK with ADB before creating an emulator.") }
             let candidate = try makeService(configuration, sdk)
-            let version = try await candidate.check()
-            helperDescription = "@androperator/emulator \(version.version) · \(candidate.invocation.script)"
+            _ = try await candidate.check()
             profiles = try await candidate.profiles()
             images = try await candidate.images(includeDownloads: false)
             service = candidate
@@ -91,6 +91,8 @@ final class EmulatorCreationStore {
     }
 
     private func fetchFullCatalog(using service: EmulatorCreationService) async {
+        isLoadingCatalog = true
+        defer { isLoadingCatalog = false }
         activity = "Loading available images…"
         catalogError = nil
         do {
@@ -110,7 +112,9 @@ final class EmulatorCreationStore {
         if let message = validationMessage(existingNames: existingNames) { errorMessage = message; return }
         isBusy = true
         errorMessage = nil
-        activity = image.installed ? "Creating emulator…" : "Downloading image and creating emulator… This may take several minutes."
+        isCreating = true
+        defer { isCreating = false }
+        activity = image.installed ? "Creating emulator…" : "Downloading image and creating emulator…"
         defer { isBusy = false }
         do {
             let request = EmulatorCreationRequest(name: name, profile: profile, image: image, storageGB: Int(storageGB) ?? 0)

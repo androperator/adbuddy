@@ -141,8 +141,9 @@ current product contract; they are not an outstanding implementation plan.
   Never replace existing AVDs or accept SDK licenses automatically. Report
   prerequisite and license failures visibly. Offer start after creation using
   the existing standalone emulator launch flow.
-- Creation and catalog requests show indeterminate activity. Dismissal is disabled
-  during operations; cancellation and byte-level download progress are deferred.
+- Catalog status appears below the image picker while fields remain usable.
+  Creation progress appears in the footer; technical errors are expandable.
+  Dismissal is disabled during creation; cancellation and byte-level download progress are deferred.
   Configured capacity is not a host-disk quota, guaranteed guest capacity, or
   existing-userdata resizing. Dynamic allocation and snapshot policy use SDK defaults.
 
