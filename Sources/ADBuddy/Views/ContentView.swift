@@ -229,6 +229,10 @@ struct ContentView: View {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: chooseAPK) {
                     Label("Install APK", systemImage: "shippingbox")
+                        .foregroundStyle(
+                            deviceStore.devices.contains(where: \.isUsable)
+                                ? Color.primary : Color.secondary
+                        )
                 }
                 .disabled(!deviceStore.devices.contains(where: \.isUsable))
                 .help("Install APK on Android Device")
