@@ -8,6 +8,10 @@ struct ContentView: View {
     @Environment(APKInstallationStore.self) private var apkInstallationStore
 
 
+    private var canInstallAPK: Bool {
+        deviceStore.devices.contains(where: \.isUsable)
+    }
+
     private var contentWithFeedback: some View {
         deviceContent
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -230,12 +234,14 @@ struct ContentView: View {
                 Button(action: chooseAPK) {
                     Label("Install APK", systemImage: "shippingbox")
                         .foregroundStyle(
-                            deviceStore.devices.contains(where: \.isUsable)
-                                ? Color.primary : Color.secondary
+                            canInstallAPK
+                                ? Color.primary : Color(nsColor: .disabledControlTextColor)
                         )
                 }
-                .disabled(!deviceStore.devices.contains(where: \.isUsable))
-                .help("Install APK on Android Device")
+                .disabled(!canInstallAPK)
+                .help(canInstallAPK
+                    ? "Install APK on Android Device"
+                    : "Connect an available Android device to install an APK")
             }
 
             if preferences.isDeepLinkLauncherEnabled {
