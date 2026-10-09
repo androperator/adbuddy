@@ -53,7 +53,19 @@ explicitly authorized publication.
 
 1. Confirm `VERSION` matches the requested version, the worktree is clean, and
    the target commit is the one intended for the release. Run `swift test`.
-2. Build the public artifact with notarization. Do not use
+2. Before packaging, ensure the intended release commit contains exactly one
+   `CHANGELOG.md` entry for `VERSION`. If absent, use
+   [release-notes-author](../release-notes-author/SKILL.md) with the previous
+   published tag and the intended end ref, review the entry, and commit it.
+   Reconfirm the clean release commit, then extract the body before tagging:
+
+   ```bash
+   python3 .agents/skills/release-notes-author/scripts/extract_release_notes.py <version> <commit> > /tmp/adbuddy-release-notes.md
+   ```
+
+   Stop if extraction fails. Use this exact body for the GitHub Release.
+
+3. Build the public artifact with notarization. Do not use
    `--skip-notarization` for a distributable binary:
 
    ```bash
@@ -64,10 +76,10 @@ explicitly authorized publication.
    where architecture is `arm64`, `x86_64`, or `universal`. The matching sources are
    in `dist/release/ADBuddy-recording-sources-<version>.zip`. Publish all four assets
    together and keep them available; the app links to that source archive.
-3. Before changing remote state, confirm that `v<version>` is absent locally
+4. Before changing remote state, confirm that `v<version>` is absent locally
    and on `origin`, and that `gh release view v<version>` reports no GitHub
    Release. Do not force-move or reuse a tag that points at a different commit.
-4. Create an annotated tag at the validated release commit, push that tag only,
+5. Create an annotated tag at the validated release commit, push that tag only,
    then upload the three notarized app ZIPs and source ZIP to its GitHub Release:
 
    ```bash
@@ -78,10 +90,10 @@ explicitly authorized publication.
      dist/release/ADBuddy-macos-x86_64-<version>.zip \
      dist/release/ADBuddy-recording-sources-<version>.zip \
      --title "ADBuddy <version>" \
-     --generate-notes
+     --notes-file /tmp/adbuddy-release-notes.md
    ```
 
-5. Record the GitHub Release URL and archive SHA-256. Do not modify the
+6. Record the GitHub Release URL and archive SHA-256. Do not modify the
    separate Homebrew tap unless the user explicitly includes it in the request.
 
 If the tag push succeeds but release creation or asset upload fails, do not

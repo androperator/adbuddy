@@ -29,5 +29,7 @@ jobs:
         run: |
           xcodebuild -version
           swift --version
+      - name: Check release-note helpers
+        run: python3 .agents/skills/release-notes-author/scripts/test_release_notes.py
       - name: Run unit tests
         run: scripts/test.sh

@@ -92,20 +92,26 @@ This ad-hoc signs the app and skips notarization. Neither `--local` nor
 
 1. Follow the version-bump procedure in the repository
    [release skill](../.agents/skills/release-adbuddy/SKILL.md).
-2. Run `scripts/test.sh` on the host and build both release architectures.
+2. Author and commit the target version entry in `CHANGELOG.md` using the
+   [release-notes-author skill](../.agents/skills/release-notes-author/SKILL.md).
+   It gathers the previous release tag through the intended build commit,
+   classifies app, MCP, and documentation changes, and lists landed pull requests.
+   The GitHub Release body uses this entry from the exact release commit;
+   missing or duplicate entries block publication.
+3. Run `scripts/test.sh` on the host and build both release architectures.
    A universal build does not itself prove runtime behavior on both Mac types.
-3. Package the `.app` with its `Info.plist`, icon, and resources.
-4. Sign all bundled code with Developer ID and Hardened Runtime enabled.
-5. Submit the ZIP to Apple's notarization service, wait for acceptance, and
+4. Package the `.app` with its `Info.plist`, icon, and resources.
+5. Sign all bundled code with Developer ID and Hardened Runtime enabled.
+6. Submit the ZIP to Apple's notarization service, wait for acceptance, and
    staple the notarization ticket to the app.
-6. Verify the artifact with `codesign`, `spctl`, and `stapler`.
-7. With explicit publication authorization, tag the validated release commit
+7. Verify the artifact with `codesign`, `spctl`, and `stapler`.
+8. With explicit publication authorization, tag the validated release commit
    and upload all three final app ZIPs and the matching recording-source ZIP with
    release notes to GitHub Releases. Follow the
    release skill for tag and upload recovery rules.
-8. If a Homebrew tap update is explicitly requested, publish or update its cask
+9. If a Homebrew tap update is explicitly requested, publish or update its cask
    URL, version, and SHA-256 after the matching asset exists.
-9. Validate the published ZIP on a clean test machine or user profile. Validate
+10. Validate the published ZIP on a clean test machine or user profile. Validate
    cask installation separately when that distribution channel is available.
 
 Typical final checks include:
