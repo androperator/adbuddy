@@ -147,7 +147,7 @@ contrast in both Light and Dark appearances. Message colors brighten toward
 white in Dark mode. The app should avoid tinting the entire row with a
 saturated background.
 
-All six colors are global persisted preferences. The Theme tab in Settings
+All six colors are global persisted preferences. The Logcat tab in Settings
 provides a native color picker for each level plus **Reset to Defaults**.
 Changing a color updates all open Logcat windows.
 
