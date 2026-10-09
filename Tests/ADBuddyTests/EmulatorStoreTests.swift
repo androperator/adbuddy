@@ -6,7 +6,7 @@ import XCTest
 
 @MainActor
 final class EmulatorStoreTests: XCTestCase {
-    func testCreatedAVDStaysStoppedUntilExplicitlyStarted() async throws {
+    func testCreatedAVDHonorsCreateAndCreateThenStart() async throws {
         let sdk = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         let emulator = sdk.appendingPathComponent("emulator/emulator")
         try FileManager.default.createDirectory(at: emulator.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -23,7 +23,7 @@ final class EmulatorStoreTests: XCTestCase {
         store.requestDelete(AndroidVirtualDevice(name: "New_TV"))
         XCTAssertEqual(store.deleteConfirmationVirtualDevice?.name, "New_TV")
         store.deleteConfirmationVirtualDevice = nil
-        store.start(AndroidVirtualDevice(name: "New_TV"))
+        store.registerCreatedVirtualDevice(name: "New_TV", startAfterCreation: true)
         XCTAssertEqual(store.virtualDevices.first?.name, "New_TV")
         XCTAssertEqual(store.virtualDevices.first?.status, .starting)
         store.registerCreatedVirtualDevice(name: "New_TV")

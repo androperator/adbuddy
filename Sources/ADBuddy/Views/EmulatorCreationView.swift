@@ -163,21 +163,22 @@ struct EmulatorCreationView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 36)
                 if store.isReady || store.errorMessage != nil {
-                    Button("Create") {
-                        create()
+                    HStack(spacing: 12) {
+                        Button("Create") { create(startAfterCreation: false) }
+                        Button("Create & Start") { create(startAfterCreation: true) }
+                            .keyboardShortcut(.defaultAction)
                     }
-                    .keyboardShortcut(.defaultAction)
                     .disabled(store.isBusy || !store.isReady || store.validationMessage(existingNames: existingNames) != nil)
                     .help(store.validationMessage(existingNames: existingNames) ?? "Create emulator")
                 }
             }.frame(height: 36)
     }
 
-    private func create() {
+    private func create(startAfterCreation: Bool) {
         guard !store.isBusy else { return }
         Task {
             await store.create(existingNames: existingNames) { name in
-                if let name { emulatorStore.registerCreatedVirtualDevice(name: name) }
+                if let name { emulatorStore.registerCreatedVirtualDevice(name: name, startAfterCreation: startAfterCreation) }
                 else { emulatorStore.refreshVirtualDevices() }
             }
         }
