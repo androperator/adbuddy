@@ -50,7 +50,7 @@ struct EmulatorSystemImage: Decodable, Identifiable, Equatable, Sendable {
     let installed: Bool
 
     var title: String {
-        "\(platform.replacingOccurrences(of: "android-", with: "API ")) · \(description)\(installed ? " · Installed" : " · Download")"
+        "\(platform.replacingOccurrences(of: "android-", with: "API ")) · \(description)\(installed ? " · Installed" : " · Download required")"
     }
 }
 

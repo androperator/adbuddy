@@ -17,8 +17,15 @@ final class EmulatorCreationStore {
     private(set) var errorMessage: String?
     private(set) var helperDescription: String?
     private(set) var createdName: String?
-    private(set) var includesDownloads = false
+    private(set) var catalogError: String?
     private var service: EmulatorCreationService?
+    private let makeService: (EmulatorHelperConfiguration, AndroidSDK) throws -> EmulatorCreationService
+
+    init(makeService: @escaping (EmulatorHelperConfiguration, AndroidSDK) throws -> EmulatorCreationService = {
+        EmulatorCreationService(invocation: try EmulatorHelperInvocation.resolve(configuration: $0, sdk: $1))
+    }) {
+        self.makeService = makeService
+    }
 
     var availableHardwareTypes: [EmulatorHardwareType] {
         EmulatorHardwareType.allCases.filter { type in profiles.contains { $0.hardwareType == type } }
@@ -60,33 +67,42 @@ final class EmulatorCreationStore {
         profiles = []
         images = []
         helperDescription = nil
-        includesDownloads = false
+        catalogError = nil
         defer { isBusy = false }
         do {
             guard let sdk else { throw EmulatorCreationError("Install an Android SDK with ADB before creating an emulator.") }
-            let invocation = try EmulatorHelperInvocation.resolve(configuration: configuration, sdk: sdk)
-            let candidate = EmulatorCreationService(invocation: invocation)
+            let candidate = try makeService(configuration, sdk)
             let version = try await candidate.check()
-            helperDescription = "@androperator/emulator \(version.version) · \(invocation.script)"
+            helperDescription = "@androperator/emulator \(version.version) · \(candidate.invocation.script)"
             profiles = try await candidate.profiles()
             images = try await candidate.images(includeDownloads: false)
             service = candidate
             if !availableHardwareTypes.contains(hardwareType) { hardwareType = availableHardwareTypes.first ?? .phone }
             selectHardwareType()
+            await fetchFullCatalog(using: candidate)
         } catch { errorMessage = error.localizedDescription }
     }
 
     func loadDownloadableImages() async {
         guard !isBusy, let service else { return }
         isBusy = true
-        activity = "Loading downloadable images…"
-        errorMessage = nil
         defer { isBusy = false }
+        await fetchFullCatalog(using: service)
+    }
+
+    private func fetchFullCatalog(using service: EmulatorCreationService) async {
+        activity = "Loading available images…"
+        catalogError = nil
         do {
-            images = try await service.images(includeDownloads: true)
-            includesDownloads = true
+            let catalog = try await service.images(includeDownloads: true)
+            // Retain installed choices even if the remote catalog omits them.
+            let installed = images.filter(\.installed)
+            let installedIDs = Set(installed.map(\.id))
+            images = installed + catalog.filter { !installedIDs.contains($0.id) }
             selectProfile()
-        } catch { errorMessage = error.localizedDescription }
+        } catch {
+            catalogError = "Could not load downloadable images. Installed images are still available. " + error.localizedDescription
+        }
     }
 
     func create(existingNames: Set<String>, didCreate: (String?, Bool) -> Void) async {

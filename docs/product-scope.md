@@ -133,8 +133,10 @@ current product contract; they are not an outstanding implementation plan.
   emulator checkout.
 - Select a hardware type first (Phone, Tablet, Foldable, TV, Automotive, Wear OS,
   Desktop, XR, Glasses, or Other), then a profile from that type and a matching
-  native-architecture image. Only types present in the SDK catalog are shown. Start with installed images; **Browse Downloadable Images** loads remote
-  choices. Creating with a remote image downloads it through the helper.
+  native-architecture image. Only types present in the SDK catalog are shown.
+  Load installed images first and automatically fetch downloadable choices. Keep
+  installed images available if the remote catalog fails, with a retry action.
+  Label remote choices **Download required**; creation downloads the selected image.
 - Require a unique name and internal-storage capacity, defaulting to 24 GB.
   Never replace existing AVDs or accept SDK licenses automatically. Report
   prerequisite and license failures visibly. Offer start after creation using

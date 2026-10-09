@@ -137,6 +137,28 @@ final class EmulatorCreationTests: XCTestCase {
         XCTAssertThrowsError(try EmulatorHelperInvocation.resolve(configuration: .init(helperPath: "/missing-helper", nodePath: node.path, javaHome: ""), sdk: sdk, environment: [:], bundleURL: repo.appendingPathComponent("dist/ADBuddy.app"), home: root))
     }
 
+    @MainActor
+    func testAutomaticCatalogFailurePreservesInstalledImagesAndCanRetry() async throws {
+        let responses = CatalogResponses()
+        let service = EmulatorCreationService(invocation: .init(node: "/node", script: "/cli.js", environment: [:])) { _, arguments, _ in
+            await responses.respond(arguments)
+        }
+        let store = EmulatorCreationStore(makeService: { _, _ in service })
+        await store.load(configuration: .init(helperPath: "", nodePath: "", javaHome: ""),
+                         sdk: AndroidSDK(rootPath: "/sdk", adbPath: "/sdk/adb", source: .standardLocation))
+        XCTAssertEqual(store.images.map(\.id), ["installed"])
+        XCTAssertEqual(store.imageID, "installed")
+        XCTAssertNotNil(store.catalogError)
+        XCTAssertNil(store.validationMessage(existingNames: []))
+        XCTAssertFalse(store.isBusy)
+        await store.loadDownloadableImages()
+        XCTAssertNil(store.catalogError)
+        XCTAssertEqual(store.images.map(\.id), ["installed", "download"])
+        XCTAssertEqual(store.imageID, "installed")
+        let attempts = await responses.catalogAttempts
+        XCTAssertEqual(attempts, 2)
+    }
+
     private func result(_ text: String, status: Int32 = 0) -> ProcessResult {
         ProcessResult(standardOutput: Data(text.utf8), standardError: Data(), exitStatus: status, durationMilliseconds: 0, failureDescription: nil, wasCancelled: false)
     }
@@ -146,5 +168,29 @@ private actor CreationInvocationRecorder {
     var arguments: [[String]] = []
     func record(_ executable: String, _ arguments: [String], _ environment: [String: String]) {
         self.arguments.append(arguments)
+    }
+}
+
+private actor CatalogResponses {
+    var catalogAttempts = 0
+    func respond(_ arguments: [String]) -> ProcessResult {
+        let output: String
+        if arguments == ["--version"] { output = "v24.0.0" }
+        else if arguments.last == "--version" {
+            output = #"{"protocolVersion":1,"ok":true,"data":{"name":"@androperator/emulator","version":"0.1.1","capabilities":["catalog.profiles","catalog.images"]}}"#
+        } else if arguments.last == "profiles" {
+            output = #"{"protocolVersion":1,"ok":true,"data":{"profiles":[{"id":"pixel_7","name":"Pixel 7"}]}}"#
+        } else {
+            let installed = arguments.last == "--installed"
+            if !installed { catalogAttempts += 1 }
+            if !installed && catalogAttempts == 1 {
+                return ProcessResult(standardOutput: Data(), standardError: Data(), exitStatus: 1, durationMilliseconds: 0, failureDescription: "Offline", wasCancelled: false)
+            }
+            let id = installed ? "installed" : "download"
+            output = """
+            {"protocolVersion":1,"ok":true,"data":{"images":[{"id":"\(id)","platform":"android-35","apiLevel":35,"tag":"google_apis","abi":"\(EmulatorImageSelection.hostABI)","description":"Phone","installed":\(installed)}]}}
+            """
+        }
+        return ProcessResult(standardOutput: Data(output.utf8), standardError: Data(), exitStatus: 0, durationMilliseconds: 0, failureDescription: nil, wasCancelled: false)
     }
 }

@@ -90,12 +90,13 @@ struct EmulatorCreationSheet: View {
                 Toggle("Start after creation", isOn: $store.startAfterCreation)
             }
             .disabled(store.isBusy)
-            if !store.includesDownloads {
-                Button("Browse Downloadable Images…") { Task { await store.loadDownloadableImages() } }
+            if let error = store.catalogError {
+                Text(error).font(.caption).foregroundStyle(.secondary)
+                Button("Retry Loading Images") { Task { await store.loadDownloadableImages() } }
                     .disabled(store.isBusy)
             }
             if store.availableImages.isEmpty {
-                Text("No matching \(EmulatorImageSelection.hostABI) image is available for this profile. Try downloadable images or another profile.")
+                Text("No matching \(EmulatorImageSelection.hostABI) image is available for this profile. Try another hardware profile.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if store.selectedImage?.installed == false {
