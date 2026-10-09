@@ -8,6 +8,8 @@ struct EmulatorCreationSheet: View {
     @Environment(EmulatorStore.self) private var emulatorStore
     @State private var store = EmulatorCreationStore()
     @State private var showsErrorDetails = false
+    @FocusState private var isDeviceTypeFocused: Bool
+    @State private var hasSetInitialFocus = false
 
     private var existingNames: Set<String> { Set(emulatorStore.virtualDevices.map(\.name)) }
 
@@ -22,6 +24,11 @@ struct EmulatorCreationSheet: View {
         .frame(width: 600)
         .interactiveDismissDisabled(store.isCreating)
         .task { await load() }
+        .onChange(of: store.isReady) { _, ready in
+            guard ready, !hasSetInitialFocus else { return }
+            hasSetInitialFocus = true
+            isDeviceTypeFocused = true
+        }
         .onChange(of: store.createdName) { _, name in
             if name != nil { dismiss() }
         }
@@ -36,6 +43,7 @@ struct EmulatorCreationSheet: View {
                     if store.profiles.isEmpty { Text("Loading devices…").tag(store.hardwareType) }
                 }
                 .labelsHidden().frame(width: 412)
+                .focused($isDeviceTypeFocused)
                 .onChange(of: store.hardwareType) { _, _ in store.selectHardwareType() }
             }
             GridRow {
