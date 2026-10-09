@@ -67,7 +67,7 @@ struct EmulatorCreationView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Install Node.js to create emulators")
                 .font(.title3.weight(.semibold))
-            Text("ADBuddy includes the emulator tools, but needs Node.js 24 or newer to run them.")
+            Text("Node.js 24 or newer is required to create emulators.")
                 .foregroundStyle(.secondary)
             Link("Node.js installation instructions", destination: URL(string: "https://nodejs.org/en/download")!)
             Text("Follow the official instructions to install Node.js 24 or newer, then choose Check Again.")
