@@ -219,18 +219,6 @@ struct ContentView: View {
         .navigationTitle("ADBuddy")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    EmulatorCreationWindowController.shared.show(
-                        preferences: preferences, deviceStore: deviceStore, emulatorStore: emulatorStore
-                    )
-                } label: {
-                    Label("Create Android Emulator", systemImage: "plus.rectangle")
-                        .foregroundStyle(Color.primary)
-                }
-                .help("Create Android Emulator")
-            }
-
-            ToolbarItem(placement: .primaryAction) {
                 Button(action: chooseAPK) {
                     Label("Install APK", systemImage: "shippingbox")
                         .foregroundStyle(
@@ -242,6 +230,18 @@ struct ContentView: View {
                 .help(canInstallAPK
                     ? "Install APK on Android Device"
                     : "Connect an available Android device to install an APK")
+            }
+
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    EmulatorCreationWindowController.shared.show(
+                        preferences: preferences, deviceStore: deviceStore, emulatorStore: emulatorStore
+                    )
+                } label: {
+                    Label("Create Android Emulator", systemImage: "plus.rectangle")
+                        .foregroundStyle(Color.primary)
+                }
+                .help("Create Android Emulator")
             }
 
             if preferences.isDeepLinkLauncherEnabled {
