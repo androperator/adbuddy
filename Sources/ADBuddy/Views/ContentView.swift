@@ -221,6 +221,7 @@ struct ContentView: View {
                     )
                 } label: {
                     Label("Create Android Emulator", systemImage: "plus.rectangle")
+                        .foregroundStyle(Color.primary)
                 }
                 .help("Create Android Emulator")
             }
@@ -248,6 +249,7 @@ struct ContentView: View {
             ToolbarItem(placement: .primaryAction) {
                 SettingsLink {
                     Label("Settings", systemImage: "gearshape")
+                        .foregroundStyle(Color.primary)
                 }
                 .help("Settings")
             }
