@@ -26,7 +26,7 @@ app containing both slices. Each app includes the `adbuddy-mcp` stdio helper in
 such as:
 
 ```text
-ADBuddy-macos-universal-0.2.1.zip
+ADBuddy-macos-universal-0.3.0.zip
 ```
 
 The smaller downloads use `ADBuddy-macos-arm64-<version>.zip` and
@@ -57,7 +57,7 @@ source ZIP on the same release and keep them available. See [recording-backend.m
 `VERSION` is the source of truth for the release version. Use the repository
 release helper to synchronize the MCP version, document examples, and packaging
 example, then commit the version change before packaging. The current version is
-`0.2.1`.
+`0.3.0`.
 
 `scripts/package_release.sh` creates all three application bundles and
 versioned app ZIPs, plus one shared recording-source ZIP. It defaults to the
@@ -140,7 +140,7 @@ future shape is:
 
 ```ruby
 cask "adbuddy" do
-  version "0.2.1"
+  version "0.3.0"
   sha256 "<release-sha256>"
 
   url "https://github.com/clawperator/adbuddy/releases/download/v#{version}/ADBuddy-macos-universal-#{version}.zip"
