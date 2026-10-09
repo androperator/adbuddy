@@ -142,6 +142,11 @@ struct MenuBarContentView: View {
                         }
                         .disabled(deviceStore.isPerformingAppAction(for: device))
 
+                        Button("Toggle Dark Theme") {
+                            deviceStore.performDeviceSetting(.toggleDarkTheme, for: device)
+                        }
+                        .disabled(deviceStore.isPerformingDeviceSetting(for: device))
+
                         Menu("Device Settings") {
                             DeviceSettingsMenuContent { action in
                                 deviceStore.performDeviceSetting(action, for: device)

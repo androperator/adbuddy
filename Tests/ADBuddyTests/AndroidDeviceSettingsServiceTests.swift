@@ -3,6 +3,49 @@ import XCTest
 @testable import ADBuddyCore
 
 final class AndroidDeviceSettingsServiceTests: XCTestCase {
+    func testToggleReadsEffectiveThemeAndAppliesOppositeForEachDevice() async {
+        for (serial, isDark, expectedAction, argument) in [
+            ("first-device", true, AndroidDeviceSettingAction.enableLightTheme, "no"),
+            ("second-device", false, AndroidDeviceSettingAction.enableDarkTheme, "yes"),
+        ] {
+            let runner = ScriptedDeviceSettingsProcessRunner(results: [
+                successfulResult(output: "mNightMode=0 (auto)\n mComputedNightMode=\(isDark) customStart=22:00\n"),
+                successfulResult(),
+            ])
+            let service = AndroidDeviceSettingsService(adbPath: "/SDK/adb", processRunner: runner)
+            let result = await service.apply(.toggleDarkTheme, to: serial)
+            XCTAssertEqual(result, .success(AndroidDeviceSettingOutcome(action: expectedAction, deviceSerial: serial)))
+            let invocations = await runner.invocations
+            XCTAssertEqual(invocations, [
+                ["-s", serial, "shell", "dumpsys", "uimode"],
+                ["-s", serial, "shell", "cmd", "uimode", "night", argument],
+            ])
+        }
+    }
+
+    func testToggleDoesNotWriteWhenThemeCannotBeRead() async {
+        for readResult in [permissionFailure(), successfulResult(output: "mNightMode=0 (auto)"),
+                           successfulResult(output: "mComputedNightMode=unknown")] {
+            let runner = ScriptedDeviceSettingsProcessRunner(results: [readResult])
+            let service = AndroidDeviceSettingsService(adbPath: "/SDK/adb", processRunner: runner)
+            let result = await service.apply(.toggleDarkTheme, to: "serial")
+            guard case .failure = result else {
+                return XCTFail("An unreadable theme must not be changed")
+            }
+            let invocations = await runner.invocations
+            XCTAssertEqual(invocations.count, 1)
+        }
+    }
+
+    func testToggleReportsWriteFailure() async {
+        let runner = ScriptedDeviceSettingsProcessRunner(results: [
+            successfulResult(output: "mComputedNightMode=false"), permissionFailure(),
+        ])
+        let service = AndroidDeviceSettingsService(adbPath: "/SDK/adb", processRunner: runner)
+        let result = await service.apply(.toggleDarkTheme, to: "serial")
+        XCTAssertEqual(result, .failure(.commandFailed("Permission denial")))
+    }
+
     func testUsesFixedArgumentsForNonNavigationSettings() async {
         let actions: [AndroidDeviceSettingAction] = [
             .openSystemSettings, .enableDarkTheme, .enableLightTheme,
