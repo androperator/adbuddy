@@ -86,7 +86,7 @@ struct EmulatorCreationSheet: View {
                     ForEach(store.availableImages) { image in Text(image.title).tag(image.id) }
                 }
                 TextField("Name", text: $store.name)
-                TextField("Internal storage (GB)", text: $store.storageGB)
+                TextField("Maximum internal storage (GB)", text: $store.storageGB)
                 Toggle("Start after creation", isOn: $store.startAfterCreation)
             }
             .disabled(store.isBusy)
@@ -102,7 +102,7 @@ struct EmulatorCreationSheet: View {
                 Text("The image will be downloaded into your Android SDK. SDK licenses must already be accepted; this prototype does not accept licenses automatically.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Text("Internal storage is Android’s configured capacity, not a limit on Mac disk usage. Actual capacity depends on the image. Snapshot and allocation settings use the SDK defaults.")
+            Text("Disk space is used as needed, rather than reserved upfront.")
                 .font(.caption).foregroundStyle(.secondary)
             if let message = store.validationMessage(existingNames: existingNames), !store.name.isEmpty {
                 Text(message).font(.caption).foregroundStyle(.secondary)
